@@ -10,4 +10,10 @@ public interface IUserService {
     User createUser(UserDTO userDTO) throws Exception;
 
     User getUserByToken(String token) throws Exception;
+
+    void updateResetPasswordToken(String token, String email) throws Exception;
+
+    User getUserByResetPasswordToken(String token);
+
+    void updatePassword(User user, String newPassword);
 }

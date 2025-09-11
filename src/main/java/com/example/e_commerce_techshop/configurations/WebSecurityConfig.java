@@ -43,7 +43,7 @@ public class WebSecurityConfig {
                                 String.format("%s/users/auth/social-login", apiPrefix),
                                 String.format("%s/users/auth/social/callback", apiPrefix)
                         ).permitAll()
-                        .anyRequest().authenticated()
+                        .anyRequest().permitAll()
                 );
         return http.build();
     }

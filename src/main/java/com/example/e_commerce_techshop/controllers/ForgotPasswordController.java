@@ -1,0 +1,80 @@
+package com.example.e_commerce_techshop.controllers;
+
+import com.example.e_commerce_techshop.dtos.ResetPasswordDTO;
+import com.example.e_commerce_techshop.models.User;
+import com.example.e_commerce_techshop.responses.ApiResponse;
+import com.example.e_commerce_techshop.services.user.IUserService;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.io.UnsupportedEncodingException;
+import java.util.UUID;
+
+@RestController
+@RequiredArgsConstructor
+public class ForgotPasswordController {
+    private final JavaMailSender javaMailSender;
+
+    private final IUserService userService;
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> processForgotPassword(HttpServletRequest request, @RequestParam String email){
+        try {
+            String token = UUID.randomUUID().toString();
+            userService.updateResetPasswordToken(token, email);
+            String resetPasswordLink = getServletPath(request) + "/reset-password?token=" + token;
+            sendEmail(email, resetPasswordLink);
+            return ResponseEntity.ok(ApiResponse.ok("Đã gửi mã xác nhận tới email của bạn!"));
+        } catch (Exception e){
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordDTO resetPasswordDTO){
+        User user = userService.getUserByResetPasswordToken(resetPasswordDTO.getToken());
+        if(user == null)
+            return ResponseEntity.badRequest().body(ApiResponse.error("Mã token không hợp lệ"));
+        userService.updatePassword(user, resetPasswordDTO.getPassword());
+        return ResponseEntity.ok(ApiResponse.ok("Đã đổi mật khẩu thành công"));
+    }
+
+    public void sendEmail(String recipientEmail, String link)
+            throws MessagingException, UnsupportedEncodingException {
+        MimeMessage message = javaMailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message);
+
+        helper.setFrom("ngochuymail25@gmail.com", "E-Commerce Support");
+        helper.setTo(recipientEmail);
+
+        String subject = "Here's the link to reset your password";
+
+        String content = "<p>Xin chào,</p>"
+                + "<p>Bạn có gửi yêu cầu đổi mật khẩu.</p>"
+                + "<p>Click vào link bên dưới để thực hiện thao tác:</p>"
+                + "<p><a href=\"" + link + "\">Change my password</a></p>"
+                + "<br>"
+                + "<p>Bỏ qua email này nếu bạn nhớ lại mật khẩu. </p>";
+
+        helper.setSubject(subject);
+
+        helper.setText(content, true);
+
+        javaMailSender.send(message);
+    }
+
+    public String getServletPath(HttpServletRequest request){
+        String url = request.getRequestURL().toString();
+        return url.replace(request.getServletPath(), "");
+    }
+}

@@ -46,6 +46,9 @@ public class User extends BaseEntity implements UserDetails {
     @Column(name = "is_active", nullable = false)
     private Boolean isActive;
 
+    @Column(name = "reset_password_token")
+    private String resetPasswordToken;
+
     @OneToOne
     @JoinColumn(name = "address_id")
     private Address address;
