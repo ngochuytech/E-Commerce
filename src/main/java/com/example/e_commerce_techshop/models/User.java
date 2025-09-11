@@ -46,6 +46,12 @@ public class User extends BaseEntity implements UserDetails {
     @Column(name = "is_active", nullable = false)
     private Boolean isActive;
 
+    @Column(name = "enable")
+    private Boolean enable;
+
+    @Column(name = "verification_code")
+    private String verificationCode;
+
     @Column(name = "reset_password_token")
     private String resetPasswordToken;
 
@@ -66,5 +72,10 @@ public class User extends BaseEntity implements UserDetails {
     @Override
     public String getUsername() {
         return this.getEmail();
+    }
+
+    @Override
+    public boolean isEnabled(){
+        return this.enable;
     }
 }

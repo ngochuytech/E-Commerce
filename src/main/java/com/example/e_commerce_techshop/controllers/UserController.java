@@ -15,10 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -60,7 +57,7 @@ public class UserController {
 
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody UserDTO userDTO, BindingResult result){
+    public ResponseEntity<?> register(HttpServletRequest request, @RequestBody UserDTO userDTO, BindingResult result){
         try {
             if(result.hasErrors()){
                 List<String> errorMessages = result.getFieldErrors()
@@ -72,14 +69,28 @@ public class UserController {
             if(!userDTO.getPassword().equals(userDTO.getRetypePassword()))
                 return ResponseEntity.badRequest().body(ApiResponse.error("Password doesn't match"));
             // CẦN KIỂM TRA USER ĐÃ XÁC MINH EMAIL CHƯA !!
-            userService.createUser(userDTO);
-            return ResponseEntity.ok(ApiResponse.ok("Đã đăng ký thành công!"));
+            userService.createUser(userDTO, getSiteURL(request));
+            return ResponseEntity.ok(ApiResponse.ok("Đã đăng ký thành công! Cần xác minh email"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         }
     }
 
-    boolean isMobileDevice(String userAgent){
+    @GetMapping("/verify")
+    public ResponseEntity<?> verify(@RequestParam("code") String code){
+        if(userService.verifyUser(code))
+            return ResponseEntity.ok(ApiResponse.ok("Đã xác minh tài khoản thành công!"));
+        else
+            return ResponseEntity.badRequest().body(ApiResponse.error("Xác minh tài khoản thất bại! Do tài khoản của" +
+                    "bạn đã được xác minh hoặc mã code xác nhận không chính xác."));
+    }
+
+    private boolean isMobileDevice(String userAgent){
         return userAgent.toLowerCase().contains("mobile");
+    }
+
+    private String getSiteURL(HttpServletRequest request) {
+        String siteURL = request.getRequestURL().toString();
+        return siteURL.replace(request.getServletPath(), "");
     }
 }

@@ -7,7 +7,9 @@ import com.example.e_commerce_techshop.models.User;
 public interface IUserService {
     String loginUser(UserLoginDTO userLoginDTO) throws Exception;
 
-    User createUser(UserDTO userDTO) throws Exception;
+    void createUser(UserDTO userDTO, String siteURL) throws Exception;
+
+    boolean verifyUser(String verificationCode);
 
     User getUserByToken(String token) throws Exception;
 
