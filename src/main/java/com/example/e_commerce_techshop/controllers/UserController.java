@@ -57,7 +57,7 @@ public class UserController {
 
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(HttpServletRequest request, @RequestBody UserDTO userDTO, BindingResult result){
+    public ResponseEntity<?> register(HttpServletRequest request, @RequestBody @Valid UserDTO userDTO, BindingResult result){
         try {
             if(result.hasErrors()){
                 List<String> errorMessages = result.getFieldErrors()

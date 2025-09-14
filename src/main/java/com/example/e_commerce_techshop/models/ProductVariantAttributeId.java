@@ -4,15 +4,15 @@ import java.io.Serializable;
 import java.util.Objects;
 
 public class ProductVariantAttributeId implements Serializable {
-    private String product;
+    private String productVariant;
 
-    private String attribute;
+    private Long attribute;
 
     public ProductVariantAttributeId() {
     }
 
-    public ProductVariantAttributeId(String product, String attribute) {
-        this.product = product;
+    public ProductVariantAttributeId(String product, Long attribute) {
+        this.productVariant = product;
         this.attribute = attribute;
     }
 
@@ -21,12 +21,12 @@ public class ProductVariantAttributeId implements Serializable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         ProductVariantAttributeId that = (ProductVariantAttributeId) o;
-        return Objects.equals(product, that.product) &&
+        return Objects.equals(productVariant, that.productVariant) &&
                 Objects.equals(attribute, that.attribute);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(product, attribute);
+        return Objects.hash(productVariant, attribute);
     }
 }

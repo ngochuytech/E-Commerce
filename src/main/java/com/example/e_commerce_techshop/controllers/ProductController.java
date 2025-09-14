@@ -5,6 +5,7 @@ import com.example.e_commerce_techshop.models.Product;
 import com.example.e_commerce_techshop.responses.ApiResponse;
 import com.example.e_commerce_techshop.responses.ProductResponse;
 import com.example.e_commerce_techshop.services.product.IProductService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
@@ -20,7 +21,7 @@ public class ProductController {
     private final IProductService productService;
 
     @PostMapping("/create")
-    public ResponseEntity<?> craeteProduct(@RequestBody ProductDTO productDTO, BindingResult result){
+    public ResponseEntity<?> craeteProduct(@RequestBody @Valid ProductDTO productDTO, BindingResult result){
         try {
             if(result.hasErrors()){
                 List<String> errorMessages = result.getFieldErrors()
@@ -77,7 +78,7 @@ public class ProductController {
     }
 
     @PutMapping("/update/{id}")
-    public ResponseEntity<?> updateProduct(@PathVariable("id") String productId, @RequestBody ProductDTO productDTO, BindingResult result){
+    public ResponseEntity<?> updateProduct(@PathVariable("id") String productId, @RequestBody @Valid ProductDTO productDTO, BindingResult result){
         try {
             if(result.hasErrors()){
                 List<String> errorMessages = result.getFieldErrors()

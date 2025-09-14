@@ -3,6 +3,8 @@ package com.example.e_commerce_techshop.models;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.List;
+
 @Entity
 @Table(name = "product_variants")
 @Getter
@@ -18,7 +20,8 @@ public class ProductVariant {
     @Column(nullable = false)
     private String name;
 
-    private String image_url    ;
+    @Column(name = "image_url")
+    private String imageUrl;
 
     @Column(nullable = false)
     private Long price;
@@ -31,4 +34,7 @@ public class ProductVariant {
     @ManyToOne
     @JoinColumn(name = "product_id")
     private Product product;
+
+    @OneToMany(mappedBy = "productVariant", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<ProductVariantAttribute> attributes;
 }

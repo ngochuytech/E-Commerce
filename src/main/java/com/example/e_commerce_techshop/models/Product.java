@@ -3,6 +3,8 @@ package com.example.e_commerce_techshop.models;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.List;
+
 
 enum ProductStatus {
     ACTIVE, HIDDEN, SOLD
@@ -44,6 +46,9 @@ public class Product extends BaseEntity{
     @OneToOne
     @JoinColumn(name = "store_id")
     private Store store;
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProductVariant> variants;
 
     public static boolean getValidStatus(String status){
         try {

@@ -18,8 +18,8 @@ public class ProductVariantAttribute {
 
     @Id
     @ManyToOne
-    @JoinColumn(name = "product_id")
-    private Product product;
+    @JoinColumn(name = "product_variant_id")
+    private ProductVariant productVariant;
 
     @Id
     @ManyToOne
