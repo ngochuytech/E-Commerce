@@ -18,7 +18,7 @@ public class ProductVariant {
     @Column(nullable = false)
     private String name;
 
-    private String image_url    ;
+    private String image_url;
 
     @Column(nullable = false)
     private Long price;

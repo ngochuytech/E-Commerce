@@ -37,7 +37,7 @@ public class ProductDTO {
 
     @JsonProperty("brand_id")
     @NotNull(message = "Brand id is required")
-    private Long brandId;
+    private String brandId;
 
     @JsonProperty("store_id")
     @NotNull(message = "Store id is required")
