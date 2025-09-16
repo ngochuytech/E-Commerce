@@ -19,14 +19,26 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: ngochuymail25@gmail.com
-    password: jwrs ymuu aote jbsv
+    username:
+    password:
     properties:
       mail:
         smtp:
           auth: true
           starttls:
             enable: true
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id:
+            client-secret:
+            redirect-uri: http://localhost:5173/oauth2/callback
+
+file:
+  upload-dir: ./uploads/images
+  base-url: /image
 
 api:
   prefix: api/v1

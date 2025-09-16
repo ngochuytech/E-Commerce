@@ -2,6 +2,7 @@ package com.example.e_commerce_techshop.controllers;
 
 import com.example.e_commerce_techshop.dtos.ProductDTO;
 import com.example.e_commerce_techshop.models.Product;
+import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.responses.ApiResponse;
 import com.example.e_commerce_techshop.responses.ProductResponse;
 import com.example.e_commerce_techshop.services.product.IProductService;
@@ -12,6 +13,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController

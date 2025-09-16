@@ -1,14 +1,18 @@
 package com.example.e_commerce_techshop.controllers;
 
+import com.example.e_commerce_techshop.components.JwtTokenProvider;
+import com.example.e_commerce_techshop.dtos.GoogleCodeRequest;
 import com.example.e_commerce_techshop.dtos.UserDTO;
 import com.example.e_commerce_techshop.dtos.UserLoginDTO;
 import com.example.e_commerce_techshop.models.Token;
 import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.responses.ApiResponse;
 import com.example.e_commerce_techshop.responses.user.LoginResponse;
+import com.example.e_commerce_techshop.services.GoogleAuthService;
 import com.example.e_commerce_techshop.services.token.ITokenService;
 import com.example.e_commerce_techshop.services.user.IUserService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +21,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -26,6 +31,10 @@ public class UserController {
     private final IUserService userService;
 
     private final ITokenService tokenService;
+
+    private final GoogleAuthService googleAuthService;
+
+    private final JwtTokenProvider jwtTokenProvider;
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody @Valid UserLoginDTO userLoginDTO, BindingResult result, HttpServletRequest request){
@@ -92,5 +101,35 @@ public class UserController {
     private String getSiteURL(HttpServletRequest request) {
         String siteURL = request.getRequestURL().toString();
         return siteURL.replace(request.getServletPath(), "");
+    }
+
+
+    public void socialAuth(HttpServletResponse response) throws IOException {
+        String url = googleAuthService.generateAuthUrl();
+        response.sendRedirect(url);
+    }
+
+    @PostMapping("/auth/social/callback")
+    public ResponseEntity<?> callback(HttpServletRequest httpServletRequest,@RequestBody GoogleCodeRequest request){
+        try {
+            String userAgent = httpServletRequest.getHeader("User-Agent");
+            User user = googleAuthService.loginWithGoogle(request);
+            String token = jwtTokenProvider.generateToken(user);
+            Token jwtToken = tokenService.addToken(user, token, isMobileDevice(userAgent));
+
+            LoginResponse loginResponse = LoginResponse.builder()
+                    .message("Đăng nhập thành công!")
+                    .token(jwtToken.getToken())
+                    .tokenType(jwtToken.getTokenType())
+                    .refreshToken(jwtToken.getRefreshToken())
+                    .username(user.getFullName())
+                    .roles(user.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList())
+                    .id(user.getId())
+                    .build();
+
+            return ResponseEntity.ok(ApiResponse.ok(loginResponse));
+        } catch (Exception e){
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 }
