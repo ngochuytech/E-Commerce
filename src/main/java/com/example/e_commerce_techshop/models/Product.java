@@ -43,7 +43,7 @@ public class Product extends BaseEntity{
     @JoinColumn(name = "brand_id")
     private Brand brand;
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "store_id")
     private Store store;
 
