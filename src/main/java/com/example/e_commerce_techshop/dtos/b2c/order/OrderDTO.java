@@ -6,6 +6,8 @@ import jakarta.validation.constraints.Positive;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -31,6 +33,38 @@ public class OrderDTO {
     private String paymentMethod;
 
     private String status; // PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED
+    
+    // Additional fields for response
+    private String id;
+    private String buyerName;
+    private String buyerEmail;
+    private String buyerPhone;
+    private String shippingAddress;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private Integer itemCount;
+    private List<OrderItem> orderItems;
+    
+    @Data
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class OrderItem {
+        private String id;
+        private String productVariantId;
+        private String productName;
+        private String variantName;
+        private String productImage;
+        private Integer quantity;
+        private BigDecimal price;
+        private BigDecimal subtotal;
+        
+        // Additional product info
+        private String productId;
+        private String category;
+        private String brand;
+        private Integer stock;
+    }
 }
 
 

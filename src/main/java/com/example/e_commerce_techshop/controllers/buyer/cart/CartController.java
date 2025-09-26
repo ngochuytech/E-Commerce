@@ -1,7 +1,6 @@
 package com.example.e_commerce_techshop.controllers.buyer.cart;
 
 import com.example.e_commerce_techshop.dtos.buyer.cart.CartDTO;
-import com.example.e_commerce_techshop.dtos.buyer.cart.CartResponseDTO;
 import com.example.e_commerce_techshop.responses.ApiResponse;
 import com.example.e_commerce_techshop.services.cart.ICartService;
 import jakarta.validation.Valid;
@@ -13,6 +12,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("${api.prefix}/buyer/cart")
@@ -44,7 +44,7 @@ public class CartController {
             String userId = getCurrentUserId();
             
             // Thêm vào giỏ hàng
-            CartResponseDTO cartResponse = cartService.addToCart(userId, cartDTO);
+            CartDTO cartResponse = cartService.addToCart(userId, cartDTO);
             
             return ResponseEntity.ok(ApiResponse.ok(cartResponse));
             
@@ -62,7 +62,7 @@ public class CartController {
     public ResponseEntity<?> getCart() {
         try {
             String userId = getCurrentUserId();
-            CartResponseDTO cartResponse = cartService.getCart(userId);
+            CartDTO cartResponse = cartService.getCart(userId);
             
             return ResponseEntity.ok(ApiResponse.ok(cartResponse));
             
@@ -79,20 +79,24 @@ public class CartController {
     @PutMapping("/{cartItemId}")
     public ResponseEntity<?> updateCartItem(
             @PathVariable String cartItemId,
-            @RequestParam Integer quantity) {
+            @RequestBody Map<String, Integer> request) {
         try {
             // Validate input
+            Integer quantity = request.get("quantity");
+            System.out.println("DEBUG CartController: quantity = " + quantity); // Debug log
             if (quantity == null) {
+                System.out.println("DEBUG CartController: quantity is null");
                 return ResponseEntity.badRequest()
                         .body(ApiResponse.error("Số lượng không được để trống"));
             }
             
-            String userId = getCurrentUserId();
-            CartResponseDTO cartResponse = cartService.updateCartItem(userId, cartItemId, quantity);
+            String userEmail = getCurrentUserEmail();
+            CartDTO cartResponse = cartService.updateCartItem(userEmail, cartItemId, quantity);
             
             return ResponseEntity.ok(ApiResponse.ok(cartResponse));
             
         } catch (Exception e) {
+            e.printStackTrace(); // Debug log
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("Lỗi khi cập nhật sản phẩm: " + e.getMessage()));
         }
@@ -105,8 +109,8 @@ public class CartController {
     @DeleteMapping("/{cartItemId}")
     public ResponseEntity<?> removeCartItem(@PathVariable String cartItemId) {
         try {
-            String userId = getCurrentUserId();
-            CartResponseDTO cartResponse = cartService.removeCartItem(userId, cartItemId);
+            String userEmail = getCurrentUserEmail();
+            CartDTO cartResponse = cartService.removeCartItem(userEmail, cartItemId);
             
             return ResponseEntity.ok(ApiResponse.ok(cartResponse));
             
@@ -124,7 +128,7 @@ public class CartController {
     public ResponseEntity<?> clearCart() {
         try {
             String userId = getCurrentUserId();
-            CartResponseDTO cartResponse = cartService.clearCart(userId);
+            CartDTO cartResponse = cartService.clearCart(userId);
             
             return ResponseEntity.ok(ApiResponse.ok(cartResponse));
             
@@ -159,6 +163,17 @@ public class CartController {
      * Lấy user ID từ JWT token
      */
     private String getCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getName() == null) {
+            throw new RuntimeException("Không tìm thấy thông tin người dùng");
+        }
+        return authentication.getName(); // Trong hệ thống hiện tại, getName() trả về email
+    }
+    
+    /**
+     * Lấy user email từ JWT token
+     */
+    private String getCurrentUserEmail() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || authentication.getName() == null) {
             throw new RuntimeException("Không tìm thấy thông tin người dùng");

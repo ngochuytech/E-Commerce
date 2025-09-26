@@ -1,10 +1,7 @@
 package com.example.e_commerce_techshop.services.order;
 
-import com.example.e_commerce_techshop.dtos.buyer.cart.CartResponseDTO;
-import com.example.e_commerce_techshop.dtos.buyer.order.CheckoutDTO;
-import com.example.e_commerce_techshop.dtos.buyer.order.OrderItemDTO;
-import com.example.e_commerce_techshop.dtos.buyer.order.OrderResponseDTO;
-import com.example.e_commerce_techshop.dtos.buyer.order.OrderSummaryDTO;
+import com.example.e_commerce_techshop.dtos.buyer.cart.CartDTO;
+import com.example.e_commerce_techshop.dtos.buyer.order.OrderDTO;
 import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
 import com.example.e_commerce_techshop.models.*;
 import com.example.e_commerce_techshop.repositories.*;
@@ -39,23 +36,23 @@ public class OrderService implements IOrderService {
     
     @Override
     @Transactional
-    public OrderResponseDTO checkout(String userEmail, CheckoutDTO checkoutDTO) throws Exception {
+    public OrderDTO checkout(String userEmail, OrderDTO orderDTO) throws Exception {
         // 1. Convert email to User object (y chang như B2C)
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy người dùng với Email: " + userEmail));
         String buyerId = user.getId();
         
         // 2. Validate address exists
-        addressRepository.findById(checkoutDTO.getAddressId())
-                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy địa chỉ với ID: " + checkoutDTO.getAddressId()));
+        addressRepository.findById(orderDTO.getAddressId())
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy địa chỉ với ID: " + orderDTO.getAddressId()));
         
         // 3. Validate payment method
-        if (!isValidPaymentMethod(checkoutDTO.getPaymentMethod())) {
-            throw new IllegalArgumentException("Phương thức thanh toán không hợp lệ: " + checkoutDTO.getPaymentMethod());
+        if (!isValidPaymentMethod(orderDTO.getPaymentMethod())) {
+            throw new IllegalArgumentException("Phương thức thanh toán không hợp lệ: " + orderDTO.getPaymentMethod());
         }
         
         // 4. Lấy cart hiện tại
-        CartResponseDTO cart = cartService.getCart(userEmail);
+        CartDTO cart = cartService.getCart(userEmail);
         
         // 5. Validate cart không rỗng
         if (cart.getItems().isEmpty()) {
@@ -93,9 +90,9 @@ public class OrderService implements IOrderService {
 
         // 7.2. Áp mã khuyến mãi cấp độ đơn (nếu có và hợp lệ)
         BigDecimal discountAmount = BigDecimal.ZERO;
-        if (checkoutDTO.getPromotionId() != null && !checkoutDTO.getPromotionId().isBlank()) {
+        if (orderDTO.getPromotionId() != null && !orderDTO.getPromotionId().isBlank()) {
             // Validate promotion thuộc store này và còn hiệu lực
-            Promotion promo = promotionRepository.findById(checkoutDTO.getPromotionId())
+            Promotion promo = promotionRepository.findById(orderDTO.getPromotionId())
                     .orElseThrow(() -> new DataNotFoundException("Không tìm thấy khuyến mãi"));
             if (!storeId.equals(promo.getStore().getId())) {
                 throw new IllegalArgumentException("Khuyến mãi không thuộc cửa hàng của đơn");
@@ -130,10 +127,10 @@ public class OrderService implements IOrderService {
         Order order = Order.builder()
                 .buyerId(buyerId)
                 .storeId(storeId)
-                .promotionId(checkoutDTO.getPromotionId())
+                .promotionId(orderDTO.getPromotionId())
                 .totalPrice(totalAfterDiscount)
-                .addressId(checkoutDTO.getAddressId())
-                .paymentMethod(checkoutDTO.getPaymentMethod())
+                .addressId(orderDTO.getAddressId())
+                .paymentMethod(orderDTO.getPaymentMethod())
                 .status("PENDING")
                 .build();
         
@@ -164,7 +161,7 @@ public class OrderService implements IOrderService {
     }
     
     @Override
-    public Page<OrderSummaryDTO> getOrderHistory(String userEmail, int page, int size, String status) throws Exception {
+    public Page<OrderDTO> getOrderHistory(String userEmail, int page, int size, String status) throws Exception {
         // 1. Convert email to User object
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy người dùng với Email: " + userEmail));
@@ -182,11 +179,11 @@ public class OrderService implements IOrderService {
         }
         
         // 4. Convert to DTO
-        return orders.map(this::convertToOrderSummaryDTO);
+        return orders.map(this::convertToOrderDTO);
     }
     
     @Override
-    public OrderResponseDTO getOrderDetail(String userEmail, String orderId) throws Exception {
+    public OrderDTO getOrderDetail(String userEmail, String orderId) throws Exception {
         // 1. Convert email to User object
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy người dùng với Email: " + userEmail));
@@ -200,12 +197,12 @@ public class OrderService implements IOrderService {
         List<OrderItem> orderItems = orderItemRepository.findByOrderId(orderId);
         
         // 4. Convert to DTO
-        return convertToOrderResponseDTO(order, orderItems);
+        return convertToOrderDTO(order, orderItems);
     }
     
     @Override
     @Transactional
-    public OrderResponseDTO cancelOrder(String userEmail, String orderId) throws Exception {
+    public OrderDTO cancelOrder(String userEmail, String orderId) throws Exception {
         // 1. Convert email to User object
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy người dùng với Email: " + userEmail));
@@ -233,7 +230,7 @@ public class OrderService implements IOrderService {
         }
         
         // 6. Return updated order
-        return convertToOrderResponseDTO(order, order.getOrderItems());
+        return convertToOrderDTO(order, order.getOrderItems());
     }
     
     
@@ -256,8 +253,8 @@ public class OrderService implements IOrderService {
         return counts;
     }
     
-    private OrderSummaryDTO convertToOrderSummaryDTO(Order order) {
-        return OrderSummaryDTO.builder()
+    private OrderDTO convertToOrderDTO(Order order) {
+        return OrderDTO.builder()
                 .id(order.getId())
                 .totalPrice(order.getTotalPrice())
                 .status(order.getStatus())
@@ -266,7 +263,7 @@ public class OrderService implements IOrderService {
                 .build();
     }
     
-    private OrderResponseDTO convertToOrderResponseDTO(Order order, List<OrderItem> orderItems) {
+    private OrderDTO convertToOrderDTO(Order order, List<OrderItem> orderItems) {
         // Optimize: Get all product variants at once to avoid N+1 queries
         List<String> productVariantIds = orderItems.stream()
                 .map(OrderItem::getProductVariantId)
@@ -276,11 +273,11 @@ public class OrderService implements IOrderService {
         Map<String, ProductVariant> productVariantMap = productVariants.stream()
                 .collect(Collectors.toMap(ProductVariant::getId, pv -> pv));
         
-        List<OrderItemDTO> orderItemDTOs = orderItems.stream()
+        List<OrderDTO.OrderItem> orderItemDTOs = orderItems.stream()
                 .map(item -> convertToOrderItemDTO(item, productVariantMap.get(item.getProductVariantId())))
                 .collect(Collectors.toList());
         
-        return OrderResponseDTO.builder()
+        return OrderDTO.builder()
                 .id(order.getId())
                 .buyerId(order.getBuyerId())
                 .storeId(order.getStoreId())
@@ -295,7 +292,7 @@ public class OrderService implements IOrderService {
                 .build();
     }
     
-    private OrderItemDTO convertToOrderItemDTO(OrderItem orderItem, ProductVariant productVariant) {
+    private OrderDTO.OrderItem convertToOrderItemDTO(OrderItem orderItem, ProductVariant productVariant) {
         String productName = productVariant != null ? productVariant.getName() : "Unknown Product";
         String productImage = productVariant != null ? productVariant.getImageUrl() : null;
         String storeName = "Unknown Store";
@@ -308,7 +305,7 @@ public class OrderService implements IOrderService {
             storeLogo = store.getLogo_url();
         }
         
-        return OrderItemDTO.builder()
+        return OrderDTO.OrderItem.builder()
                 .id(orderItem.getId())
                 .productVariantId(orderItem.getProductVariantId())
                 .productName(productName)

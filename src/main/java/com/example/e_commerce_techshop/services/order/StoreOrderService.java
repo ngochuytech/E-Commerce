@@ -1,9 +1,6 @@
 package com.example.e_commerce_techshop.services.order;
 
-import com.example.e_commerce_techshop.dtos.b2c.order.OrderItemResponse;
-import com.example.e_commerce_techshop.dtos.b2c.order.OrderResponse;
-import com.example.e_commerce_techshop.dtos.b2c.order.OrderSummaryResponse;
-import com.example.e_commerce_techshop.dtos.b2c.order.UpdateOrderStatusDTO;
+import com.example.e_commerce_techshop.dtos.b2c.order.OrderDTO;
 import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
 import com.example.e_commerce_techshop.models.*;
 import com.example.e_commerce_techshop.repositories.*;
@@ -34,41 +31,41 @@ public class StoreOrderService implements IStoreOrderService {
     private final StoreRepository storeRepository;
 
     @Override
-    public List<OrderSummaryResponse> getOrdersByStore(String storeId) throws Exception {
+    public List<OrderDTO> getOrdersByStore(String storeId) throws Exception {
         List<Order> orders = orderRepository.findByStoreId(storeId);
         return orders.stream()
-                .map(this::convertToOrderSummaryResponse)
+                .map(this::convertToOrderDTO)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<OrderResponse> getOrdersByStoreAndStatus(String storeId, String status) throws Exception {
+    public List<OrderDTO> getOrdersByStoreAndStatus(String storeId, String status) throws Exception {
         List<Order> orders = orderRepository.findByStoreIdAndStatus(storeId, status);
         return orders.stream()
-                .map(this::convertToOrderResponse)
+                .map(this::convertToOrderDTO)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<OrderResponse> getRecentOrdersByStore(String storeId, int limit) throws Exception {
+    public List<OrderDTO> getRecentOrdersByStore(String storeId, int limit) throws Exception {
         List<Order> orders = orderRepository.findByStoreId(storeId);
         return orders.stream()
                 .sorted((o1, o2) -> o2.getCreatedAt().compareTo(o1.getCreatedAt()))
                 .limit(limit)
-                .map(this::convertToOrderResponse)
+                .map(this::convertToOrderDTO)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public OrderResponse getOrderById(String orderId) throws Exception {
+    public OrderDTO getOrderById(String orderId) throws Exception {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy đơn hàng với ID: " + orderId));
-        return convertToOrderResponse(order);
+        return convertToOrderDTO(order);
     }
 
     @Override
     @Transactional
-    public OrderResponse updateOrderStatus(String orderId, UpdateOrderStatusDTO updateDTO) throws Exception {
+    public OrderDTO updateOrderStatus(String orderId, OrderDTO updateDTO) throws Exception {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy đơn hàng với ID: " + orderId));
         if (!isValidStatusTransition(order.getStatus(), updateDTO.getStatus())) {
@@ -77,12 +74,12 @@ public class StoreOrderService implements IStoreOrderService {
         order.setStatus(updateDTO.getStatus());
         order.setUpdatedAt(LocalDateTime.now());
         order = orderRepository.save(order);
-        return convertToOrderResponse(order);
+        return convertToOrderDTO(order);
     }
 
     @Override
     @Transactional
-    public OrderResponse cancelOrder(String orderId, String reason) throws Exception {
+    public OrderDTO cancelOrder(String orderId, String reason) throws Exception {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy đơn hàng với ID: " + orderId));
         if (!"PENDING".equals(order.getStatus()) && !"CONFIRMED".equals(order.getStatus())) {
@@ -96,7 +93,7 @@ public class StoreOrderService implements IStoreOrderService {
             productVariantRepository.save(productVariant);
         }
         order = orderRepository.save(order);
-        return convertToOrderResponse(order);
+        return convertToOrderDTO(order);
     }
 
     @Override
@@ -113,21 +110,21 @@ public class StoreOrderService implements IStoreOrderService {
     }
 
     @Override
-    public List<OrderResponse> getOrdersByDateRange(String storeId, String startDate, String endDate) throws Exception {
+    public List<OrderDTO> getOrdersByDateRange(String storeId, String startDate, String endDate) throws Exception {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         LocalDateTime start = LocalDateTime.parse(startDate, formatter);
         LocalDateTime end = LocalDateTime.parse(endDate, formatter);
         List<Order> orders = orderRepository.findByStoreIdAndDateRange(storeId, start, end);
-        return orders.stream().map(this::convertToOrderResponse).collect(Collectors.toList());
+        return orders.stream().map(this::convertToOrderDTO).collect(Collectors.toList());
     }
 
     @Override
-    public Page<OrderSummaryResponse> getOrdersByStoreWithPagination(String storeId, int page, int size, String status) throws Exception {
+    public Page<OrderDTO> getOrdersByStoreWithPagination(String storeId, int page, int size, String status) throws Exception {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<Order> ordersPage = (status != null && !status.equals("ALL"))
                 ? orderRepository.findByStoreIdAndStatus(storeId, status, pageable)
                 : orderRepository.findByStoreId(storeId, pageable);
-        return ordersPage.map(this::convertToOrderSummaryResponse);
+        return ordersPage.map(this::convertToOrderDTO);
     }
 
     private boolean isValidStatusTransition(String currentStatus, String newStatus) {
@@ -142,16 +139,16 @@ public class StoreOrderService implements IStoreOrderService {
         return validTransitions.getOrDefault(currentStatus, List.of()).contains(newStatus);
     }
 
-    private OrderResponse convertToOrderResponse(Order order) {
+    private OrderDTO convertToOrderDTO(Order order) {
         User buyer = userRepository.findById(order.getBuyerId()).orElse(null);
         String buyerName = buyer != null ? buyer.getFullName() : "Unknown Buyer";
         String buyerEmail = buyer != null ? buyer.getEmail() : "Unknown Email";
         String buyerPhone = buyer != null ? buyer.getPhone() : "Unknown Phone";
 
-        List<OrderItemResponse> orderItems = orderItemRepository.findByOrderId(order.getId())
-                .stream().map(this::convertToOrderItemResponse).collect(Collectors.toList());
+        List<OrderDTO.OrderItem> orderItems = orderItemRepository.findByOrderId(order.getId())
+                .stream().map(this::convertToOrderItemDTO).collect(Collectors.toList());
 
-        return OrderResponse.builder()
+        return OrderDTO.builder()
                 .id(order.getId())
                 .buyerId(order.getBuyerId())
                 .buyerName(buyerName)
@@ -169,23 +166,8 @@ public class StoreOrderService implements IStoreOrderService {
                 .build();
     }
 
-    private OrderSummaryResponse convertToOrderSummaryResponse(Order order) {
-        User buyer = userRepository.findById(order.getBuyerId()).orElse(null);
-        String buyerName = buyer != null ? buyer.getFullName() : "Unknown Buyer";
-        return OrderSummaryResponse.builder()
-                .id(order.getId())
-                .buyerId(order.getBuyerId())
-                .buyerName(buyerName)
-                .totalPrice(order.getTotalPrice())
-                .status(order.getStatus())
-                .itemCount((int) orderItemRepository.countByOrderId(order.getId()))
-                .createdAt(order.getCreatedAt())
-                .updatedAt(order.getUpdatedAt())
-                .paymentMethod(order.getPaymentMethod())
-                .build();
-    }
 
-    private OrderItemResponse convertToOrderItemResponse(OrderItem orderItem) {
+    private OrderDTO.OrderItem convertToOrderItemDTO(OrderItem orderItem) {
         ProductVariant productVariant = productVariantRepository.findById(orderItem.getProductVariantId()).orElse(null);
         String productName = "Unknown Product";
         String variantName = "Unknown Variant";
@@ -207,7 +189,7 @@ public class StoreOrderService implements IStoreOrderService {
                 }
             }
         }
-        return OrderItemResponse.builder()
+        return OrderDTO.OrderItem.builder()
                 .id(orderItem.getId())
                 .productVariantId(orderItem.getProductVariantId())
                 .productName(productName)

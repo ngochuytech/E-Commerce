@@ -1,8 +1,6 @@
 package com.example.e_commerce_techshop.controllers.buyer.order;
 
-import com.example.e_commerce_techshop.dtos.buyer.order.CheckoutDTO;
-import com.example.e_commerce_techshop.dtos.buyer.order.OrderResponseDTO;
-import com.example.e_commerce_techshop.dtos.buyer.order.OrderSummaryDTO;
+import com.example.e_commerce_techshop.dtos.buyer.order.OrderDTO;
 import com.example.e_commerce_techshop.responses.ApiResponse;
 import com.example.e_commerce_techshop.services.order.IOrderService;
 import jakarta.validation.Valid;
@@ -30,8 +28,8 @@ public class BuyerOrderController {
     }
 
     @PostMapping("/checkout")
-    public ResponseEntity<ApiResponse<OrderResponseDTO>> checkout(
-            @Valid @RequestBody CheckoutDTO checkoutDTO,
+    public ResponseEntity<ApiResponse<OrderDTO>> checkout(
+            @Valid @RequestBody OrderDTO orderDTO,
             BindingResult result) {
         
         if (result.hasErrors()) {
@@ -42,7 +40,7 @@ public class BuyerOrderController {
         
         try {
             String userEmail = getCurrentUserEmail();
-            OrderResponseDTO order = orderService.checkout(userEmail, checkoutDTO);
+            OrderDTO order = orderService.checkout(userEmail, orderDTO);
             
             return ResponseEntity.ok(
                 ApiResponse.ok(order)
@@ -55,7 +53,7 @@ public class BuyerOrderController {
     }
 
     @GetMapping("")
-    public ResponseEntity<ApiResponse<Page<OrderSummaryDTO>>> getOrderHistory(
+    public ResponseEntity<ApiResponse<Page<OrderDTO>>> getOrderHistory(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String status,
@@ -64,7 +62,7 @@ public class BuyerOrderController {
     ) {
         try {
             String userEmail = getCurrentUserEmail();
-            Page<OrderSummaryDTO> orderPage = orderService.getOrderHistory(userEmail, page, size, status);
+            Page<OrderDTO> orderPage = orderService.getOrderHistory(userEmail, page, size, status);
             
             return ResponseEntity.ok(
                 ApiResponse.ok(orderPage)
@@ -77,10 +75,10 @@ public class BuyerOrderController {
     }
 
     @GetMapping("/{orderId}")
-    public ResponseEntity<ApiResponse<OrderResponseDTO>> getOrderDetail(@PathVariable String orderId) {
+    public ResponseEntity<ApiResponse<OrderDTO>> getOrderDetail(@PathVariable String orderId) {
         try {
             String userEmail = getCurrentUserEmail();
-            OrderResponseDTO orderDetail = orderService.getOrderDetail(userEmail, orderId);
+            OrderDTO orderDetail = orderService.getOrderDetail(userEmail, orderId);
             
             return ResponseEntity.ok(
                 ApiResponse.ok(orderDetail)
@@ -93,13 +91,13 @@ public class BuyerOrderController {
     }
 
     @PutMapping("/{orderId}/cancel")
-    public ResponseEntity<ApiResponse<OrderResponseDTO>> cancelOrder(
+    public ResponseEntity<ApiResponse<OrderDTO>> cancelOrder(
             @PathVariable String orderId,
             @RequestBody(required = false) String reason
     ) {
         try {
             String userEmail = getCurrentUserEmail();
-            OrderResponseDTO cancelledOrder = orderService.cancelOrder(userEmail, orderId);
+            OrderDTO cancelledOrder = orderService.cancelOrder(userEmail, orderId);
             
             return ResponseEntity.ok(
                 ApiResponse.ok(cancelledOrder)

@@ -1,8 +1,7 @@
 package com.example.e_commerce_techshop.services.order;
 
-import com.example.e_commerce_techshop.dtos.buyer.order.CheckoutDTO;
-import com.example.e_commerce_techshop.dtos.buyer.order.OrderResponseDTO;
-import com.example.e_commerce_techshop.dtos.buyer.order.OrderSummaryDTO;
+
+import com.example.e_commerce_techshop.dtos.buyer.order.OrderDTO;
 import org.springframework.data.domain.Page;
 
 import java.util.Map;
@@ -12,10 +11,10 @@ public interface IOrderService {
     /**
      * Tạo đơn hàng từ cart
      * @param userEmail Email của user
-     * @param checkoutDTO Thông tin checkout
-     * @return OrderResponseDTO
+     * @param orderDTO Thông tin checkout
+     * @return OrderDTO
      */
-    OrderResponseDTO checkout(String userEmail, CheckoutDTO checkoutDTO) throws Exception;
+    OrderDTO checkout(String userEmail, OrderDTO orderDTO) throws Exception;
     
     /**
      * Lấy lịch sử đơn hàng
@@ -23,25 +22,25 @@ public interface IOrderService {
      * @param page Số trang (0-based)
      * @param size Kích thước trang
      * @param status Trạng thái đơn hàng
-     * @return Page<OrderSummaryDTO>
+     * @return Page<OrderDTO>
      */
-    Page<OrderSummaryDTO> getOrderHistory(String userEmail, int page, int size, String status) throws Exception;
+    Page<OrderDTO> getOrderHistory(String userEmail, int page, int size, String status) throws Exception;
     
     /**
      * Lấy chi tiết đơn hàng
      * @param userEmail Email của user
      * @param orderId ID đơn hàng
-     * @return OrderResponseDTO
+     * @return OrderDTO
      */
-    OrderResponseDTO getOrderDetail(String userEmail, String orderId) throws Exception;
+    OrderDTO getOrderDetail(String userEmail, String orderId) throws Exception;
     
     /**
      * Hủy đơn hàng
      * @param userEmail Email của user
      * @param orderId ID đơn hàng
-     * @return OrderResponseDTO
+     * @return OrderDTO
      */
-    OrderResponseDTO cancelOrder(String userEmail, String orderId) throws Exception;
+    OrderDTO cancelOrder(String userEmail, String orderId) throws Exception;
     
     /**
      * Đếm số đơn hàng theo trạng thái

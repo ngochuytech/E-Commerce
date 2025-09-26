@@ -1,8 +1,6 @@
 package com.example.e_commerce_techshop.services.cart;
 
 import com.example.e_commerce_techshop.dtos.buyer.cart.CartDTO;
-import com.example.e_commerce_techshop.dtos.buyer.cart.CartItemDTO;
-import com.example.e_commerce_techshop.dtos.buyer.cart.CartResponseDTO;
 import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
 import com.example.e_commerce_techshop.models.CardItem;
 import com.example.e_commerce_techshop.models.Cart;
@@ -36,7 +34,7 @@ public class CartService implements ICartService {
     
     @Override
     @Transactional
-    public CartResponseDTO addToCart(String userEmail, CartDTO cartDTO) throws Exception {
+    public CartDTO addToCart(String userEmail, CartDTO cartDTO) throws Exception {
         // 1. Validate input
         validateCartInput(cartDTO);
         
@@ -124,7 +122,7 @@ public class CartService implements ICartService {
     }
     
     @Override
-    public CartResponseDTO getCart(String userEmail) throws Exception {
+    public CartDTO getCart(String userEmail) throws Exception {
         // Convert email to User object (y chang như B2C)
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy người dùng với Email: " + userEmail));
@@ -135,7 +133,7 @@ public class CartService implements ICartService {
                 .orElse(null);
         
         if (cart == null) {
-            return CartResponseDTO.builder()
+            return CartDTO.builder()
                     .cartId("empty")
                     .userId(userId)
                     .items(new ArrayList<>())
@@ -151,7 +149,7 @@ public class CartService implements ICartService {
         List<CardItem> cardItems = cardItemRepository.findByCartId(cart.getId());
         
         if (cardItems.isEmpty()) {
-            return CartResponseDTO.builder()
+            return CartDTO.builder()
                     .cartId(cart.getId())
                     .userId(userId)
                     .items(new ArrayList<>())
@@ -163,7 +161,7 @@ public class CartService implements ICartService {
                     .build();
         }
         
-        List<CartItemDTO> itemDTOs = new ArrayList<>();
+        List<CartDTO.CartItem> itemDTOs = new ArrayList<>();
         long subtotal = 0;
         int totalItems = 0;
         
@@ -172,7 +170,7 @@ public class CartService implements ICartService {
                     .orElse(null);
             
             if (productVariant != null) {
-                CartItemDTO itemDTO = CartItemDTO.builder()
+                CartDTO.CartItem itemDTO = CartDTO.CartItem.builder()
                         .cartItemId(cardItem.getId())
                         .productVariantId(cardItem.getProductVariantId())
                         .productName(productVariant.getProduct().getName())
@@ -194,7 +192,7 @@ public class CartService implements ICartService {
         long tax = Math.round(subtotal * VAT_RATE);
         long total = subtotal + tax;
         
-        return CartResponseDTO.builder()
+        return CartDTO.builder()
                 .cartId(cart.getId())
                 .userId(userId)
                 .items(itemDTOs)
@@ -208,9 +206,10 @@ public class CartService implements ICartService {
     
     @Override
     @Transactional
-    public CartResponseDTO updateCartItem(String userEmail, String cartItemId, Integer quantity) throws Exception {
+    public CartDTO updateCartItem(String userEmail, String cartItemId, Integer quantity) throws Exception {
+        System.out.println("DEBUG CartService: userEmail = " + userEmail + ", cartItemId = " + cartItemId + ", quantity = " + quantity);
         // 1. Validate input
-        if (quantity == null || quantity < 0) {
+        if (quantity == null || quantity <= 0) {
             throw new IllegalArgumentException("Số lượng không hợp lệ");
         }
         
@@ -270,7 +269,7 @@ public class CartService implements ICartService {
     
     @Override
     @Transactional
-    public CartResponseDTO removeCartItem(String userEmail, String cartItemId) throws Exception {
+    public CartDTO removeCartItem(String userEmail, String cartItemId) throws Exception {
         // Convert email to User object (y chang như B2C)
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy người dùng với Email: " + userEmail));
@@ -286,7 +285,7 @@ public class CartService implements ICartService {
         
         cardItemRepository.delete(cardItem);
         
-        CartResponseDTO response = getCart(userEmail);
+        CartDTO response = getCart(userEmail);
         response.setMessage("Đã xóa sản phẩm khỏi giỏ hàng");
         
         return response;
@@ -294,7 +293,7 @@ public class CartService implements ICartService {
     
     @Override
     @Transactional
-    public CartResponseDTO clearCart(String userEmail) throws Exception {
+    public CartDTO clearCart(String userEmail) throws Exception {
         // Convert email to User object (y chang như B2C)
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy người dùng với Email: " + userEmail));
@@ -309,7 +308,7 @@ public class CartService implements ICartService {
             cardItemRepository.deleteByCartId(cart.getId());
         }
         
-        return CartResponseDTO.builder()
+        return CartDTO.builder()
                 .cartId("empty")
                 .userId(userEmail)
                 .items(new ArrayList<>())
