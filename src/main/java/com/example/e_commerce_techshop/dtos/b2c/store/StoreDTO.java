@@ -20,7 +20,7 @@ public class StoreDTO {
     @JsonProperty("banner_url")
     private String bannerUrl;
 
-    @NotBlank(message = "Trạng thái không được để trống")
+    // Optional on create; default will be PENDING
     private String status;
 
     @JsonProperty("owner_id")
