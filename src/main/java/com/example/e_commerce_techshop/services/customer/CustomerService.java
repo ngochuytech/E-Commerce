@@ -26,7 +26,7 @@ public class CustomerService implements ICustomerService {
     public List<CustomerResponse> getCustomersByStore(String storeId) {
         List<Order> orders = orderRepository.findByStoreId(storeId);
         List<String> customerIds = orders.stream()
-                .map(Order::getBuyerId)
+                .map(order -> order.getBuyer().getId())
                 .distinct()
                 .collect(Collectors.toList());
         
@@ -47,7 +47,7 @@ public class CustomerService implements ICustomerService {
     @Override
     public List<OrderResponse> getCustomerOrders(String customerId, String storeId) {
         List<Order> orders = orderRepository.findByStoreId(storeId).stream()
-                .filter(order -> order.getBuyerId().equals(customerId))
+                .filter(order -> order.getBuyer().getId().equals(customerId))
                 .collect(Collectors.toList());
         
         return orders.stream()
@@ -61,7 +61,7 @@ public class CustomerService implements ICustomerService {
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy khách hàng với ID: " + customerId));
         
         List<Order> customerOrders = orderRepository.findByStoreId(storeId).stream()
-                .filter(order -> order.getBuyerId().equals(customerId))
+                .filter(order -> order.getBuyer().getId().equals(customerId))
                 .collect(Collectors.toList());
         
         int totalOrders = customerOrders.size();

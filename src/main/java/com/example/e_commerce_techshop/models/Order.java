@@ -18,26 +18,14 @@ public class Order extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @Column(name = "buyer_id", nullable = false)
-    private String buyerId;
-
-    @Column(name = "store_id", nullable = false)
-    private String storeId;
-
-    @Column(name = "promotion_id")
-    private String promotionId;
-
     @Column(name = "total_price", nullable = false)
     private BigDecimal totalPrice;
-
-    @Column(name = "address_id", nullable = false)
-    private String addressId;
 
     @Column(name = "payment_method", nullable = false)
     private String paymentMethod;
 
     @Column(name = "status", nullable = false)
-    private String status; // PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED
+    private String status = "PENDING"; // PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<OrderItem> orderItems;
@@ -57,4 +45,8 @@ public class Order extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "address_id", insertable = false, updatable = false)
     private Address address;
+}
+
+enum OrderStatus {
+    PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED
 }

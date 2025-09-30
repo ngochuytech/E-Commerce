@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Positive;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.Map;
 
 @Data
 @Builder
@@ -18,11 +19,11 @@ public class OrderDTO {
     @NotNull(message = "ID cửa hàng không được để trống")
     private String storeId;
 
-    private String promotionId;
+    private Map<String, String> promotionIds;
 
     @NotNull(message = "Tổng giá không được để trống")
     @Positive(message = "Tổng giá phải lớn hơn 0")
-    private BigDecimal totalPrice;
+    private Long totalPrice;
 
     @NotNull(message = "ID địa chỉ không được để trống")
     private String addressId;

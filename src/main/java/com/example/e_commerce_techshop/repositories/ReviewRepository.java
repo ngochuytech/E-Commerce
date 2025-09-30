@@ -14,9 +14,11 @@ public interface ReviewRepository extends JpaRepository<Review, String> {
     // Find reviews by store (through product variants)
     @Query("SELECT r FROM Review r JOIN r.productVariant pv JOIN pv.product p WHERE p.store.id = :storeId")
     List<Review> findByStoreId(@Param("storeId") String storeId);
+    List<Review> findByOrder_StoreId(@Param("storeId") String storeId);
+
 
     // Find reviews by product
-    @Query("SELECT r FROM Review r WHERE r.productVariantId IN (SELECT pv.id FROM ProductVariant pv WHERE pv.product.id = :productId)")
+    @Query("SELECT r FROM Review r WHERE r.productVariant.id IN (SELECT pv.id FROM ProductVariant pv WHERE pv.product.id = :productId)")
     List<Review> findByProductId(@Param("productId") String productId);
 
     // Find reviews by product variant
@@ -37,6 +39,6 @@ public interface ReviewRepository extends JpaRepository<Review, String> {
     Double getAverageRatingByStoreId(@Param("storeId") String storeId);
 
     // Get reviews without seller response
-    @Query("SELECT r FROM Review r JOIN r.productVariant pv JOIN pv.product p WHERE p.store.id = :storeId AND r.sellerResponse IS NULL")
-    List<Review> findPendingReviewsByStoreId(@Param("storeId") String storeId);
+//    @Query("SELECT r FROM Review r JOIN r.productVariant pv JOIN pv.product p WHERE p.store.id = :storeId AND r.sellerResponse IS NULL")
+//    List<Review> findPendingReviewsByStoreId(@Param("storeId") String storeId);
 }

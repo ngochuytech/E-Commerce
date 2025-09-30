@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface PromotionRepository extends JpaRepository<Promotion, String> {
     List<Promotion> findByStoreId(String storeId);
@@ -21,6 +22,8 @@ public interface PromotionRepository extends JpaRepository<Promotion, String> {
     
     @Query("SELECT p FROM Promotion p WHERE p.endDate < :now")
     List<Promotion> findExpiredPromotions(@Param("now") LocalDateTime now);
+
+    Optional<Promotion> findByIdAndStoreId(String id, String storeId);
 }
 
 

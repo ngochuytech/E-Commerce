@@ -22,17 +22,17 @@ public interface OrderRepository extends JpaRepository<Order, String> {
     List<Order> findByStoreIdAndStatus(String storeId, String status);
     
     // Find orders by date range
-    @Query("SELECT o FROM Order o WHERE o.storeId = :storeId AND o.createdAt BETWEEN :startDate AND :endDate")
+    @Query("SELECT o FROM Order o WHERE o.store.id = :storeId AND o.createdAt BETWEEN :startDate AND :endDate")
     List<Order> findByStoreIdAndDateRange(@Param("storeId") String storeId, 
                                           @Param("startDate") LocalDateTime startDate, 
                                           @Param("endDate") LocalDateTime endDate);
     
     // Count orders by status
-    @Query("SELECT COUNT(o) FROM Order o WHERE o.storeId = :storeId AND o.status = :status")
+    @Query("SELECT COUNT(o) FROM Order o WHERE o.store.id = :storeId AND o.status = :status")
     Long countByStoreIdAndStatus(@Param("storeId") String storeId, @Param("status") String status);
     
     // Find recent orders
-    @Query("SELECT o FROM Order o WHERE o.storeId = :storeId ORDER BY o.createdAt DESC")
+    @Query("SELECT o FROM Order o WHERE o.store.id = :storeId ORDER BY o.createdAt DESC")
     List<Order> findRecentOrdersByStoreId(@Param("storeId") String storeId);
 }
 

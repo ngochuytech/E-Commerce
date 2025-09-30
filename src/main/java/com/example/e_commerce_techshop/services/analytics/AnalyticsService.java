@@ -153,7 +153,7 @@ public class AnalyticsService implements IAnalyticsService {
     public Map<String, Object> getCustomerAnalytics(String storeId, String period) {
         List<Order> orders = orderRepository.findByStoreId(storeId);
         long uniqueCustomers = orders.stream()
-                .map(Order::getBuyerId)
+                .map(order -> order.getBuyer().getId())
                 .distinct()
                 .count();
         
@@ -186,11 +186,12 @@ public class AnalyticsService implements IAnalyticsService {
         
         Long totalReviews = reviewRepository.countByStoreId(storeId);
         Double averageRating = reviewRepository.getAverageRatingByStoreId(storeId);
-        Long pendingReviews = (long) reviewRepository.findPendingReviewsByStoreId(storeId).size();
+        // Seller Response ko có trong DB
+//        Long pendingReviews = (long) reviewRepository.findPendingReviewsByStoreId(storeId).size();
         
         result.put("totalReviews", totalReviews);
         result.put("averageRating", averageRating);
-        result.put("pendingReviews", pendingReviews);
+//        result.put("pendingReviews", pendingReviews);
         
         return result;
     }
@@ -208,10 +209,11 @@ public class AnalyticsService implements IAnalyticsService {
     
     @Override
     public Map<String, Object> getPendingReviewsAnalytics(String storeId) {
-        List<Review> pendingReviews = reviewRepository.findPendingReviewsByStoreId(storeId);
+        // Seller Response ko có trong DB
+//        List<Review> pendingReviews = reviewRepository.findPendingReviewsByStoreId(storeId);
         Map<String, Object> result = new HashMap<>();
-        result.put("pendingCount", pendingReviews.size());
-        result.put("pendingReviews", pendingReviews);
+//        result.put("pendingCount", pendingReviews.size());
+//        result.put("pendingReviews", pendingReviews);
         return result;
     }
     

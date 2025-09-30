@@ -29,12 +29,13 @@ public class ReviewResponse {
     public static ReviewResponse fromReview(Review review) {
         return ReviewResponse.builder()
                 .id(review.getId())
-                .orderId(review.getOrderId())
-                .productVariantId(review.getProductVariantId())
-                .userId(review.getUserId())
+                .orderId(review.getOrder().getId())
+                .productVariantId(review.getProductVariant().getId())
+                .userId(review.getUser().getId())
                 .rating(review.getRating())
                 .comment(review.getComment())
-                .sellerResponse(review.getSellerResponse())
+                // Seller Response ko có trong DB
+//                .sellerResponse(review.getSellerResponse())
                 .createdAt(review.getCreatedAt())
                 .updatedAt(review.getUpdatedAt())
                 .build();

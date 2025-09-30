@@ -15,23 +15,15 @@ public class Review extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @Column(name = "order_id", nullable = false)
-    private String orderId;
-
-    @Column(name = "product_variant_id", nullable = false)
-    private String productVariantId;
-
-    @Column(name = "user_id", nullable = false)
-    private String userId;
-
     @Column(name = "rating", nullable = false)
     private Integer rating; // 1-5
 
     @Column(name = "comment")
     private String comment;
 
-    @Column(name = "seller_response")
-    private String sellerResponse;
+    // Seller Response dùng để làm gì ?
+//    @Column(name = "seller_response")
+//    private String sellerResponse;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", insertable = false, updatable = false)

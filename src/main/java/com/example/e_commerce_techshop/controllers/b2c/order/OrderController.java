@@ -1,10 +1,13 @@
 package com.example.e_commerce_techshop.controllers.b2c.order;
 
+import com.example.e_commerce_techshop.dtos.b2c.order.OrderDTO;
 import com.example.e_commerce_techshop.responses.ApiResponse;
 import com.example.e_commerce_techshop.responses.OrderResponse;
 import com.example.e_commerce_techshop.services.order.IOrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -109,6 +112,23 @@ public class OrderController {
             List<OrderResponse> orders = orderService.getOrdersByDateRange(storeId, startDate, endDate);
             return ResponseEntity.ok(ApiResponse.ok(orders));
         } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @PostMapping("/create")
+    public ResponseEntity<?> createOrders(@RequestBody OrderDTO orderDTO, BindingResult result){
+        try{
+            if(result.hasErrors()){
+                List<String> errorMessages = result.getFieldErrors()
+                        .stream()
+                        .map(FieldError::getDefaultMessage)
+                        .toList();
+                return ResponseEntity.badRequest().body(new ApiResponse<>(false, null, String.join(", ", errorMessages)));
+            }
+            orderService.createOrder(orderDTO);
+            return ResponseEntity.ok(ApiResponse.ok("Tạo đơn hàng mới thành công!"));
+        } catch (Exception e){
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         }
     }

@@ -18,7 +18,7 @@ public class ReviewService implements IReviewService {
     
     @Override
     public List<ReviewResponse> getReviewsByStore(String storeId) {
-        List<Review> reviews = reviewRepository.findByStoreId(storeId);
+        List<Review> reviews = reviewRepository.findByOrder_StoreId(storeId);
         return reviews.stream()
                 .map(ReviewResponse::fromReview)
                 .collect(Collectors.toList());
@@ -50,21 +50,27 @@ public class ReviewService implements IReviewService {
     
     @Override
     public ReviewResponse respondToReview(String reviewId, String response) {
-        Review review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy đánh giá với ID: " + reviewId));
-        
-        review.setSellerResponse(response);
-        Review updatedReview = reviewRepository.save(review);
-        
-        return ReviewResponse.fromReview(updatedReview);
+//        Review review = reviewRepository.findById(reviewId)
+//                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy đánh giá với ID: " + reviewId));
+//
+//        review.setSellerResponse(response);
+//        Review updatedReview = reviewRepository.save(review);
+//
+//        return ReviewResponse.fromReview(updatedReview);
+
+        // Seller Response ko có trong DB
+        return null;
     }
     
     @Override
     public List<ReviewResponse> getPendingReviewsByStore(String storeId) {
-        List<Review> reviews = reviewRepository.findPendingReviewsByStoreId(storeId);
-        return reviews.stream()
-                .map(ReviewResponse::fromReview)
-                .collect(Collectors.toList());
+//        List<Review> reviews = reviewRepository.findPendingReviewsByStoreId(storeId);
+//        return reviews.stream()
+//                .map(ReviewResponse::fromReview)
+//                .collect(Collectors.toList());
+
+        // Seller Response ko có trong DB
+        return null;
     }
     
     @Override

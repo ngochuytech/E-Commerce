@@ -17,17 +17,11 @@ public class OrderItem extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @Column(name = "order_id", nullable = false)
-    private String orderId;
-
-    @Column(name = "product_variant_id", nullable = false)
-    private String productVariantId;
-
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
 
     @Column(name = "price", nullable = false)
-    private BigDecimal price;
+    private Long price;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", insertable = false, updatable = false)

@@ -8,7 +8,7 @@ import java.util.List;
 public interface IOrderService {
     
     // Create order (for buyers)
-    OrderResponse createOrder(OrderDTO orderDTO);
+    void createOrder(OrderDTO orderDTO) throws Exception;
     
     // Update order status (for sellers)
     OrderResponse updateOrderStatus(String orderId, String status);
