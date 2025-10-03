@@ -14,4 +14,8 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
 
     List<ProductVariant> findByProduct_CategoryAndProduct_Brand_Name(String category, String brand);
 
+    List<ProductVariant> findByStockLessThan(Integer stock);
+
+    List<ProductVariant> findByStockEquals(Integer stock);
+
 }

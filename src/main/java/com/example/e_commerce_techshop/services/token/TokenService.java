@@ -39,13 +39,13 @@ public class TokenService implements ITokenService{
             // Ktra xem trong danh sách userTokens có tồn tại ít nhất 1 token
             // ko phải là thiết bị di động
             boolean hasNonMobileToken = !userTokens.stream().allMatch(Token::isMobile);
-            Token tokenToDelete;
             if(hasNonMobileToken) {
                 // Xóa token ko phải là token của mobile
-                tokenToDelete = userTokens.stream()
+                Token tokenToDelete = userTokens.stream()
                         .filter(userToken -> !userToken.isMobile())
                         .findFirst()
                         .orElse(userTokens.getFirst());
+                tokenRepository.delete(tokenToDelete);
             }
             else {
                 tokenRepository.delete(userTokens.getFirst());

@@ -19,14 +19,17 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username:
-    password:
+    username: ngochuymail25@gmail.com
+    password: pqzy sybn nnim quji
     properties:
       mail:
         smtp:
           auth: true
           starttls:
             enable: true
+          ssl:
+            trust: "*"
+        debug: false
   security:
     oauth2:
       client:
