@@ -3,13 +3,12 @@ version: '3.8'
 services:
   # MySQL Database
   mysql:
-    image: mysql:8.0
+    image: mariadb:10.6
     container_name: ecommerce-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_ROOT_PASSWORD: ""
       MYSQL_DATABASE: e-commerce
-      MYSQL_USER: ecommerce_user
-      MYSQL_PASSWORD: ecommerce_password
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
     ports:
       - "3306:3306"
     volumes:
@@ -19,15 +18,32 @@ services:
       - ecommerce-network
     restart: unless-stopped
 
+  # Spring Boot Application
+  app:
+    build: .
+    container_name: ecommerce-app
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USERNAME=root
+      - DB_PASSWORD=
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql
+    networks:
+      - ecommerce-network
+    restart: unless-stopped
+
   # phpMyAdmin (Optional - for database management)
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
     container_name: ecommerce-phpmyadmin
     environment:
+      PMA_ARBITRARY: 1
       PMA_HOST: mysql
-      PMA_PORT: 3306
-      PMA_USER: ecommerce_user
-      PMA_PASSWORD: ecommerce_password
+      PMA_USER: root
+      PMA_PASSWORD: ""
     ports:
       - "8081:80"
     depends_on:

@@ -3,8 +3,6 @@ package com.example.e_commerce_techshop.models;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.math.BigDecimal;
-
 @Entity
 @Table(name = "order_items")
 @Getter
@@ -12,7 +10,7 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class OrderItem extends BaseEntity {
+public class OrderItem {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
@@ -24,11 +22,11 @@ public class OrderItem extends BaseEntity {
     private Long price;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id", insertable = false, updatable = false)
+    @JoinColumn(name = "order_id")
     private Order order;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_variant_id", insertable = false, updatable = false)
+    @JoinColumn(name = "product_variant_id")
     private ProductVariant productVariant;
 }
 

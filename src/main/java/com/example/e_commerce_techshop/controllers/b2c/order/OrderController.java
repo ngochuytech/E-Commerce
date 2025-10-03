@@ -2,137 +2,169 @@ package com.example.e_commerce_techshop.controllers.b2c.order;
 
 import com.example.e_commerce_techshop.dtos.b2c.order.OrderDTO;
 import com.example.e_commerce_techshop.responses.ApiResponse;
-import com.example.e_commerce_techshop.responses.OrderResponse;
-import com.example.e_commerce_techshop.services.order.IOrderService;
+import com.example.e_commerce_techshop.services.order.IStoreOrderService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.BindingResult;
-import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("${api.prefix}/b2c/orders")
 @RequiredArgsConstructor
 public class OrderController {
-    
-    private final IOrderService orderService;
-    
-    // Get orders by store
+
+    private final IStoreOrderService sellerOrderService;
+
+    private String getCurrentStoreOwnerEmail() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getName() == null) {
+            throw new RuntimeException("Không tìm thấy thông tin người dùng");
+        }
+        return authentication.getName(); // Returns email
+    }
+
+    /**
+     * Lấy tất cả orders của store
+     */
     @GetMapping("/store/{storeId}")
-    public ResponseEntity<?> getOrdersByStore(@PathVariable String storeId) {
+    public ResponseEntity<ApiResponse<List<OrderDTO>>> getOrdersByStore(@PathVariable String storeId) {
         try {
-            List<OrderResponse> orders = orderService.getOrdersByStore(storeId);
+            List<OrderDTO> orders = sellerOrderService.getOrdersByStore(storeId);
             return ResponseEntity.ok(ApiResponse.ok(orders));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         }
     }
-    
-    // Get order by ID
+
+    /**
+     * Lấy chi tiết order theo ID
+     */
     @GetMapping("/{orderId}")
-    public ResponseEntity<?> getOrderById(@PathVariable String orderId) {
+    public ResponseEntity<ApiResponse<OrderDTO>> getOrderById(@PathVariable String orderId) {
         try {
-            OrderResponse order = orderService.getOrderById(orderId);
+            OrderDTO order = sellerOrderService.getOrderById(orderId);
             return ResponseEntity.ok(ApiResponse.ok(order));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         }
     }
-    
-    // Update order status
+
+    /**
+     * Cập nhật trạng thái order
+     */
     @PutMapping("/{orderId}/status")
-    public ResponseEntity<?> updateOrderStatus(@PathVariable String orderId, @RequestParam String status) {
+    public ResponseEntity<ApiResponse<OrderDTO>> updateOrderStatus(
+            @PathVariable String orderId,
+            @Valid @RequestBody OrderDTO updateDTO,
+            BindingResult bindingResult) {
+        
+        if (bindingResult.hasErrors()) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Dữ liệu không hợp lệ"));
+        }
+        
         try {
-            OrderResponse order = orderService.updateOrderStatus(orderId, status);
-            return ResponseEntity.ok(ApiResponse.ok("Cập nhật trạng thái đơn hàng thành công!"));
+            OrderDTO order = sellerOrderService.updateOrderStatus(orderId, updateDTO);
+            return ResponseEntity.ok(ApiResponse.ok(order));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         }
     }
-    
-    // Get orders by store and status
+
+    /**
+     * Lấy orders theo store và status
+     */
     @GetMapping("/store/{storeId}/status/{status}")
-    public ResponseEntity<?> getOrdersByStoreAndStatus(@PathVariable String storeId, @PathVariable String status) {
+    public ResponseEntity<ApiResponse<List<OrderDTO>>> getOrdersByStoreAndStatus(
+            @PathVariable String storeId, 
+            @PathVariable String status) {
         try {
-            List<OrderResponse> orders = orderService.getOrdersByStoreAndStatus(storeId, status);
-            return ResponseEntity.ok(ApiResponse.ok(orders));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
-        }
-    }
-    
-    // Get recent orders
-    @GetMapping("/store/{storeId}/recent")
-    public ResponseEntity<?> getRecentOrders(@PathVariable String storeId, @RequestParam(defaultValue = "10") int limit) {
-        try {
-            List<OrderResponse> orders = orderService.getRecentOrdersByStore(storeId, limit);
-            return ResponseEntity.ok(ApiResponse.ok(orders));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
-        }
-    }
-    
-    // Cancel order
-    @PutMapping("/{orderId}/cancel")
-    public ResponseEntity<?> cancelOrder(@PathVariable String orderId, @RequestParam String reason) {
-        try {
-            OrderResponse order = orderService.cancelOrder(orderId, reason);
-            return ResponseEntity.ok(ApiResponse.ok("Hủy đơn hàng thành công!"));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
-        }
-    }
-    
-    // Get order statistics
-    @GetMapping("/store/{storeId}/statistics")
-    public ResponseEntity<?> getOrderStatistics(@PathVariable String storeId) {
-        try {
-            Long pendingCount = orderService.getOrderCountByStoreAndStatus(storeId, "PENDING");
-            Long processingCount = orderService.getOrderCountByStoreAndStatus(storeId, "PROCESSING");
-            Long shippedCount = orderService.getOrderCountByStoreAndStatus(storeId, "SHIPPED");
-            Long deliveredCount = orderService.getOrderCountByStoreAndStatus(storeId, "DELIVERED");
-            Long cancelledCount = orderService.getOrderCountByStoreAndStatus(storeId, "CANCELLED");
-            
-            return ResponseEntity.ok(ApiResponse.ok(
-                String.format("PENDING: %d, PROCESSING: %d, SHIPPED: %d, DELIVERED: %d, CANCELLED: %d", 
-                    pendingCount, processingCount, shippedCount, deliveredCount, cancelledCount)));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
-        }
-    }
-    
-    // Get orders by date range
-    @GetMapping("/store/{storeId}/date-range")
-    public ResponseEntity<?> getOrdersByDateRange(@PathVariable String storeId, 
-                                                  @RequestParam String startDate, 
-                                                  @RequestParam String endDate) {
-        try {
-            List<OrderResponse> orders = orderService.getOrdersByDateRange(storeId, startDate, endDate);
+            List<OrderDTO> orders = sellerOrderService.getOrdersByStoreAndStatus(storeId, status);
             return ResponseEntity.ok(ApiResponse.ok(orders));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         }
     }
 
-    @PostMapping("/create")
-    public ResponseEntity<?> createOrders(@RequestBody OrderDTO orderDTO, BindingResult result){
-        try{
-            if(result.hasErrors()){
-                List<String> errorMessages = result.getFieldErrors()
-                        .stream()
-                        .map(FieldError::getDefaultMessage)
-                        .toList();
-                return ResponseEntity.badRequest().body(new ApiResponse<>(false, null, String.join(", ", errorMessages)));
-            }
-            orderService.createOrder(orderDTO);
-            return ResponseEntity.ok(ApiResponse.ok("Tạo đơn hàng mới thành công!"));
-        } catch (Exception e){
+    /**
+     * Lấy orders gần đây của store
+     */
+    @GetMapping("/store/{storeId}/recent")
+    public ResponseEntity<ApiResponse<List<OrderDTO>>> getRecentOrders(
+            @PathVariable String storeId, 
+            @RequestParam(defaultValue = "10") int limit) {
+        try {
+            List<OrderDTO> orders = sellerOrderService.getRecentOrdersByStore(storeId, limit);
+            return ResponseEntity.ok(ApiResponse.ok(orders));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    /**
+     * Hủy order
+     */
+    @PutMapping("/{orderId}/cancel")
+    public ResponseEntity<ApiResponse<OrderDTO>> cancelOrder(
+            @PathVariable String orderId, 
+            @RequestParam(required = false) String reason) {
+        try {
+            OrderDTO order = sellerOrderService.cancelOrder(orderId, reason);
+            return ResponseEntity.ok(ApiResponse.ok(order));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    /**
+     * Lấy thống kê orders theo store
+     */
+    @GetMapping("/store/{storeId}/statistics")
+    public ResponseEntity<ApiResponse<Map<String, Long>>> getOrderStatistics(@PathVariable String storeId) {
+        try {
+            Map<String, Long> statistics = sellerOrderService.getOrderStatistics(storeId);
+            return ResponseEntity.ok(ApiResponse.ok(statistics));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    /**
+     * Lấy orders theo khoảng thời gian
+     */
+    @GetMapping("/store/{storeId}/date-range")
+    public ResponseEntity<ApiResponse<List<OrderDTO>>> getOrdersByDateRange(
+            @PathVariable String storeId,
+            @RequestParam String startDate,
+            @RequestParam String endDate) {
+        try {
+            List<OrderDTO> orders = sellerOrderService.getOrdersByDateRange(storeId, startDate, endDate);
+            return ResponseEntity.ok(ApiResponse.ok(orders));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    /**
+     * Lấy orders theo store với phân trang
+     */
+    @GetMapping("/store/{storeId}/paginated")
+    public ResponseEntity<ApiResponse<Page<OrderDTO>>> getOrdersByStoreWithPagination(
+            @PathVariable String storeId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String status) {
+        try {
+            Page<OrderDTO> ordersPage = sellerOrderService.getOrdersByStoreWithPagination(storeId, page, size, status);
+            return ResponseEntity.ok(ApiResponse.ok(ordersPage));
+        } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         }
     }
 }
-
-
-

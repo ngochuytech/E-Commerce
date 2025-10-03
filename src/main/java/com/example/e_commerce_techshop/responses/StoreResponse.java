@@ -26,7 +26,7 @@ public class StoreResponse {
                 .id(store.getId())
                 .name(store.getName())
                 .description(store.getDescription())
-                .logoUrl(store.getLogo_url())
+                .logoUrl(store.getLogoUrl())
                 .bannerUrl(store.getBanner_url())
                 .status(store.getStatus())
                 .ownerId(store.getOwner() != null ? store.getOwner().getId() : null)

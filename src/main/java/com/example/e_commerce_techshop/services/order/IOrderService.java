@@ -1,39 +1,54 @@
 package com.example.e_commerce_techshop.services.order;
 
-import com.example.e_commerce_techshop.dtos.b2c.order.OrderDTO;
-import com.example.e_commerce_techshop.responses.OrderResponse;
+
+import com.example.e_commerce_techshop.dtos.buyer.order.OrderDTO;
+import com.example.e_commerce_techshop.responses.buyer.OrderResponse;
+
+import org.springframework.data.domain.Page;
 
 import java.util.List;
+import java.util.Map;
 
 public interface IOrderService {
     
-    // Create order (for buyers)
-    void createOrder(OrderDTO orderDTO) throws Exception;
+    /**
+     * Tạo đơn hàng từ cart
+     * @param userEmail Email của user
+     * @param orderDTO Thông tin checkout
+     * @return OrderDTO
+     */
+    List<OrderResponse> checkout(String userEmail, OrderDTO orderDTO) throws Exception;
     
-    // Update order status (for sellers)
-    OrderResponse updateOrderStatus(String orderId, String status);
+    /**
+     * Lấy lịch sử đơn hàng
+     * @param userEmail Email của user
+     * @param page Số trang (0-based)
+     * @param size Kích thước trang
+     * @param status Trạng thái đơn hàng
+     * @return Page<OrderResponse>
+     */
+    Page<OrderResponse> getOrderHistory(String userEmail, int page, int size, String status) throws Exception;
     
-    // Get order by ID
-    OrderResponse getOrderById(String orderId);
+    /**
+     * Lấy chi tiết đơn hàng
+     * @param userEmail Email của user
+     * @param orderId ID đơn hàng
+     * @return OrderResponse
+     */
+    OrderResponse getOrderDetail(String userEmail, String orderId) throws Exception;
     
-    // Get orders by store
-    List<OrderResponse> getOrdersByStore(String storeId);
+    /**
+     * Hủy đơn hàng
+     * @param userEmail Email của user
+     * @param orderId ID đơn hàng
+     * @return OrderResponse
+     */
+    OrderResponse cancelOrder(String userEmail, String orderId) throws Exception;
     
-    // Get orders by store and status
-    List<OrderResponse> getOrdersByStoreAndStatus(String storeId, String status);
-    
-    // Get recent orders by store
-    List<OrderResponse> getRecentOrdersByStore(String storeId, int limit);
-    
-    // Cancel order
-    OrderResponse cancelOrder(String orderId, String reason);
-    
-    // Get order statistics
-    Long getOrderCountByStoreAndStatus(String storeId, String status);
-    
-    // Get orders by date range
-    List<OrderResponse> getOrdersByDateRange(String storeId, String startDate, String endDate);
+    /**
+     * Đếm số đơn hàng theo trạng thái
+     * @param userEmail Email của user
+     * @return Map<String, Long>
+     */
+    Map<String, Long> getOrderCount(String userEmail) throws Exception;
 }
-
-
-

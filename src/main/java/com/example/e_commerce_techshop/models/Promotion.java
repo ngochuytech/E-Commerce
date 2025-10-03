@@ -47,6 +47,9 @@ public class Promotion extends BaseEntity {
 
     @Column(name = "status")
     private String status; // ACTIVE, INACTIVE, EXPIRED
+    
+    @Column(name = "code", unique = true)
+    private String code; // Mã giảm giá để người dùng nhập
 }
 
 

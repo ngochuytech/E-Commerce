@@ -30,8 +30,8 @@ public class StoreService implements IStoreService {
         User owner;
         if (storeDTO.getOwnerId() != null && !storeDTO.getOwnerId().isEmpty()) {
             System.out.println("StoreService - Looking for user with ID: " + storeDTO.getOwnerId());
-            owner = userRepository.findById(storeDTO.getOwnerId())
-                    .orElseThrow(() -> new DataNotFoundException("Không tìm thấy chủ sở hữu với ID: " + storeDTO.getOwnerId()));
+            owner = userRepository.findByEmail(storeDTO.getOwnerId())
+                    .orElseThrow(() -> new DataNotFoundException("Không tìm thấy chủ sở hữu với Email: " + storeDTO.getOwnerId()));
             System.out.println("StoreService - Found owner: " + owner.getFullName() + " (" + owner.getEmail() + ")");
         } else {
             // For testing purposes, get the first user as default owner
@@ -52,9 +52,9 @@ public class StoreService implements IStoreService {
         Store store = Store.builder()
                 .name(storeDTO.getName())
                 .description(storeDTO.getDescription())
-                .logo_url(storeDTO.getLogoUrl())
-                .banner_url(storeDTO.getBannerUrl())
-                .status(storeDTO.getStatus())
+                .logoUrl(null) // Always null when creating new store
+                .banner_url(null) // Always null when creating new store
+                .status(storeDTO.getStatus() == null || storeDTO.getStatus().isBlank() ? "PENDING" : storeDTO.getStatus())
                 .owner(owner)
                 .address(address)
                 .build();
@@ -65,15 +65,21 @@ public class StoreService implements IStoreService {
 
     @Override
     public StoreResponse updateStore(String storeId, StoreDTO storeDTO) throws Exception {
+        System.out.println("StoreService - Updating store: " + storeId);
+        System.out.println("StoreService - Logo URL: " + storeDTO.getLogoUrl());
+        System.out.println("StoreService - Banner URL: " + storeDTO.getBannerUrl());
+        
         Store existingStore = storeRepository.findById(storeId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy cửa hàng"));
 
         // Update fields
         existingStore.setName(storeDTO.getName());
         existingStore.setDescription(storeDTO.getDescription());
-        existingStore.setLogo_url(storeDTO.getLogoUrl());
+        existingStore.setLogoUrl(storeDTO.getLogoUrl());
         existingStore.setBanner_url(storeDTO.getBannerUrl());
-        existingStore.setStatus(storeDTO.getStatus());
+        if (storeDTO.getStatus() != null && !storeDTO.getStatus().isBlank()) {
+            existingStore.setStatus(storeDTO.getStatus());
+        }
 
         // Update address if provided
         if (storeDTO.getAddressId() != null) {
@@ -82,7 +88,14 @@ public class StoreService implements IStoreService {
             existingStore.setAddress(address);
         }
 
+        System.out.println("StoreService - Before save - Logo URL: " + existingStore.getLogoUrl());
+        System.out.println("StoreService - Before save - Banner URL: " + existingStore.getBanner_url());
+        
         Store updatedStore = storeRepository.save(existingStore);
+        
+        System.out.println("StoreService - After save - Logo URL: " + updatedStore.getLogoUrl());
+        System.out.println("StoreService - After save - Banner URL: " + updatedStore.getBanner_url());
+        
         return StoreResponse.fromStore(updatedStore);
     }
 
@@ -142,7 +155,18 @@ public class StoreService implements IStoreService {
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy cửa hàng"));
         
-        store.setStatus(status);
+        // ✅ VALIDATE STATUS
+        if (!Store.isValidStatus(status)) {
+            String validStatuses = String.join(", ", Store.getValidStatuses());
+            throw new IllegalArgumentException("Status không hợp lệ: '" + status + "'. Chỉ chấp nhận: " + validStatuses);
+        }
+        
+        // Only ADMIN can set to APPROVED/REJECTED; owner/admin can set DELETED; anyone can set PENDING? keep existing rules minimal
+        if (!"DELETED".equalsIgnoreCase(status)) {
+            // TODO: check role from security context; currently all permitted as security is open
+        }
+        
+        store.setStatus(status.toUpperCase());
         storeRepository.save(store);
     }
 }

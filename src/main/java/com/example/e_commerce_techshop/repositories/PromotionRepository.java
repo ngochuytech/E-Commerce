@@ -24,6 +24,11 @@ public interface PromotionRepository extends JpaRepository<Promotion, String> {
     List<Promotion> findExpiredPromotions(@Param("now") LocalDateTime now);
 
     Optional<Promotion> findByIdAndStoreId(String id, String storeId);
+    
+    /**
+     * Tìm promotion theo code
+     */
+    Optional<Promotion> findByCode(String code);
 }
 
 

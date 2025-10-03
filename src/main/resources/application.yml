@@ -27,6 +27,9 @@ spring:
           auth: true
           starttls:
             enable: true
+          ssl:
+            trust: "*"
+        debug: false
   security:
     oauth2:
       client:

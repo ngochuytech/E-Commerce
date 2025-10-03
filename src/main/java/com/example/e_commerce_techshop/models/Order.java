@@ -25,28 +25,31 @@ public class Order extends BaseEntity {
     private String paymentMethod;
 
     @Column(name = "status", nullable = false)
-    private String status = "PENDING"; // PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED
+    private String status; // PENDING, CONFIRMED, SHIPPING, DELIVERED, CANCELLED
+    
+    @Column(name = "note")
+    private String note;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<OrderItem> orderItems;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "buyer_id", insertable = false, updatable = false)
+    @JoinColumn(name = "buyer_id")
     private User buyer;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "store_id", insertable = false, updatable = false)
+    @JoinColumn(name = "store_id")
     private Store store;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "promotion_id", insertable = false, updatable = false)
+    @JoinColumn(name = "promotion_id")
     private Promotion promotion;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "address_id", insertable = false, updatable = false)
+    @JoinColumn(name = "address_id")
     private Address address;
 }
 
 enum OrderStatus {
-    PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED
+    PENDING, CONFIRMED, SHIPPING, DELIVERED, CANCELLED
 }

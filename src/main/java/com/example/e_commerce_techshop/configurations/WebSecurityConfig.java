@@ -43,6 +43,8 @@ public class WebSecurityConfig {
                                 String.format("%s/users/auth/social-login", apiPrefix),
                                 String.format("%s/users/auth/social/callback", apiPrefix)
                         ).permitAll()
+                        // Cho phép truy cập ảnh tĩnh đã upload
+                        .requestMatchers("/image/**").permitAll()
                         // TEMPORARY: Cho phép tất cả APIs để test (SAU NÀY SẼ BẬT LẠI AUTHENTICATION)
                         .anyRequest().permitAll()
                 );

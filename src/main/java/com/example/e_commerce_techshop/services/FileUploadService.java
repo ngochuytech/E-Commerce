@@ -19,6 +19,10 @@ public class FileUploadService {
     private String baseUrl;
 
     public String uploadFile(MultipartFile file) throws Exception {
+        return uploadFile(file, "general");
+    }
+
+    public String uploadFile(MultipartFile file, String category) throws Exception {
         if (file == null || file.isEmpty()) {
             return null;
         }
@@ -34,7 +38,10 @@ public class FileUploadService {
 
         // Tạo tên file duy nhất
         String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
-        Path filePath = Paths.get(uploadDir, fileName);
+        
+        // Tạo đường dẫn theo category: uploads/images/stores/, uploads/images/products/, etc.
+        String categoryDir = uploadDir + "/" + category;
+        Path filePath = Paths.get(categoryDir, fileName);
 
         // Tạo thư mục nếu chưa tồn tại
         Files.createDirectories(filePath.getParent());
@@ -42,8 +49,8 @@ public class FileUploadService {
         // Lưu file vào local storage
         Files.write(filePath, file.getBytes());
 
-        // Trả về URL hoặc đường dẫn tương đối
-        return baseUrl + "/" + fileName;
+        // Trả về URL với category: /image/stores/filename.jpg
+        return baseUrl + "/" + category + "/" + fileName;
     }
 
     public void deleteFile(String imageUrl) throws IOException {
@@ -51,9 +58,9 @@ public class FileUploadService {
             return;
         }
         // Chuyển imageUrl thành đường dẫn file trong local storage
-        // imageUrl có dạng /images/filename.jpg, cần lấy filename.jpg
-        String fileName = imageUrl.substring(imageUrl.lastIndexOf("/") + 1);
-        Path filePath = Paths.get(uploadDir, fileName);
+        // imageUrl có dạng /image/stores/filename.jpg hoặc /image/filename.jpg
+        String relativePath = imageUrl.replace(baseUrl + "/", "");
+        Path filePath = Paths.get(uploadDir, relativePath);
 
         // Xóa file nếu tồn tại
         if (Files.exists(filePath)) {
