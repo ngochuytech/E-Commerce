@@ -1,720 +1,310 @@
-﻿# 📊 BÁO CÁO SO SÁNH CHI TIẾT E-COMMERCE vs E-COMMERCE1
+# 📋 CHANGELOG - Cập nhật hệ thống quản lý ảnh và store
 
-## 🎯 TỔNG QUAN DỰ ÁN
+> **Phiên bản**: v2.0  
+> **Ngày cập nhật**: 8 tháng 10, 2025  
+> **Branch**: NgocHuy
 
-| Tiêu chí | E-Commerce (Gốc) | E-Commerce1 (NgocHuy) |
-|----------|------------------|------------------------|
-| **Kiến trúc** | ✅ Hiện đại, có Buyer APIs | ❌ Chỉ có B2C APIs |
-| **API Endpoints** | ✅ 99 endpoints | ❌ 85 endpoints |
-| **DTO Structure** | ✅ Consolidated, clean | ✅ Clean nhưng thiếu Buyer |
-| **Business Logic** | ✅ Hoàn thiện với Cart/Order | ❌ Chỉ có B2C logic |
-| **User Experience** | ✅ Đầy đủ cho cả Buyer và Store | ❌ Chỉ cho Store owners |
+## 🎯 **Tổng quan các thay đổi**
+
+Phiên bản này tập trung vào việc nâng cấp hệ thống xử lý ảnh cho Product Variants và Store, từ việc chỉ hỗ trợ một ảnh sang hỗ trợ nhiều ảnh với khả năng quản lý tốt hơn.
 
 ---
 
-## 🏗️ KIẾN TRÚC VÀ THIẾT KẾ
+## 🔥 **THAY ĐỔI CHÍNH**
 
-### **E-Commerce (Gốc) - Complete Architecture:**
-```
-controllers/
-├── b2c/ (B2C APIs)
-│   ├── analytics/AnalyticsController.java
-│   ├── customer/CustomerController.java
-│   ├── order/OrderController.java
-│   ├── promotion/PromotionController.java
-│   ├── review/ReviewController.java
-│   └── store/StoreController.java
-├── buyer/ (Buyer APIs) ⭐
-│   ├── cart/CartController.java ⭐
-│   └── order/BuyerOrderController.java ⭐
-└── (Common APIs)
-    ├── UserController.java
-    ├── ProductController.java
-    ├── ProductVariantController.java
-    └── ForgotPasswordController.java
-```
+### 1. **Hệ thống quản lý nhiều ảnh cho Product Variants**
 
-### **E-Commerce1 (NgocHuy) - B2C Only:**
-```
-controllers/
-├── b2c/ (B2C APIs only)
-│   ├── analytics/AnalyticsController.java
-│   ├── customer/CustomerController.java
-│   ├── order/OrderController.java
-│   ├── promotion/PromotionController.java
-│   ├── review/ReviewController.java
-│   └── store/StoreController.java
-└── (Common APIs)
-    ├── UserController.java
-    ├── ProductController.java
-    ├── ProductVariantController.java
-    └── ForgotPasswordController.java
-```
+#### 🆕 **Model & Database mới:**
+- **ProductImage Model**: Quản lý nhiều ảnh cho mỗi Product Variant
+- **ProductImageRepository**: Repository để quản lý các thao tác với ảnh
+- **Bảng `product_images`**: Lưu trữ metadata của ảnh (path, type, isPrimary)
 
-**Kết luận**: E-Commerce có kiến trúc **HOÀN CHỈNH** với cả Buyer và B2C, E-Commerce1 chỉ có B2C!
+#### 🔄 **Cập nhật Model hiện có:**
+- **ProductVariant**: Thêm quan hệ OneToMany với ProductImage
+- **ProductImage**: Chuyển quan hệ từ Product sang ProductVariant
+
+#### 📁 **Files mới/cập nhật:**
+```
+├── models/
+│   ├── ProductImage.java (Cập nhật)
+│   └── ProductVariant.java (Thêm quan hệ images)
+├── repositories/
+│   └── ProductImageRepository.java (MỚI)
+├── services/
+│   ├── FileUploadService.java (Thêm uploadFiles, deleteFiles)
+│   └── productVariant/
+│       ├── ProductVariantSerivce.java (Xử lý nhiều ảnh)
+│       └── IProductVariantService.java (Thêm getById, updateWithImages)
+├── controllers/
+│   └── ProductVariantController.java (Endpoints mới)
+├── responses/
+│   └── ProductVariantResponse.java (Thêm imageUrls, primaryImageUrl)
+└── create_product_images_table.sql (Script migration)
+```
 
 ---
 
-## 📁 CẤU TRÚC DTOs
+### 2. **Nâng cấp hệ thống Store với upload Logo**
 
-### **E-Commerce (Gốc) - Complete DTO Structure:**
-```
-dtos/
-├── b2c/
-│   ├── order/OrderDTO.java
-│   ├── promotion/PromotionDTO.java
-│   └── store/StoreDTO.java
-├── buyer/ ⭐
-│   ├── cart/CartDTO.java ⭐
-│   └── order/OrderDTO.java ⭐
-└── (Common DTOs)
-    ├── GoogleCodeRequest.java
-    ├── ProductDTO.java
-    ├── ProductFilterDTO.java
-    ├── ProductVariantDTO.java
-    ├── ResetPasswordDTO.java
-    ├── UserDTO.java
-    └── UserLoginDTO.java
-```
+#### 🆕 **Tính năng mới:**
+- Upload logo khi tạo store mới
+- Update store với logo và banner
+- Tự động xóa file cũ khi upload file mới
 
-### **E-Commerce1 (NgocHuy) - B2C Only DTOs:**
+#### 📁 **Files cập nhật:**
 ```
-dtos/
-├── b2c/
-│   ├── inventory/ProductVariantDTO.java
-│   ├── order/OrderDTO.java
-│   ├── promotion/PromotionDTO.java
-│   └── store/StoreDTO.java
-└── (Common DTOs)
-    ├── GoogleCodeRequest.java
-    ├── ProductDTO.java
-    ├── ProductFilterDTO.java
-    ├── ProductVariantDTO.java
-    ├── ResetPasswordDTO.java
-    ├── UserDTO.java
-    └── UserLoginDTO.java
+├── services/store/
+│   ├── StoreService.java (Thêm FileUploadService, xử lý upload)
+│   └── IStoreService.java (Thêm updateStoreWithMedia)
+└── controllers/b2c/store/
+    └── StoreController.java (Endpoint update with media)
 ```
-
-**Kết luận**: E-Commerce có **Buyer DTOs** hoàn chỉnh, E-Commerce1 thiếu hoàn toàn!
 
 ---
 
-## 🔧 API ENDPOINTS COMPARISON
+## 🚀 **API ENDPOINTS MỚI**
 
-### **E-Commerce (Gốc) - 99 Endpoints:**
+### **Product Variants:**
 
-#### **B2C APIs (85 endpoints):**
-- **Analytics**: 20 endpoints
-- **Customer**: 7 endpoints  
-- **Order**: 9 endpoints
-- **Promotion**: 13 endpoints
-- **Review**: 10 endpoints
-- **Store**: 10 endpoints
-- **Common**: 16 endpoints
+#### 1. Lấy Product Variant theo ID
+```http
+GET /api/product-variants/{id}
+```
+**Response:**
+```json
+{
+  "status": "success",
+  "data": {
+    "id": "uuid",
+    "name": "Product Name",
+    "imageUrls": ["/image/product-variants/img1.jpg", "/image/product-variants/img2.jpg"],
+    "primaryImageUrl": "/image/product-variants/img1.jpg",
+    "price": 1000000,
+    "stock": 20,
+    "attributes": {...}
+  }
+}
+```
 
-#### **Buyer APIs (14 endpoints) ⭐:**
-- **Cart**: 6 endpoints
-  - `POST /api/v1/buyer/cart/add`
-  - `GET /api/v1/buyer/cart`
-  - `PUT /api/v1/buyer/cart/{cartItemId}`
-  - `DELETE /api/v1/buyer/cart/{cartItemId}`
-  - `DELETE /api/v1/buyer/cart/clear`
-  - `GET /api/v1/buyer/cart/count`
+#### 2. Tạo Product Variant với nhiều ảnh
+```http
+POST /api/product-variants/create
+Content-Type: multipart/form-data
 
-- **Order**: 4 endpoints
-  - `POST /api/v1/buyer/orders/checkout`
-  - `GET /api/v1/buyer/orders`
-  - `GET /api/v1/buyer/orders/{orderId}`
-  - `PUT /api/v1/buyer/orders/{orderId}/cancel`
+- dto: ProductVariantDTO
+- images: List<MultipartFile> (nhiều ảnh)
+```
 
-- **User**: 4 endpoints
-  - `POST /api/v1/users/login`
-  - `POST /api/v1/users/register`
-  - `GET /api/v1/users/verify`
-  - `POST /api/v1/users/auth/social/callback`
+#### 3. Update Product Variant với nhiều ảnh
+```http
+PUT /api/product-variants/update-with-images/{id}
+Content-Type: multipart/form-data
 
-### **E-Commerce1 (NgocHuy) - 85 Endpoints:**
+- dto: ProductVariantDTO  
+- images: List<MultipartFile>
+```
 
-#### **B2C APIs (85 endpoints):**
-- **Analytics**: 20 endpoints
-- **Customer**: 7 endpoints
-- **Order**: 8 endpoints
-- **Promotion**: 13 endpoints
-- **Review**: 10 endpoints
-- **Store**: 10 endpoints
-- **Common**: 17 endpoints
+### **Store Management:**
 
-#### **Buyer APIs: 0 endpoints ❌**
-- **Không có Cart APIs**
-- **Không có Buyer Order APIs**
-- **Không có Buyer functionality**
+#### 4. Update Store với Logo và Banner
+```http
+PUT /api/b2c/stores/{storeId}/with-media
+Content-Type: multipart/form-data
 
-**Kết luận**: E-Commerce có **14 Buyer APIs** mà E-Commerce1 hoàn toàn thiếu!
+- storeDTO: StoreDTO
+- logo: MultipartFile (optional)
+- banner: MultipartFile (optional)
+```
 
 ---
 
-## 💼 BUSINESS LOGIC COMPARISON
+## 🛠 **CÁCH SỬ DỤNG**
 
-### **E-Commerce (Gốc) - Complete Business Logic:**
-
-#### **1. Buyer Cart System ⭐:**
-```java
-// Cart functionality hoàn chỉnh
-- Add to cart
-- Update cart items
-- Remove from cart
-- Clear cart
-- Get cart count
-- Cart validation
+### **1. Migration Database:**
+```sql
+-- Chạy script tạo bảng product_images
+SOURCE create_product_images_table.sql;
 ```
 
-#### **2. Buyer Order System ⭐:**
-```java
-// Order workflow hoàn chỉnh
-- Checkout from cart
-- Order history
-- Order details
-- Cancel order
-- Order status tracking
+### **2. Upload nhiều ảnh cho Product Variant:**
+```javascript
+const formData = new FormData();
+formData.append('dto', JSON.stringify(productVariantData));
+formData.append('images', file1);
+formData.append('images', file2);
+formData.append('images', file3);
+
+fetch('/api/product-variants/create', {
+    method: 'POST',
+    body: formData
+});
 ```
 
-#### **3. Store Status Enforcement:**
-```java
-// Kiểm tra store phải APPROVED
-if (!"APPROVED".equals(store.getStatus())) {
-    throw new IllegalArgumentException("Cửa hàng tạm thời đóng cửa");
-}
+### **3. Upload logo cho Store:**
+```javascript
+const formData = new FormData();
+formData.append('storeDTO', JSON.stringify(storeData));
+formData.append('logo', logoFile);
+
+fetch('/api/b2c/stores/create', {
+    method: 'POST',
+    body: formData
+});
 ```
-
-#### **4. Promotion System:**
-```java
-// Áp dụng khuyến mãi cấp độ đơn hàng
-if (orderDTO.getPromotionId() != null) {
-    // Validate và apply promotion
-}
-```
-
-#### **5. Stock Management:**
-```java
-// Kiểm tra tồn kho
-if (productVariant.getStock() < quantity) {
-    throw new IllegalArgumentException("Không đủ hàng trong kho");
-}
-```
-
-### **E-Commerce1 (NgocHuy) - B2C Only Logic:**
-
-#### **1. Store Management:**
-```java
-// Chỉ có store CRUD operations
-- Create store
-- Update store
-- Get store details
-- Approve/Reject store
-```
-
-#### **2. Order Management (B2C only):**
-```java
-// Chỉ có B2C order operations
-- Get orders by store
-- Update order status
-- Cancel order
-- Order statistics
-```
-
-#### **3. Product Management:**
-```java
-// Product CRUD operations
-- Create product
-- Update product
-- Get product details
-- Product filtering
-```
-
-**Kết luận**: E-Commerce có **Buyer logic hoàn chỉnh**, E-Commerce1 hoàn toàn thiếu!
 
 ---
 
-## 🗄️ DATABASE SCHEMA DIFFERENCES
+## 📊 **RESPONSE FORMAT MỚI**
 
-### **OrderItem Entity:**
-
-#### **E-Commerce1 (NgocHuy):**
-```java
-public class OrderItem extends BaseEntity {
-    // Có created_at, updated_at columns
-    // Tốn storage space
-    // Performance kém hơn
+### **ProductVariantResponse:**
+```json
+{
+  "id": "variant-uuid",
+  "name": "Product Variant Name",
+  "imageUrls": [
+    "/image/product-variants/uuid1_image1.jpg",
+    "/image/product-variants/uuid2_image2.jpg"
+  ],
+  "primaryImageUrl": "/image/product-variants/uuid1_image1.jpg",
+  "price": 25000000,
+  "description": "Mô tả sản phẩm",
+  "stock": 10,
+  "attributes": {
+    "CPU": "Intel Core i5",
+    "RAM": "16GB",
+    "GPU": "RTX 3050"
+  }
 }
 ```
 
-#### **E-Commerce (Gốc):**
-```java
-public class OrderItem {
-    // KHÔNG có created_at, updated_at columns
-    // Tiết kiệm storage space
-    // Performance tốt hơn
+### **OrderResponse (Đã sửa):**
+```json
+{
+  "orderItems": [{
+    "productImage": "/image/product-variants/primary-image.jpg",  // Lấy ảnh primary
+    "productName": "Laptop Gaming",
+    "quantity": 1,
+    "price": 25000000
+  }]
 }
 ```
 
-### **Order Status:**
+---
 
-#### **E-Commerce1 (NgocHuy):**
-```java
-// Status: PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED
-private String status;
+## 🔧 **CÁC TÍNH NĂNG CHI TIẾT**
+
+### **1. Quản lý ảnh thông minh:**
+- ✅ **Ảnh chính**: Ảnh đầu tiên tự động được đánh dấu `isPrimary = true`
+- ✅ **Fallback**: Nếu không có ảnh primary, lấy ảnh đầu tiên
+- ✅ **Null-safe**: Xử lý trường hợp không có ảnh
+- ✅ **Auto-cleanup**: Tự động xóa ảnh cũ khi cập nhật
+
+### **2. File Upload nâng cao:**
+- ✅ **Batch upload**: Upload nhiều file cùng lúc
+- ✅ **Category folder**: Tự động phân loại theo thư mục (product-variants, stores)
+- ✅ **File validation**: Kiểm tra định dạng và kích thước
+- ✅ **Error handling**: Xử lý lỗi upload gracefully
+
+### **3. Tương thích ngược:**
+- ✅ **Legacy API**: Các endpoint cũ vẫn hoạt động bình thường
+- ✅ **Migration safe**: Dữ liệu cũ được migrate an toàn
+- ✅ **Gradual upgrade**: Có thể nâng cấp từng phần
+
+---
+
+## 📁 **CẤU TRÚC FOLDER LÀM VIỆC**
+
+```
+uploads/
+├── product-variants/          # Ảnh của Product Variants
+│   ├── uuid1_laptop1.jpg     # Ảnh sản phẩm
+│   ├── uuid2_laptop2.jpg
+│   └── uuid3_laptop3.jpg
+├── stores/                    # Logo và banner của Store
+│   ├── uuid4_logo.png        # Logo cửa hàng  
+│   └── uuid5_banner.jpg      # Banner cửa hàng
+└── general/                   # Ảnh khác
+    └── ...
 ```
 
-#### **E-Commerce (Gốc):**
-```java
-// Status: PENDING, CONFIRMED, SHIPPING, DELIVERED, CANCELLED
-private String status;
+---
+
+## ⚠️ **LƯU Ý QUAN TRỌNG**
+
+### **1. Database Migration:**
+- **SQL**: Có thay đổi trong cấu trúc DB, hãy cập nhật DB mới nhật
+
+### **2. File Storage:**
+- **Dung lượng**: Cần đảm bảo đủ không gian lưu trữ
+- **Backup**: Thiết lập backup cho thư mục uploads
+- **Permissions**: Đảm bảo quyền ghi cho thư mục uploads
+
+### **3. Performance:**
+- **Lazy loading**: Ảnh được load lazy để tối ưu performance
+- **CDN**: Khuyến nghị sử dụng CDN cho production
+- **Image optimization**: Cân nhắc compress ảnh trước khi upload
+
+---
+
+## 🐛 **FIXES & IMPROVEMENTS**
+
+### **Bug Fixes:**
+- ✅ **OrderResponse**: Sửa lỗi lấy ảnh primary thay vì ảnh đầu tiên
+- ✅ **File cleanup**: Sửa memory leak khi xóa file
+- ✅ **Null pointer**: Xử lý trường hợp product variant không có ảnh
+
+### **Performance Improvements:**
+- ✅ **Batch processing**: Upload nhiều ảnh hiệu quả hơn
+- ✅ **Database indexing**: Thêm index cho bảng product_images
+- ✅ **Response optimization**: Giảm dung lượng response JSON
+
+---
+
+## 🔄 **MIGRATION GUIDE**
+
+### **Từ phiên bản cũ lên v2.0:**
+
+1. **Backup dữ liệu:**
+```bash
+mysqldump -u username -p database_name > backup.sql
 ```
 
-**Kết luận**: E-Commerce có schema tối ưu hơn, E-Commerce1 có schema bloat!
-
----
-
-## 🚀 PERFORMANCE & OPTIMIZATION
-
-### **E-Commerce (Gốc) - High Performance:**
-
-#### **1. Database Optimization:**
-- ✅ **OrderItem**: Không có created_at/updated_at
-- ✅ **Faster queries**: Ít columns
-- ✅ **Better indexing**: Tối ưu cho performance
-
-#### **2. API Efficiency:**
-- ✅ **Buyer APIs**: Optimized for end-users
-- ✅ **Cart system**: Real-time updates
-- ✅ **Order workflow**: Streamlined process
-
-#### **3. Business Logic:**
-- ✅ **Store status check**: Prevents invalid operations
-- ✅ **Stock validation**: Real-time inventory
-- ✅ **Promotion system**: Dynamic pricing
-
-### **E-Commerce1 (NgocHuy) - Standard Performance:**
-
-#### **1. Database Issues:**
-- ❌ **OrderItem**: Có created_at/updated_at không cần thiết
-- ❌ **Storage bloat**: Nhiều columns không dùng
-- ❌ **Slower queries**: N+1 query problems
-
-#### **2. Limited Functionality:**
-- ❌ **No Buyer APIs**: Không có end-user experience
-- ❌ **No Cart system**: Không có shopping cart
-- ❌ **No Order workflow**: Không có checkout process
-
-**Kết luận**: E-Commerce nhanh hơn và có functionality đầy đủ hơn!
-
----
-
-## 📈 FEATURE COMPARISON
-
-| Feature | E-Commerce | E-Commerce1 | Advantage |
-|---------|------------|-------------|-----------|
-| **Total APIs** | 99 endpoints | 85 endpoints | E-Commerce +16% |
-| **Buyer APIs** | 14 endpoints | 0 endpoints | E-Commerce +∞% |
-| **Cart System** | ✅ Complete | ❌ None | E-Commerce +100% |
-| **Order Workflow** | ✅ Full | ❌ B2C only | E-Commerce +100% |
-| **Database Schema** | ✅ Optimized | ❌ Bloated | E-Commerce +30% |
-| **User Experience** | ✅ Complete | ❌ Limited | E-Commerce +200% |
-| **Business Logic** | ✅ Advanced | ❌ Basic | E-Commerce +300% |
-
----
-
-## 🎯 KẾT LUẬN CHI TIẾT
-
-### **🏆 E-Commerce (Gốc) THẮNG ÁP ĐẢO:**
-
-#### **✅ Ưu điểm vượt trội:**
-1. **Complete Architecture**: Có cả Buyer và B2C APIs
-2. **Full User Experience**: Cart, Order, Checkout workflow
-3. **Advanced Business Logic**: Store status, promotion, stock management
-4. **Optimized Database**: Clean schema, better performance
-5. **Production Ready**: Hoàn chỉnh cho end-users
-
-#### **❌ E-Commerce1 (NgocHuy) thua kém:**
-1. **Incomplete Architecture**: Chỉ có B2C, thiếu Buyer
-2. **No User Experience**: Không có cart, không có checkout
-3. **Limited Business Logic**: Chỉ có basic B2C operations
-4. **Database Issues**: Schema bloat, performance kém
-5. **Not Production Ready**: Không thể dùng cho end-users
-
-### **🚀 KHUYẾN NGHỊ:**
-
-**SỬ DỤNG E-COMMERCE (GỐC)** vì:
-- ✅ **Complete e-commerce solution** với đầy đủ tính năng
-- ✅ **Buyer experience** hoàn chỉnh (Cart, Order, Checkout)
-- ✅ **B2C management** đầy đủ cho store owners
-- ✅ **Production ready** ngay lập tức
-- ✅ **Scalable** cho tương lai
-
-**TRÁNH E-COMMERCE1 (NgocHuy)** vì:
-- ❌ **Incomplete solution** - thiếu Buyer functionality
-- ❌ **No user experience** - không có shopping cart
-- ❌ **Not production ready** - không thể dùng cho customers
-- ❌ **Limited scope** - chỉ phục vụ store owners
-- ❌ **Database issues** - performance kém
-
----
-
-## 📊 TỔNG KẾT SỐ LIỆU
-
-| Metric | E-Commerce | E-Commerce1 | Improvement |
-|--------|------------|-------------|-------------|
-| **Total APIs** | 99 | 85 | +16% |
-| **Buyer APIs** | 14 | 0 | +∞% |
-| **Cart System** | ✅ | ❌ | +100% |
-| **Order Workflow** | ✅ | ❌ | +100% |
-| **User Experience** | Complete | Limited | +200% |
-| **Business Logic** | Advanced | Basic | +300% |
-| **Production Ready** | ✅ | ❌ | +∞% |
-
-### **🏆 E-COMMERCE (GỐC) LÀ LỰA CHỌN DUY NHẤT CHO E-COMMERCE SOLUTION!**
-
----
-
-*Báo cáo được tạo dựa trên phân tích thực tế code - Ngày: $(Get-Date -Format "dd/MM/yyyy HH:mm:ss")*
-
-
-
-
-
-
-
-
-
-
-
-
-
-# 🔍 PHÂN TÍCH CÁC VẤN ĐỀ STORE MANAGEMENT
-
-## 📋 CÁC VẤN ĐỀ ĐƯỢC ĐỀ CẬP
-
-1. **Store xử lý phần thêm ảnh**
-2. **Không xóa cứng** (Soft delete)
-3. **Lúc reject thì reason được lưu vào đâu?**
-4. **Cần kiểm tra các status có thể dùng khi cập nhật status cho store**
-
----
-
-## 🔧 PHÂN TÍCH CHI TIẾT
-
-### **1. Store xử lý phần thêm ảnh**
-
-#### **E-Commerce (Gốc) - ✅ ĐÃ GIẢI QUYẾT:**
-```java
-// Upload logo for specific store
-@PostMapping("/{storeId}/logo")
-public ResponseEntity<?> uploadStoreLogo(@PathVariable String storeId, 
-    @RequestParam("file") MultipartFile file) {
-    try {
-        // Validate store exists and user has permission
-        StoreResponse store = storeService.getStoreById(storeId);
-        
-        // Delete old logo if exists
-        if (store.getLogoUrl() != null && !store.getLogoUrl().isEmpty()) {
-            fileUploadService.deleteFile(store.getLogoUrl());
-        }
-        
-        // Upload new logo
-        String logoUrl = fileUploadService.uploadFile(file, "stores");
-        
-        // Update store with new logo URL
-        StoreDTO updateDTO = new StoreDTO();
-        updateDTO.setLogoUrl(logoUrl);
-        storeService.updateStore(storeId, updateDTO);
-        
-        return ResponseEntity.ok(ApiResponse.ok(logoUrl));
-    } catch (Exception e) {
-        return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
-    }
-}
-
-// Upload banner for specific store
-@PostMapping("/{storeId}/banner")
-public ResponseEntity<?> uploadStoreBanner(@PathVariable String storeId, 
-    @RequestParam("file") MultipartFile file) {
-    // Similar implementation for banner
-}
+2. **Chạy migration script:**
+```sql
+SOURCE create_product_images_table.sql;
 ```
 
-**✅ Kết quả:**
-- ✅ **Logo upload**: `POST /api/v1/b2c/stores/{storeId}/logo`
-- ✅ **Banner upload**: `POST /api/v1/b2c/stores/{storeId}/banner`
-- ✅ **File management**: Tự động xóa file cũ khi upload mới
-- ✅ **Validation**: Kiểm tra quyền truy cập store
-- ✅ **Error handling**: Xử lý lỗi đầy đủ
-
-#### **E-Commerce1 (NgocHuy) - ❌ CHƯA GIẢI QUYẾT:**
-```java
-// KHÔNG CÓ API upload ảnh cho store
-// Chỉ có basic CRUD operations
-@PostMapping("/create")
-@PutMapping("/{storeId}")
-@GetMapping("/{storeId}")
-// ... không có upload endpoints
+3. **Update code:**
+```bash
+git pull origin NgocHuy
+mvn clean install
 ```
 
-**❌ Kết quả:**
-- ❌ **Không có logo upload API**
-- ❌ **Không có banner upload API**
-- ❌ **Không có file management**
-- ❌ **Store chỉ có text fields**
+4. **Restart application:**
+```bash
+mvn spring-boot:run
+```
+
+5. **Verify migration:**
+- Test API endpoints mới
+- Kiểm tra upload ảnh
+- Verify dữ liệu cũ
 
 ---
 
-### **2. Không xóa cứng (Soft delete)**
+## 📞 **SUPPORT & CONTACT**
 
-#### **E-Commerce (Gốc) - ✅ ĐÃ GIẢI QUYẾT:**
-```java
-// Soft delete store
-@DeleteMapping("/{storeId}")
-public ResponseEntity<?> deleteStore(@PathVariable String storeId) {
-    try {
-        // ✅ SOFT DELETE - Chỉ thay đổi status thành DELETED
-        storeService.updateStoreStatus(storeId, "DELETED");
-        return ResponseEntity.ok(ApiResponse.ok("Đã xóa (mềm) cửa hàng"));
-    } catch (Exception e) {
-        return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
-    }
-}
-
-// Store model có status validation
-public static boolean isValidStatus(String status) {
-    try {
-        StoreStatus.valueOf(status.toUpperCase());
-        return true;
-    } catch (IllegalArgumentException e) {
-        return false;
-    }
-}
-
-// Valid statuses: PENDING, APPROVED, REJECTED, DELETED
-enum StoreStatus {
-    PENDING, APPROVED, REJECTED, DELETED
-}
-```
-
-**✅ Kết quả:**
-- ✅ **Soft delete**: Chỉ thay đổi status thành `DELETED`
-- ✅ **Data preservation**: Dữ liệu vẫn được giữ lại
-- ✅ **Status validation**: Kiểm tra status hợp lệ
-- ✅ **Audit trail**: Có thể track lịch sử thay đổi
-
-#### **E-Commerce1 (NgocHuy) - ❌ CHƯA GIẢI QUYẾT:**
-```java
-// KHÔNG CÓ soft delete implementation
-// Chỉ có basic status update
-@PutMapping("/{storeId}/status")
-public ResponseEntity<?> updateStoreStatus(@PathVariable String storeId, 
-    @RequestParam String status) {
-    try {
-        storeService.updateStoreStatus(storeId, status);
-        return ResponseEntity.ok(ApiResponse.ok("Cập nhật trạng thái cửa hàng thành công!"));
-    } catch (Exception e) {
-        return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
-    }
-}
-
-// Store model KHÔNG có status validation
-public class Store extends BaseEntity {
-    @Column(name = "status", length = 50)
-    private String status; // Không có validation
-    // ... không có enum StoreStatus
-}
-```
-
-**❌ Kết quả:**
-- ❌ **Không có soft delete**: Không có endpoint delete
-- ❌ **Không có status validation**: Có thể set status bất kỳ
-- ❌ **Không có enum**: Không có định nghĩa status hợp lệ
-- ❌ **Data loss risk**: Có thể mất dữ liệu nếu hard delete
+- **Developer**: NgocHuy
+- **Repository**: [E-Commerce](https://github.com/ngochuytech/E-Commerce)
+- **Branch**: NgocHuy
+- **Issues**: Tạo issue trên GitHub repository
 
 ---
 
-### **3. Lúc reject thì reason được lưu vào đâu?**
+## 🎉 **CREDITS**
 
-#### **E-Commerce (Gốc) - ❌ CHƯA GIẢI QUYẾT:**
-```java
-@PutMapping("/{storeId}/reject")
-public ResponseEntity<?> rejectStore(@PathVariable String storeId, 
-    @RequestParam String reason) {
-    try {
-        // ❌ REASON KHÔNG ĐƯỢC LƯU VÀO DATABASE
-        StoreResponse storeResponse = storeService.rejectStore(storeId, reason);
-        return ResponseEntity.ok(ApiResponse.ok("Từ chối cửa hàng thành công!"));
-    } catch (Exception e) {
-        return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
-    }
-}
-
-// Service layer
-public StoreResponse rejectStore(String storeId, String reason) throws Exception {
-    Store store = storeRepository.findById(storeId)
-            .orElseThrow(() -> new DataNotFoundException("Không tìm thấy cửa hàng"));
-    
-    store.setStatus("REJECTED");
-    // ❌ REASON KHÔNG ĐƯỢC LƯU
-    Store updatedStore = storeRepository.save(store);
-    return StoreResponse.fromStore(updatedStore);
-}
-```
-
-**❌ Vấn đề:**
-- ❌ **Reason không được lưu**: Chỉ nhận parameter nhưng không lưu vào DB
-- ❌ **Không có audit trail**: Không biết lý do reject
-- ❌ **Không có notification**: Store owner không biết lý do bị reject
-
-#### **E-Commerce1 (NgocHuy) - ❌ CHƯA GIẢI QUYẾT:**
-```java
-@PutMapping("/{storeId}/reject")
-public ResponseEntity<?> rejectStore(@PathVariable String storeId, 
-    @RequestParam String reason) {
-    try {
-        // ❌ REASON KHÔNG ĐƯỢC LƯU VÀO DATABASE
-        StoreResponse storeResponse = storeService.rejectStore(storeId, reason);
-        return ResponseEntity.ok(ApiResponse.ok("Từ chối cửa hàng thành công!"));
-    } catch (Exception e) {
-        return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
-    }
-}
-```
-
-**❌ Vấn đề tương tự:**
-- ❌ **Reason không được lưu**: Cùng vấn đề với E-Commerce
-- ❌ **Không có audit trail**: Không track lý do reject
+Phiên bản này được phát triển với mục tiêu nâng cao trải nghiệm người dùng và khả năng quản lý sản phẩm của hệ thống E-Commerce. Cảm ơn tất cả những đóng góp và feedback từ team!
 
 ---
 
-### **4. Cần kiểm tra các status có thể dùng khi cập nhật status cho store**
-
-#### **E-Commerce (Gốc) - ✅ ĐÃ GIẢI QUYẾT:**
-```java
-@PutMapping("/{storeId}/status")
-public ResponseEntity<?> updateStoreStatus(@PathVariable String storeId, 
-    @RequestParam String status) {
-    try {
-        // ✅ VALIDATE STATUS TRƯỚC KHI GỌI SERVICE
-        if (!Store.isValidStatus(status)) {
-            String validStatuses = String.join(", ", Store.getValidStatuses());
-            return ResponseEntity.badRequest().body(
-                ApiResponse.error("Status không hợp lệ: '" + status + 
-                "'. Các status hợp lệ: " + validStatuses));
-        }
-        
-        storeService.updateStoreStatus(storeId, status);
-        return ResponseEntity.ok(ApiResponse.ok("Cập nhật trạng thái cửa hàng thành công!"));
-    } catch (Exception e) {
-        return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
-    }
-}
-
-// Store model có validation methods
-public static boolean isValidStatus(String status) {
-    try {
-        StoreStatus.valueOf(status.toUpperCase());
-        return true;
-    } catch (IllegalArgumentException e) {
-        return false;
-    }
-}
-
-public static String[] getValidStatuses() {
-    StoreStatus[] statuses = StoreStatus.values();
-    String[] statusStrings = new String[statuses.length];
-    for (int i = 0; i < statuses.length; i++) {
-        statusStrings[i] = statuses[i].name();
-    }
-    return statusStrings;
-}
-
-// Enum định nghĩa status hợp lệ
-enum StoreStatus {
-    PENDING, APPROVED, REJECTED, DELETED
-}
-```
-
-**✅ Kết quả:**
-- ✅ **Status validation**: Kiểm tra status hợp lệ trước khi update
-- ✅ **Clear error message**: Thông báo lỗi rõ ràng với danh sách status hợp lệ
-- ✅ **Enum definition**: Định nghĩa rõ ràng các status có thể dùng
-- ✅ **Type safety**: Tránh lỗi typo khi set status
-
-#### **E-Commerce1 (NgocHuy) - ❌ CHƯA GIẢI QUYẾT:**
-```java
-@PutMapping("/{storeId}/status")
-public ResponseEntity<?> updateStoreStatus(@PathVariable String storeId, 
-    @RequestParam String status) {
-    try {
-        // ❌ KHÔNG CÓ VALIDATION
-        storeService.updateStoreStatus(storeId, status);
-        return ResponseEntity.ok(ApiResponse.ok("Cập nhật trạng thái cửa hàng thành công!"));
-    } catch (Exception e) {
-        return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
-    }
-}
-
-// Store model KHÔNG có validation
-public class Store extends BaseEntity {
-    @Column(name = "status", length = 50)
-    private String status; // Không có validation
-    // ... không có enum StoreStatus
-}
-```
-
-**❌ Vấn đề:**
-- ❌ **Không có validation**: Có thể set status bất kỳ
-- ❌ **Không có enum**: Không có định nghĩa status hợp lệ
-- ❌ **Error prone**: Dễ gây lỗi khi set status sai
-- ❌ **No type safety**: Không có kiểm tra type
-
----
-
-## 📊 TỔNG KẾT SO SÁNH
-
-| Vấn đề | E-Commerce | E-Commerce1 | Kết quả |
-|--------|------------|-------------|---------|
-| **Store image upload** | ✅ Hoàn chỉnh | ❌ Thiếu | E-Commerce thắng |
-| **Soft delete** | ✅ Có implementation | ❌ Thiếu | E-Commerce thắng |
-| **Reject reason storage** | ❌ Chưa giải quyết | ❌ Chưa giải quyết | Cả hai đều thiếu |
-| **Status validation** | ✅ Có validation | ❌ Không có | E-Commerce thắng |
-
----
-
-## 🎯 KẾT LUẬN
-
-### **✅ E-Commerce (Gốc) - Giải quyết 3/4 vấn đề:**
-1. ✅ **Store image upload**: Hoàn chỉnh với logo/banner upload
-2. ✅ **Soft delete**: Có implementation đầy đủ
-3. ❌ **Reject reason storage**: Chưa giải quyết
-4. ✅ **Status validation**: Có validation đầy đủ
-
-### **❌ E-Commerce1 (NgocHuy) - Giải quyết 0/4 vấn đề:**
-1. ❌ **Store image upload**: Hoàn toàn thiếu
-2. ❌ **Soft delete**: Không có implementation
-3. ❌ **Reject reason storage**: Chưa giải quyết
-4. ❌ **Status validation**: Không có validation
-
-### **🚀 KHUYẾN NGHỊ:**
-
-**SỬ DỤNG E-COMMERCE (GỐC)** vì:
-- ✅ **Giải quyết 75% vấn đề** (3/4)
-- ✅ **Có image upload system** hoàn chỉnh
-- ✅ **Có soft delete** bảo vệ dữ liệu
-- ✅ **Có status validation** tránh lỗi
-- ⚠️ **Chỉ thiếu reject reason storage** (có thể bổ sung dễ dàng)
-
-**TRÁNH E-COMMERCE1 (NgocHuy)** vì:
-- ❌ **Không giải quyết vấn đề nào** (0/4)
-- ❌ **Thiếu image upload** hoàn toàn
-- ❌ **Không có soft delete** - nguy hiểm
-- ❌ **Không có validation** - dễ lỗi
-- ❌ **Cần phát triển từ đầu** - tốn thời gian
-
----
-
-*Báo cáo phân tích dựa trên code thực tế - Ngày: $(Get-Date -Format "dd/MM/yyyy HH:mm:ss")*
+*Last updated: October 8, 2025*
