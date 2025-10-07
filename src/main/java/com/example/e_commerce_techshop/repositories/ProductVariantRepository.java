@@ -1,8 +1,6 @@
 package com.example.e_commerce_techshop.repositories;
 
-import com.example.e_commerce_techshop.dtos.ProductFilterDTO;
 import com.example.e_commerce_techshop.models.ProductVariant;
-import com.example.e_commerce_techshop.responses.ProductVariantResponse;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

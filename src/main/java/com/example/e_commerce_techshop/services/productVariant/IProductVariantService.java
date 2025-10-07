@@ -8,11 +8,15 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 public interface IProductVariantService {
-    void createProductVariant(ProductVariantDTO productVariantDTO, MultipartFile imageFile) throws Exception;
+    void createProductVariant(ProductVariantDTO productVariantDTO, List<MultipartFile> imageFiles) throws Exception;
 
     void updateProductVariant(String productVariantId, ProductVariantDTO productVariantDTO, MultipartFile imageFile) throws Exception;
+    
+    void updateProductVariantWithImages(String productVariantId, ProductVariantDTO productVariantDTO, List<MultipartFile> imageFiles) throws Exception;
 
     void disableProduct(String productVariantId) throws Exception;
+
+    ProductVariantResponse getById(String productVariantId) throws Exception;
 
     List<ProductVariantResponse> getByProduct(String productId) throws Exception;
 

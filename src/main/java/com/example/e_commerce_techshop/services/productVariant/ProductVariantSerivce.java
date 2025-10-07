@@ -5,6 +5,7 @@ import com.example.e_commerce_techshop.dtos.ProductVariantDTO;
 import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
 import com.example.e_commerce_techshop.models.Attribute;
 import com.example.e_commerce_techshop.models.Product;
+import com.example.e_commerce_techshop.models.ProductImage;
 import com.example.e_commerce_techshop.models.ProductVariant;
 import com.example.e_commerce_techshop.models.ProductVariantAttribute;
 import com.example.e_commerce_techshop.repositories.*;
@@ -35,10 +36,12 @@ public class ProductVariantSerivce implements IProductVariantService{
     private final ProductRepositoryCustom productRepositoryCustom;
 
     private final FileUploadService fileUploadService;
+    
+    private final ProductImageRepository productImageRepository;
 
     @Override
     @Transactional
-    public void createProductVariant(ProductVariantDTO productVariantDTO, MultipartFile imageFile) throws Exception {
+    public void createProductVariant(ProductVariantDTO productVariantDTO, List<MultipartFile> imageFiles) throws Exception {
         Product product = productRepository.findById(productVariantDTO.getProductId())
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy product này"));
         ProductVariant productVariant = ProductVariant.builder()
@@ -49,12 +52,27 @@ public class ProductVariantSerivce implements IProductVariantService{
                 .stock(productVariantDTO.getStock())
                 .build();
 
-        // Xử lý ảnh
-        String imageUrl = fileUploadService.uploadFile(imageFile);
-        if(imageUrl != null){
-            productVariant.setImageUrl(imageUrl);
-        }
+        // Lưu product variant trước
         productVariantRepository.save(productVariant);
+
+        // Xử lý nhiều ảnh
+        if (imageFiles != null && !imageFiles.isEmpty()) {
+            List<String> imageUrls = fileUploadService.uploadFiles(imageFiles, "product-variants");
+            
+            for (int i = 0; i < imageUrls.size(); i++) {
+                String imageUrl = imageUrls.get(i);
+                MultipartFile file = imageFiles.get(i);
+                
+                ProductImage productImage = ProductImage.builder()
+                        .productVariant(productVariant)
+                        .mediaPath(imageUrl)
+                        .mediaType(file.getContentType())
+                        .isPrimary(i == 0) // Ảnh đầu tiên là ảnh chính
+                        .build();
+                
+                productImageRepository.save(productImage);
+            }
+        }
 
         // Xử lý lưu các attributes
         Map<String, String> attributeMaps = productVariantDTO.getAttributes();
@@ -86,6 +104,13 @@ public class ProductVariantSerivce implements IProductVariantService{
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy mẫu sản phẩm này"));
         productVariant.setStock(0);
         productVariantRepository.save(productVariant);
+    }
+
+    @Override
+    public ProductVariantResponse getById(String productVariantId) throws Exception {
+        ProductVariant productVariant = productVariantRepository.findById(productVariantId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy mẫu sản phẩm này"));
+        return ProductVariantResponse.fromProductVariant(productVariant);
     }
 
     @Override
@@ -124,17 +149,69 @@ public class ProductVariantSerivce implements IProductVariantService{
         productVariant.setDescription(productVariantDTO.getDescription());
         productVariant.setStock(productVariantDTO.getStock());
 
-        // Xử lý ảnh
+        // Xử lý ảnh (tạm thời giữ logic cũ cho updateProductVariant với 1 ảnh)
         if (imageFile != null && !imageFile.isEmpty()) {
-            // Xóa ảnh cũ nếu có
-            if (productVariant.getImageUrl() != null) {
-                fileUploadService.deleteFile(productVariant.getImageUrl());
+            // Xóa tất cả ảnh cũ
+            List<ProductImage> existingImages = productImageRepository.findByProductVariant(productVariant);
+            for (ProductImage img : existingImages) {
+                fileUploadService.deleteFile(img.getMediaPath());
             }
+            productImageRepository.deleteByProductVariant(productVariant);
 
             // Lưu ảnh mới
-            String newImageUrl = fileUploadService.uploadFile(imageFile);
+            String newImageUrl = fileUploadService.uploadFile(imageFile, "product-variants");
             if (newImageUrl != null) {
-                productVariant.setImageUrl(newImageUrl);
+                ProductImage productImage = ProductImage.builder()
+                        .productVariant(productVariant)
+                        .mediaPath(newImageUrl)
+                        .mediaType(imageFile.getContentType())
+                        .isPrimary(true)
+                        .build();
+                productImageRepository.save(productImage);
+            }
+        }
+
+        // Xử lý attributes
+        updateAttributes(productVariant, productVariantDTO.getAttributes());
+
+        productVariantRepository.save(productVariant);
+    }
+
+    @Override
+    @Transactional
+    public void updateProductVariantWithImages(String productVariantId, ProductVariantDTO productVariantDTO, List<MultipartFile> imageFiles) throws Exception {
+        ProductVariant productVariant = productVariantRepository.findById(productVariantId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy mẫu sản phẩm này"));
+        
+        productVariant.setName(productVariantDTO.getName());
+        productVariant.setPrice(productVariantDTO.getPrice());
+        productVariant.setDescription(productVariantDTO.getDescription());
+        productVariant.setStock(productVariantDTO.getStock());
+
+        // Xử lý nhiều ảnh
+        if (imageFiles != null && !imageFiles.isEmpty()) {
+            // Xóa tất cả ảnh cũ
+            List<ProductImage> existingImages = productImageRepository.findByProductVariant(productVariant);
+            for (ProductImage img : existingImages) {
+                fileUploadService.deleteFile(img.getMediaPath());
+            }
+            productImageRepository.deleteByProductVariant(productVariant);
+
+            // Lưu các ảnh mới
+            List<String> imageUrls = fileUploadService.uploadFiles(imageFiles, "product-variants");
+            
+            for (int i = 0; i < imageUrls.size(); i++) {
+                String imageUrl = imageUrls.get(i);
+                MultipartFile file = imageFiles.get(i);
+                
+                ProductImage productImage = ProductImage.builder()
+                        .productVariant(productVariant)
+                        .mediaPath(imageUrl)
+                        .mediaType(file.getContentType())
+                        .isPrimary(i == 0) // Ảnh đầu tiên là ảnh chính
+                        .build();
+                
+                productImageRepository.save(productImage);
             }
         }
 

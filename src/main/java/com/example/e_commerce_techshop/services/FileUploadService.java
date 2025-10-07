@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -20,6 +22,29 @@ public class FileUploadService {
 
     public String uploadFile(MultipartFile file) throws Exception {
         return uploadFile(file, "general");
+    }
+    
+    public List<String> uploadFiles(List<MultipartFile> files) throws Exception {
+        return uploadFiles(files, "general");
+    }
+    
+    public List<String> uploadFiles(List<MultipartFile> files, String category) throws Exception {
+        List<String> uploadedUrls = new ArrayList<>();
+        
+        if (files == null || files.isEmpty()) {
+            return uploadedUrls;
+        }
+        
+        for (MultipartFile file : files) {
+            if (file != null && !file.isEmpty()) {
+                String uploadedUrl = uploadFile(file, category);
+                if (uploadedUrl != null) {
+                    uploadedUrls.add(uploadedUrl);
+                }
+            }
+        }
+        
+        return uploadedUrls;
     }
 
     public String uploadFile(MultipartFile file, String category) throws Exception {
@@ -65,6 +90,16 @@ public class FileUploadService {
         // Xóa file nếu tồn tại
         if (Files.exists(filePath)) {
             Files.delete(filePath);
+        }
+    }
+    
+    public void deleteFiles(List<String> imageUrls) throws IOException {
+        if(imageUrls == null || imageUrls.isEmpty()){
+            return;
+        }
+        
+        for (String imageUrl : imageUrls) {
+            deleteFile(imageUrl);
         }
     }
 }

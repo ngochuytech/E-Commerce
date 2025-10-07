@@ -11,6 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
 import jakarta.validation.Valid;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -27,7 +29,9 @@ public class StoreController {
 
     // Store Management APIs
     @PostMapping("/create")
-    public ResponseEntity<?> createStore(@Valid @RequestBody StoreDTO storeDTO, BindingResult result) {
+    public ResponseEntity<?> createStore(@RequestPart("storeDTO") @Valid StoreDTO storeDTO,
+                                        @RequestPart(value = "logo", required = false) MultipartFile logo,
+                                         BindingResult result) {
         try {
             if (result.hasErrors()) {
                 List<String> errorMessages = result.getFieldErrors()
@@ -44,7 +48,7 @@ public class StoreController {
             // Set owner_id từ JWT, bỏ qua owner_id trong JSON
             storeDTO.setOwnerId(currentUserId);
             
-            StoreResponse storeResponse = storeService.createStore(storeDTO);
+            StoreResponse storeResponse = storeService.createStore(storeDTO, logo);
             return ResponseEntity.ok(ApiResponse.ok("Tạo cửa hàng thành công!"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
@@ -64,6 +68,28 @@ public class StoreController {
             
             StoreResponse storeResponse = storeService.updateStore(storeId, storeDTO);
             return ResponseEntity.ok(ApiResponse.ok("Cập nhật cửa hàng thành công!"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @PutMapping("/{storeId}/with-media")
+    public ResponseEntity<?> updateStoreWithMedia(@PathVariable String storeId,
+                                                 @RequestPart("storeDTO") @Valid StoreDTO storeDTO,
+                                                 @RequestPart(value = "logo", required = false) MultipartFile logo,
+                                                 @RequestPart(value = "banner", required = false) MultipartFile banner,
+                                                 BindingResult result) {
+        try {
+            if (result.hasErrors()) {
+                List<String> errorMessages = result.getFieldErrors()
+                        .stream()
+                        .map(FieldError::getDefaultMessage)
+                        .toList();
+                return ResponseEntity.badRequest().body(new ApiResponse<>(false, null, String.join(", ", errorMessages)));
+            }
+            
+            StoreResponse storeResponse = storeService.updateStoreWithMedia(storeId, storeDTO, logo, banner);
+            return ResponseEntity.ok(ApiResponse.ok("Cập nhật cửa hàng với media thành công!"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         }

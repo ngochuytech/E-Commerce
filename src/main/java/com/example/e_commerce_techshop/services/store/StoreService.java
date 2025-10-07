@@ -9,8 +9,10 @@ import com.example.e_commerce_techshop.repositories.AddressRepository;
 import com.example.e_commerce_techshop.repositories.StoreRepository;
 import com.example.e_commerce_techshop.repositories.UserRepository;
 import com.example.e_commerce_techshop.responses.StoreResponse;
+import com.example.e_commerce_techshop.services.FileUploadService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -21,9 +23,10 @@ public class StoreService implements IStoreService {
     private final StoreRepository storeRepository;
     private final UserRepository userRepository;
     private final AddressRepository addressRepository;
+    private final FileUploadService fileUploadService;
 
     @Override
-    public StoreResponse createStore(StoreDTO storeDTO) throws Exception {
+    public StoreResponse createStore(StoreDTO storeDTO, MultipartFile logo) throws Exception {
         System.out.println("StoreService - Creating store with ownerId: " + storeDTO.getOwnerId());
         
         // Validate owner exists - if not provided, use a default owner for testing
@@ -48,11 +51,17 @@ public class StoreService implements IStoreService {
                     .orElseThrow(() -> new DataNotFoundException("Không tìm thấy địa chỉ"));
         }
 
+        // Upload logo if provided
+        String logoUrl = null;
+        if (logo != null && !logo.isEmpty()) {
+            logoUrl = fileUploadService.uploadFile(logo, "stores");
+        }
+
         // Create store
         Store store = Store.builder()
                 .name(storeDTO.getName())
                 .description(storeDTO.getDescription())
-                .logoUrl(null) // Always null when creating new store
+                .logoUrl(logoUrl)
                 .banner_url(null) // Always null when creating new store
                 .status(storeDTO.getStatus() == null || storeDTO.getStatus().isBlank() ? "PENDING" : storeDTO.getStatus())
                 .owner(owner)
@@ -96,6 +105,65 @@ public class StoreService implements IStoreService {
         System.out.println("StoreService - After save - Logo URL: " + updatedStore.getLogoUrl());
         System.out.println("StoreService - After save - Banner URL: " + updatedStore.getBanner_url());
         
+        return StoreResponse.fromStore(updatedStore);
+    }
+
+    @Override
+    public StoreResponse updateStoreWithMedia(String storeId, StoreDTO storeDTO, MultipartFile logo, MultipartFile banner) throws Exception {
+        System.out.println("StoreService - Updating store with media: " + storeId);
+        
+        Store existingStore = storeRepository.findById(storeId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy cửa hàng"));
+
+        // Update basic fields
+        existingStore.setName(storeDTO.getName());
+        existingStore.setDescription(storeDTO.getDescription());
+        if (storeDTO.getStatus() != null && !storeDTO.getStatus().isBlank()) {
+            existingStore.setStatus(storeDTO.getStatus());
+        }
+
+        // Update address if provided
+        if (storeDTO.getAddressId() != null) {
+            Address address = addressRepository.findById(storeDTO.getAddressId())
+                    .orElseThrow(() -> new DataNotFoundException("Không tìm thấy địa chỉ"));
+            existingStore.setAddress(address);
+        }
+
+        // Upload new logo if provided
+        if (logo != null && !logo.isEmpty()) {
+            // Delete old logo if exists
+            if (existingStore.getLogoUrl() != null) {
+                try {
+                    fileUploadService.deleteFile(existingStore.getLogoUrl());
+                } catch (Exception e) {
+                    System.err.println("Failed to delete old logo: " + e.getMessage());
+                }
+            }
+            
+            System.out.println("StoreService - Uploading new logo: " + logo.getOriginalFilename());
+            String logoUrl = fileUploadService.uploadFile(logo, "stores");
+            existingStore.setLogoUrl(logoUrl);
+            System.out.println("StoreService - New logo uploaded to: " + logoUrl);
+        }
+
+        // Upload new banner if provided
+        if (banner != null && !banner.isEmpty()) {
+            // Delete old banner if exists
+            if (existingStore.getBanner_url() != null) {
+                try {
+                    fileUploadService.deleteFile(existingStore.getBanner_url());
+                } catch (Exception e) {
+                    System.err.println("Failed to delete old banner: " + e.getMessage());
+                }
+            }
+            
+            System.out.println("StoreService - Uploading new banner: " + banner.getOriginalFilename());
+            String bannerUrl = fileUploadService.uploadFile(banner, "stores");
+            existingStore.setBanner_url(bannerUrl);
+            System.out.println("StoreService - New banner uploaded to: " + bannerUrl);
+        }
+
+        Store updatedStore = storeRepository.save(existingStore);
         return StoreResponse.fromStore(updatedStore);
     }
 

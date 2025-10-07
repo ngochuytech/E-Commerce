@@ -20,9 +20,6 @@ public class ProductVariant {
     @Column(nullable = false)
     private String name;
 
-    @Column(name = "image_url")
-    private String imageUrl;
-
     @Column(nullable = false)
     private Long price;
 
@@ -37,4 +34,7 @@ public class ProductVariant {
 
     @OneToMany(mappedBy = "productVariant", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<ProductVariantAttribute> attributes;
+
+    @OneToMany(mappedBy = "productVariant", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<ProductImage> images;
 }

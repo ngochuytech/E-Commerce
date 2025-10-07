@@ -107,14 +107,23 @@ public class OrderResponse {
 
     public static OrderResponse fromOrder(Order order) {
         List<OrderItemResponse> orderItems = order.getOrderItems().stream()
-                .map(orderItem -> OrderItemResponse.builder()
-                        .id(orderItem.getId())
-                        .productVariantId(orderItem.getProductVariant().getId())
-                        .productName(orderItem.getProductVariant().getProduct().getName())
-                        .productImage(orderItem.getProductVariant().getImageUrl()) // Product image handling to be implemented based on actual Product model
-                        .quantity(orderItem.getQuantity())
-                        .price(BigDecimal.valueOf(orderItem.getPrice()))
-                        .build())
+                .map(orderItem -> {
+                    String primaryImageUrl = orderItem.getProductVariant().getImages().stream()
+                            .filter(img -> Boolean.TRUE.equals(img.getIsPrimary()))
+                            .map(img -> img.getMediaPath())
+                            .findFirst()
+                            .orElse(orderItem.getProductVariant().getImages().isEmpty() ? 
+                                null : orderItem.getProductVariant().getImages().get(0).getMediaPath());
+                    
+                    return OrderItemResponse.builder()
+                            .id(orderItem.getId())
+                            .productVariantId(orderItem.getProductVariant().getId())
+                            .productName(orderItem.getProductVariant().getProduct().getName())
+                            .productImage(primaryImageUrl)
+                            .quantity(orderItem.getQuantity())
+                            .price(BigDecimal.valueOf(orderItem.getPrice()))
+                            .build();
+                })
                 .collect(java.util.stream.Collectors.toList());
 
         UserResponse buyer = UserResponse.builder()

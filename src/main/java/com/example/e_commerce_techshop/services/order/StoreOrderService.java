@@ -178,7 +178,6 @@ public class StoreOrderService implements IStoreOrderService {
         if (productVariant != null) {
             productName = productVariant.getName();
             variantName = productVariant.getName();
-            productImage = productVariant.getImageUrl();
             stock = productVariant.getStock();
             if (productVariant.getProduct() != null) {
                 productId = productVariant.getProduct().getId();

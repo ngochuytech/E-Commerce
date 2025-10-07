@@ -25,9 +25,26 @@ public class ProductResponse {
 
     private String brand;
 
-    private String store;
+    private StoreResponse store;
+
+    @Getter
+    @Setter
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class StoreResponse {
+        private String id;
+        private String name;
+        private String logo;
+    }
 
     public static ProductResponse fromProduct(Product product){
+        StoreResponse storeResponse = StoreResponse.builder()
+                .id(product.getStore().getId())
+                .name(product.getStore().getName())
+                .logo(product.getStore().getLogoUrl())
+                .build();
+
         return ProductResponse.builder()
                 .id(product.getId())
                 .name(product.getName())
@@ -36,7 +53,7 @@ public class ProductResponse {
                 .price(product.getPrice())
                 .condition(product.getProductCondition())
                 .status(product.getStatus())
-                .store(product.getStore().getName())
+                .store(storeResponse)
                 .build();
     }
 }
