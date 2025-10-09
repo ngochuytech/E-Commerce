@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:mysql://${AIVEN_MYSQL_HOST}:${AIVEN_MYSQL_PORT}/${AIVEN_MYSQL_DBNAME}?useSSL=false
-    username: ${AIVEN_MYSQL_USERNAME}
-    password: ${AIVEN_MYSQL_PASSWORD}
+    url: jdbc:mysql://${AIVEN_MYSQL_HOST:localhost}:${AIVEN_MYSQL_PORT:3306}/${AIVEN_MYSQL_DBNAME:e-commerce}?useSSL=false
+    username: ${AIVEN_MYSQL_USERNAME:root}
+    password: ${AIVEN_MYSQL_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     show-sql: true
