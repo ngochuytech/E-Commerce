@@ -33,7 +33,7 @@ Login with email/password
     "success": true,
     "data": {
       "message": "Đăng nhập thành công",
-      "token": "jwt_token",
+      "token": "access_token",
       "refreshToken": "refresh_token",
       "username": "Full Name",
       "id": "user_id",
@@ -48,11 +48,10 @@ Register new user account
   ```json
   {
     "email": "string",
-    "phone": "string",// có thể null
     "full_name": "string",
     "password": "string",
     "retype_password": "string",
-    "date_of_birth": "yyyy-MM-dd", // có thể null
+    "role_id": 1 // Mặc định là 1 (User)
   }
   ```
 - **Response**:
@@ -94,6 +93,13 @@ Request password reset
     "email": "user@example.com"
   }
   ```
+- **Response**:
+  ```json
+  {
+    "success": true,
+    "message": "Đã gửi mã xác nhận tói email của bạn"
+  }
+  ```
 
 #### POST `/reset-password`
 Reset password with token
@@ -104,8 +110,45 @@ Reset password with token
     "password": "new_password"
   }
   ```
+- **Response**:
+  ```json
+  {
+    "success": true,
+    "message": "Đã đổi mật khẩu thành công"
+  }
+  ```
+
 
 ---
+
+#### GET `/current`
+Lấy user hiện tại (Cần token)
+- **Response**:
+  ```json
+  {
+    "success": true,
+    "data": {
+        "id": "id_user",
+        "email": "email",
+        "phone": "phone",
+        "fullName": "Full name",
+        "dateOfBirth": "dateOfBirth",
+        "avatar": "avatar_url",
+        "address": {
+            "id": "id_address",
+            "province": "province",
+            "district": "district",
+            "ward": "ward",
+            "homeAddress": "homeAddress",
+            "suggestedName": "suggestedName"
+        }
+    }
+  }
+  ```
+
+
+---
+
 
 ## 2. Product Management
 
@@ -119,9 +162,11 @@ Create new product (Auth required)
   {
     "name": "Product Name",
     "description": "Product Description",
-    "categoryId": "category_id",
-    "brandId": "brand_id",
-    "storeId": "store_id"
+    "category": "category_name",
+    "brand_id": "brand_id", // Có id trong bảng Brand
+    "store_id": "store_id", // Có id trong bảng store
+    "product_condition": "[NEW, LIKENEW]",
+    "status": "[ACTIVE, HIDDEN, SOLD]"
   }
   ```
 
@@ -138,8 +183,11 @@ Get product by ID
       "description": "Description",
       "category": "Category",
       "brand": "Brand",
-      "store": "Store Name",
-      "variants": []
+      "store": {
+            "id": "store_id",
+            "name": "store_name",
+            "logo": "logo_url"
+        }
     }
   }
   ```

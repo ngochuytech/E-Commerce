@@ -9,6 +9,8 @@ import com.example.e_commerce_techshop.models.Role;
 import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.repositories.RoleRepository;
 import com.example.e_commerce_techshop.repositories.UserRepository;
+import com.example.e_commerce_techshop.responses.user.UserResponse;
+
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
@@ -151,5 +153,12 @@ public class UserService implements IUserService{
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setResetPasswordToken(null);
         userRepository.save(user);
+    }
+
+    @Override
+    public UserResponse getCurrentUser(String email) throws Exception {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy user với Email này"));
+        return UserResponse.fromUser(user);
     }
 }
