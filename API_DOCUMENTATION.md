@@ -209,39 +209,76 @@ Get all products with filters
 Create product variant with multiple images
 - **Content-Type**: `multipart/form-data`
 - **Form Fields**:
-  - `productId` (string)
-  - `sku` (string)
-  - `price` (number)
-  - `stockQuantity` (integer)
-  - `attributes` (JSON string)
-  - `images` (file[]) - Multiple image files
-  - `primaryImageIndex` (integer, default: 0)
+  - `dto` (JSON): ProductVariantDTO object
+    ```json
+    {
+      "name": "Variant Name",
+      "price": 100000,
+      "description": "Variant Description",
+      "stock": 50,
+      "attributes": {"color": "red", "size": "M"},
+      "product_id": "product_uuid"
+    }
+    ```
+  - `images` (file[], optional): Multiple image files
 
 #### GET `/{id}`
 Get product variant by ID
-- **Response**:
-  ```json
-  {
-    "success": true,
-    "data": {
-      "id": "variant_id",
-      "sku": "SKU123",
-      "price": 99.99,
-      "stockQuantity": 100,
-      "attributes": {},
-      "imageUrls": ["url1", "url2"],
-      "primaryImageUrl": "primary_url"
-    }
-  }
-  ```
+- **Response**: ProductVariantResponse with imageUrls and primaryImageUrl
+
+#### PUT `/update/{id}` (Form Data)
+Update variant with single image
+- **Content-Type**: `multipart/form-data`
+- **Form Fields**:
+  - `dto` (JSON): ProductVariantDTO object
+  - `image` (file, optional): Single image file
 
 #### PUT `/update-with-images/{id}` (Form Data)
-Update variant with new images
+Update variant with multiple images
 - **Content-Type**: `multipart/form-data`
-- **Form Fields**: Same as create endpoint
+- **Form Fields**:
+  - `dto` (JSON): ProductVariantDTO object
+  - `images` (file[], optional): Multiple image files
 
 #### DELETE `/delete/{id}`
-Delete product variant
+Delete product variant (soft delete)
+
+#### GET `/product/{productId}`
+Get variants by product ID
+- **Path Parameters**: `productId` (string)
+
+#### GET `/category/{category}`
+Get variants by category
+- **Path Parameters**: `category` (string)
+
+#### GET `/category/{category}/brand/{brand}`
+Get variants by category and brand
+- **Path Parameters**: 
+  - `category` (string)
+  - `brand` (string)
+
+#### POST `/filter`
+Filter products with advanced criteria
+- **Request Body**: ProductFilterDTO object
+
+#### GET `/latest`
+Get latest product variants with pagination
+- **Query Parameters**:
+  - `page` (int, default: 0) - Page number (0-based)
+  - `size` (int, default: 10) - Items per page
+  - `sortBy` (string, default: "createdAt") - Sort field
+  - `sortDir` (string, default: "desc") - Sort direction (asc/desc)
+- **Response**: `Page<ProductVariantResponse>` object
+
+#### GET `/store/{storeId}`
+Get product variants by store with pagination
+- **Path Parameters**: `storeId` (string)
+- **Query Parameters**:
+  - `page` (int, default: 0) - Page number (0-based)
+  - `size` (int, default: 10) - Items per page
+  - `sortBy` (string, default: "createdAt") - Sort field
+  - `sortDir` (string, default: "desc") - Sort direction (asc/desc)
+- **Response**: `Page<ProductVariantResponse>` object
 
 ---
 

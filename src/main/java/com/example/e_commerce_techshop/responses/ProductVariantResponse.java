@@ -35,11 +35,30 @@ public class ProductVariantResponse {
 
     private Map<String, String> attributes;
 
+    private StoreResponse store;
+
+    @Getter
+    @Setter
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class StoreResponse {
+        private String id;
+        private String name;
+        private String logo;
+    }
+
     public static ProductVariantResponse fromProductVariant(ProductVariant productVariant){
         Map<String, String> attributes = new HashMap<>();
         for (ProductVariantAttribute variantAttribute : productVariant.getAttributes()) {
             attributes.put(variantAttribute.getAttribute().getName(), variantAttribute.getValue());
         }
+
+        StoreResponse storeResponse = StoreResponse.builder()
+                .id(productVariant.getProduct().getStore().getId())
+                .name(productVariant.getProduct().getStore().getName())
+                .logo(productVariant.getProduct().getStore().getLogoUrl())
+                .build();
 
         // Xử lý danh sách ảnh
         List<String> imageUrls = productVariant.getImages().stream()
@@ -62,6 +81,7 @@ public class ProductVariantResponse {
                 .description(productVariant.getDescription())
                 .stock(productVariant.getStock())
                 .attributes(attributes)
+                .store(storeResponse)
                 .build();
     }
 }

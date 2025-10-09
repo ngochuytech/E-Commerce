@@ -7,6 +7,7 @@ import com.example.e_commerce_techshop.responses.ProductVariantResponse;
 import com.example.e_commerce_techshop.services.productVariant.IProductVariantService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
@@ -141,4 +142,35 @@ public class ProductVariantController {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         }
     }
+
+    @GetMapping("/latest")
+    public ResponseEntity<?> getLatestProductVariants(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "2") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
+        try {
+            Page<ProductVariantResponse> response = productVariantService.getLatestProductVariants(page, size, sortBy, sortDir);
+            return ResponseEntity.ok(ApiResponse.ok(response));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @GetMapping("/store/{storeId}")
+    public ResponseEntity<?> getProductVariantsByStore(
+            @PathVariable("storeId") String storeId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
+        try {
+            Page<ProductVariantResponse> response = productVariantService.getByStore(storeId, page, size, sortBy, sortDir);
+            return ResponseEntity.ok(ApiResponse.ok(response));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    
 }

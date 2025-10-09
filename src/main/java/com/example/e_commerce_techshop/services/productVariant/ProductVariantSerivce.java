@@ -12,6 +12,10 @@ import com.example.e_commerce_techshop.repositories.*;
 import com.example.e_commerce_techshop.responses.ProductVariantResponse;
 import com.example.e_commerce_techshop.services.FileUploadService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -274,5 +278,25 @@ public class ProductVariantSerivce implements IProductVariantService{
                 productAttributeRepository.save(newAttr);
             }
         }
+    }
+
+    @Override
+    public Page<ProductVariantResponse> getLatestProductVariants(int page, int size, String sortBy, String sortDir) throws Exception {
+        Pageable pageable = PageRequest.of(page, size, 
+            sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending());
+        
+        Page<ProductVariant> variantPage = productVariantRepository.findAll(pageable);
+        
+        return variantPage.map(ProductVariantResponse::fromProductVariant);
+    }
+
+    @Override
+    public Page<ProductVariantResponse> getByStore(String storeId, int page, int size, String sortBy, String sortDir) throws Exception {
+        Pageable pageable = PageRequest.of(page, size, 
+            sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending());
+        
+        Page<ProductVariant> variantPage = productVariantRepository.findByProductStoreId(storeId, pageable);
+        
+        return variantPage.map(ProductVariantResponse::fromProductVariant);
     }
 }

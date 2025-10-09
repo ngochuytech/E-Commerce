@@ -1,7 +1,6 @@
 package com.example.e_commerce_techshop.services.product;
 
 import com.example.e_commerce_techshop.dtos.ProductDTO;
-import com.example.e_commerce_techshop.models.Product;
 import com.example.e_commerce_techshop.responses.ProductResponse;
 
 import java.util.List;
