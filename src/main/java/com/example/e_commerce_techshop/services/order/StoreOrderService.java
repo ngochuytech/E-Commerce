@@ -156,7 +156,6 @@ public class StoreOrderService implements IStoreOrderService {
                 .buyerPhone(buyerPhone)
                 .storeId(order.getStore().getId())
                 .totalPrice(order.getTotalPrice().longValue())
-                .addressId(order.getAddress().getId())
                 .paymentMethod(order.getPaymentMethod())
                 .status(order.getStatus())
                 .createdAt(order.getCreatedAt())
@@ -178,11 +177,10 @@ public class StoreOrderService implements IStoreOrderService {
         if (productVariant != null) {
             productName = productVariant.getName();
             variantName = productVariant.getName();
-            productImage = productVariant.getImageUrl();
             stock = productVariant.getStock();
             if (productVariant.getProduct() != null) {
                 productId = productVariant.getProduct().getId();
-                category = productVariant.getProduct().getCategory();
+                category = productVariant.getProduct().getCategory().getName();
                 if (productVariant.getProduct().getBrand() != null) {
                     brand = productVariant.getProduct().getBrand().getName();
                 }

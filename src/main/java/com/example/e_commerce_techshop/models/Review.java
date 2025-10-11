@@ -1,10 +1,12 @@
 package com.example.e_commerce_techshop.models;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.DBRef;
+import org.springframework.data.mongodb.core.mapping.Document;
+
 import lombok.*;
 
-@Entity
-@Table(name = "reviews")
+@Document(collection  = "reviews")
 @Getter
 @Setter
 @AllArgsConstructor
@@ -12,29 +14,23 @@ import lombok.*;
 @Builder
 public class Review extends BaseEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @Column(name = "rating", nullable = false)
     private Integer rating; // 1-5
 
-    @Column(name = "comment")
     private String comment;
 
     // Seller Response dùng để làm gì ?
-//    @Column(name = "seller_response")
-//    private String sellerResponse;
+    //    @Column(name = "seller_response")
+    //    private String sellerResponse;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id", insertable = false, updatable = false)
+    @DBRef
     private Order order;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_variant_id", insertable = false, updatable = false)
+    @DBRef
     private ProductVariant productVariant;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", insertable = false, updatable = false)
+    @DBRef
     private User user;
 }
 

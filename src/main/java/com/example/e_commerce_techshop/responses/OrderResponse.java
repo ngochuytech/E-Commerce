@@ -17,7 +17,7 @@ public class OrderResponse {
     private String storeId;
     private String promotionId;
     private BigDecimal totalPrice;
-    private String addressId;
+    private AddressResponse address;
     private String paymentMethod;
     private String status;
     private LocalDateTime createdAt;
@@ -36,7 +36,13 @@ public class OrderResponse {
                 .storeId(order.getStore().getId())
                 .promotionId(order.getPromotion().getId())
                 .totalPrice(order.getTotalPrice())
-                .addressId(order.getAddress().getId())
+                .address(order.getAddress() != null ? AddressResponse.builder()
+                        .province(order.getAddress().getProvince())
+                        .district(order.getAddress().getDistrict())
+                        .ward(order.getAddress().getWard())
+                        .homeAddress(order.getAddress().getHomeAddress())
+                        .suggestedName(order.getAddress().getSuggestedName())
+                        .build() : null)
                 .paymentMethod(order.getPaymentMethod())
                 .status(order.getStatus())
                 .createdAt(order.getCreatedAt())
@@ -57,6 +63,20 @@ class OrderItemResponse {
     private String productName;
     private String variantName;
 }
+
+@Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+class AddressResponse {
+    private String id;
+    private String province;
+    private String district;
+    private String ward;
+    private String homeAddress;
+    private String suggestedName;
+}
+
 
 
 

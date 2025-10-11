@@ -1,6 +1,5 @@
 package com.example.e_commerce_techshop.dtos;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.AllArgsConstructor;
@@ -30,7 +29,6 @@ public class ProductVariantDTO {
 
     private Map<String, String> attributes;
 
-    @JsonProperty("product_id")
     @NotNull(message = "ProductId is required")
     private String productId;
 }

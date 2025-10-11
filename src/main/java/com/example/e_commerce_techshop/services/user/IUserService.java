@@ -3,6 +3,7 @@ package com.example.e_commerce_techshop.services.user;
 import com.example.e_commerce_techshop.dtos.UserDTO;
 import com.example.e_commerce_techshop.dtos.UserLoginDTO;
 import com.example.e_commerce_techshop.models.User;
+import com.example.e_commerce_techshop.responses.user.UserResponse;
 
 public interface IUserService {
     String loginUser(UserLoginDTO userLoginDTO) throws Exception;
@@ -18,4 +19,6 @@ public interface IUserService {
     User getUserByResetPasswordToken(String token);
 
     void updatePassword(User user, String newPassword);
+
+    UserResponse getCurrentUser(String email) throws Exception;
 }

@@ -4,7 +4,6 @@ import com.example.e_commerce_techshop.dtos.buyer.address.AddressDTO;
 import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
 import com.example.e_commerce_techshop.models.Address;
 import com.example.e_commerce_techshop.models.User;
-import com.example.e_commerce_techshop.repositories.AddressRepository;
 import com.example.e_commerce_techshop.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -14,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AddressService implements IAddressService {
 
-    private final AddressRepository addressRepository;
+    // No longer need AddressRepository since Address is embedded
     private final UserRepository userRepository;
 
     @Override
@@ -36,7 +35,7 @@ public class AddressService implements IAddressService {
         Address address;
         
         if (user.getAddress() != null) {
-            // Update existing address
+            // Update existing embedded address
             address = user.getAddress();
             address.setProvince(addressDTO.getProvince());
             address.setDistrict(addressDTO.getDistrict());
@@ -44,16 +43,12 @@ public class AddressService implements IAddressService {
             address.setHomeAddress(addressDTO.getHomeAddress());
             address.setSuggestedName(addressDTO.getSuggestedName());
         } else {
-            // Create new address
+            // Create new embedded address
             address = AddressDTO.toEntity(addressDTO);
-            address = addressRepository.save(address);
-            
-            // Link address to user
             user.setAddress(address);
         }
         
-        // Save changes
-        address = addressRepository.save(address);
+        // Save user with embedded address
         userRepository.save(user);
         
         return AddressDTO.fromEntity(address);
@@ -68,14 +63,9 @@ public class AddressService implements IAddressService {
             throw new DataNotFoundException("Người dùng không có địa chỉ để xóa");
         }
         
-        Address address = user.getAddress();
-        
-        // Unlink address from user
+        // Remove embedded address
         user.setAddress(null);
         userRepository.save(user);
-        
-        // Delete address
-        addressRepository.delete(address);
     }
 
     @Override

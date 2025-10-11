@@ -1,11 +1,13 @@
 package com.example.e_commerce_techshop.repositories;
 
 import com.example.e_commerce_techshop.models.Notification;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-public interface NotificationRepository extends JpaRepository<Notification, String> {
+@Repository
+public interface NotificationRepository extends MongoRepository<Notification, String> {
     List<Notification> findByUserIdOrderByCreatedAtDesc(String userId);
 
     List<Notification> findByUserIdAndIsReadOrderByCreatedAtDesc(String userId, boolean isRead);

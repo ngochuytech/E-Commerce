@@ -1,6 +1,5 @@
 package com.example.e_commerce_techshop.dtos;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -24,22 +23,11 @@ public class ProductDTO {
 
     private String description;
 
-    @JsonProperty("price")
     private Long price;
 
-    @JsonProperty("product_condition")
-    @NotNull(message = "Product condition is required")
-    private String productCondition;
+    @NotNull(message = "Brand is required")
+    private String brand;
 
-    @JsonProperty("status")
-    @NotNull(message = "Status is required")
-    private String status;
-
-    @JsonProperty("brand_id")
-    @NotNull(message = "Brand id is required")
-    private Long brandId;
-
-    @JsonProperty("store_id")
     @NotNull(message = "Store id is required")
     private String storeId;
 }

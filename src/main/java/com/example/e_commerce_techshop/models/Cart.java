@@ -1,30 +1,40 @@
 package com.example.e_commerce_techshop.models;
 
-import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.DBRef;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Entity
-@Table(name = "carts")
+@Document(collection = "carts")
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class Cart {
+public class Cart extends BaseEntity {
     
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
     
-    @OneToOne
-    @JoinColumn(name = "user_id")
+    @DBRef
     private User user;
     
-    // Relationship với CartItem (chi tiết giỏ hàng)
-    @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     @Builder.Default
-    private List<CartItem> cartItems = new ArrayList<>();
+    private List<CartItemEmbedded> cartItems = new ArrayList<>();
+    
+    @Getter
+    @Setter
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class CartItemEmbedded {
+        private String id;
+        @DBRef
+        private ProductVariant productVariant;
+        private int quantity;
+        private Long unitPrice;
+    }
 }

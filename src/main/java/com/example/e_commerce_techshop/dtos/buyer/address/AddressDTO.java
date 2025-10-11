@@ -39,7 +39,6 @@ public class AddressDTO {
      */
     public static Address toEntity(AddressDTO dto) {
         return Address.builder()
-                .id(dto.getId())
                 .province(dto.getProvince())
                 .district(dto.getDistrict())
                 .ward(dto.getWard())
@@ -53,7 +52,7 @@ public class AddressDTO {
      */
     public static AddressDTO fromEntity(Address address) {
         return AddressDTO.builder()
-                .id(address.getId())
+                .id(null) // No ID for embedded documents
                 .province(address.getProvince())
                 .district(address.getDistrict())
                 .ward(address.getWard())

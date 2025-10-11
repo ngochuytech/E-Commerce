@@ -1,21 +1,36 @@
 package com.example.e_commerce_techshop.repositories;
 
-import com.example.e_commerce_techshop.dtos.ProductFilterDTO;
 import com.example.e_commerce_techshop.models.ProductVariant;
-import com.example.e_commerce_techshop.responses.ProductVariantResponse;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
 
 import java.util.List;
 
-public interface ProductVariantRepository extends JpaRepository<ProductVariant, String> {
+public interface ProductVariantRepository extends MongoRepository<ProductVariant, String> {
+    // Sử dụng query method naming convention thay vì @Query annotation
     List<ProductVariant> findByProductId(String productId);
+    
+    // Alternative method sử dụng @Query với ObjectId
+    @Query("{'product.$id': ObjectId(?0)}")
+    List<ProductVariant> findByProductIdWithObjectId(String productId);
+    
+    // Alternative method sử dụng @Query với string
+    @Query("{'product.$id': ?0}")
+    List<ProductVariant> findByProductIdWithQuery(String productId);
 
-    List<ProductVariant> findByProduct_Category(String category);
+    // Sửa lại query cho category - sử dụng @Query vì @DBRef
+    @Query("{'product.category.$id': ?0}")
+    List<ProductVariant> findByProductCategoryId(String categoryId);
 
-    List<ProductVariant> findByProduct_CategoryAndProduct_Brand_Name(String category, String brand);
+    @Query("{'product.category.id': ?0, 'product.brand.id': ?1}")
+    List<ProductVariant> findByProductCategoryAndProductBrandName(String category, String brand);
 
     List<ProductVariant> findByStockLessThan(Integer stock);
 
     List<ProductVariant> findByStockEquals(Integer stock);
 
+    @Query("{'product.$id': ?0}")
+    Page<ProductVariant> findByProductStoreId(String storeId, Pageable pageable);
 }

@@ -1,10 +1,11 @@
 package com.example.e_commerce_techshop.models;
 
-import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.index.Indexed;
 
-@Entity
-@Table(name = "brands")
+@Document(collection = "brands")
 @Getter
 @Setter
 @AllArgsConstructor
@@ -12,8 +13,8 @@ import lombok.*;
 @Builder
 public class Brand {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
+    @Indexed(unique = true)
     private String name;
 }

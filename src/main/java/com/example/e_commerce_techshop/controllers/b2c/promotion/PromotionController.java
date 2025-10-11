@@ -49,7 +49,7 @@ public class PromotionController {
                 return ResponseEntity.badRequest().body(new ApiResponse<>(false, null, String.join(", ", errorMessages)));
             }
             
-            PromotionResponse promotionResponse = promotionService.updatePromotion(promotionId, promotionDTO);
+            promotionService.updatePromotion(promotionId, promotionDTO);
             return ResponseEntity.ok(ApiResponse.ok("Cập nhật khuyến mãi thành công"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
@@ -92,7 +92,7 @@ public class PromotionController {
     @PutMapping("/{promotionId}/activate")
     public ResponseEntity<?> activatePromotion(@PathVariable String promotionId) {
         try {
-            PromotionResponse promotionResponse = promotionService.activatePromotion(promotionId);
+            promotionService.activatePromotion(promotionId);
             return ResponseEntity.ok(ApiResponse.ok("Kích hoạt khuyến mãi thành công!"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
@@ -102,7 +102,7 @@ public class PromotionController {
     @PutMapping("/{promotionId}/deactivate")
     public ResponseEntity<?> deactivatePromotion(@PathVariable String promotionId) {
         try {
-            PromotionResponse promotionResponse = promotionService.deactivatePromotion(promotionId);
+            promotionService.deactivatePromotion(promotionId);
             return ResponseEntity.ok(ApiResponse.ok("Vô hiệu hóa khuyến mãi thành công!"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
@@ -125,7 +125,7 @@ public class PromotionController {
     @PostMapping("/{promotionId}/validate")
     public ResponseEntity<?> validatePromotion(@PathVariable String promotionId, @RequestParam Long orderValue) {
         try {
-            PromotionResponse promotionResponse = promotionService.validatePromotion(promotionId, orderValue);
+            promotionService.validatePromotion(promotionId, orderValue);
             return ResponseEntity.ok(ApiResponse.ok("Khuyến mãi hợp lệ!"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));

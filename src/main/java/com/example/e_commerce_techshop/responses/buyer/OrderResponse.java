@@ -51,28 +51,6 @@ public class OrderResponse {
     @AllArgsConstructor
     @NoArgsConstructor
     @Builder
-    static class OrderItemResponse {
-        private String id;
-
-        @JsonProperty("product_variant_id")
-        private String productVariantId;
-
-        @JsonProperty("product_name")
-        private String productName;
-
-        @JsonProperty("product_image")
-        private String productImage;
-
-        private Integer quantity;
-
-        private BigDecimal price;
-    }
-
-    @Getter
-    @Setter
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @Builder
     static class UserResponse {
         private String id;
         private String username;
@@ -97,7 +75,6 @@ public class OrderResponse {
     @NoArgsConstructor
     @Builder
     static class AddressResponse {
-        private String id;
         private String province;
         private String district;
         private String ward;
@@ -107,14 +84,18 @@ public class OrderResponse {
 
     public static OrderResponse fromOrder(Order order) {
         List<OrderItemResponse> orderItems = order.getOrderItems().stream()
-                .map(orderItem -> OrderItemResponse.builder()
-                        .id(orderItem.getId())
-                        .productVariantId(orderItem.getProductVariant().getId())
-                        .productName(orderItem.getProductVariant().getProduct().getName())
-                        .productImage(orderItem.getProductVariant().getImageUrl()) // Product image handling to be implemented based on actual Product model
-                        .quantity(orderItem.getQuantity())
-                        .price(BigDecimal.valueOf(orderItem.getPrice()))
-                        .build())
+                .map(orderItem -> {
+                    String primaryImageUrl = orderItem.getProductVariant().getPrimaryImageUrl();
+                    
+                    return OrderItemResponse.builder()
+                            .id(orderItem.getId())
+                            .productVariantId(orderItem.getProductVariant().getId())
+                            .productName(orderItem.getProductVariant().getProduct().getName())
+                            .productImage(primaryImageUrl)
+                            .quantity(orderItem.getQuantity())
+                            .price(BigDecimal.valueOf(orderItem.getPrice()))
+                            .build();
+                })
                 .collect(java.util.stream.Collectors.toList());
 
         UserResponse buyer = UserResponse.builder()
@@ -131,7 +112,6 @@ public class OrderResponse {
                 .build();
 
         AddressResponse address = AddressResponse.builder()
-                .id(order.getAddress().getId())
                 .province(order.getAddress().getProvince())
                 .district(order.getAddress().getDistrict())
                 .ward(order.getAddress().getWard())
@@ -225,4 +205,23 @@ public class OrderResponse {
             return BigDecimal.ZERO;
         }
     }
+}
+
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+class OrderItemResponse {
+    private String id;
+
+    private String productVariantId;
+
+    private String productName;
+
+    private String productImage;
+
+    private Integer quantity;
+
+    private BigDecimal price;
 }

@@ -1,12 +1,15 @@
 package com.example.e_commerce_techshop.models;
 
-import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "notifications")
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.DBRef;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+@Document(collection = "notifications")
 @Getter
 @Setter
 @AllArgsConstructor
@@ -14,27 +17,19 @@ import java.time.LocalDateTime;
 @Builder
 public class Notification {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
+    @DBRef
     private User user;
 
-    @Column(name = "title", nullable = false)
     private String title;
 
-    @Column(name = "message", nullable = false)
     private String message;
 
-    @Column(name = "is_read")
     private Boolean isRead;
 
-    @Column(name = "created_at")
+    @CreatedDate
     private LocalDateTime createdAt;
 
-    @PrePersist
-    protected void onCreate(){
-        this.createdAt = LocalDateTime.now();
-    }
+
 }

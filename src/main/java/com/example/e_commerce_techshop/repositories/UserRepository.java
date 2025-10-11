@@ -1,11 +1,11 @@
 package com.example.e_commerce_techshop.repositories;
 
 import com.example.e_commerce_techshop.models.User;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.util.Optional;
 
-public interface UserRepository extends JpaRepository<User, String> {
+public interface UserRepository extends MongoRepository<User, String> {
     boolean existsByEmail(String email);
 
     Optional<User> findByEmail(String email);

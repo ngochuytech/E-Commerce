@@ -1,8 +1,8 @@
 package com.example.e_commerce_techshop.services.order;
 
 
-import com.example.e_commerce_techshop.dtos.buyer.order.OrderDTO;
-import com.example.e_commerce_techshop.responses.buyer.OrderResponse;
+import com.example.e_commerce_techshop.dtos.OrderDTO;
+import com.example.e_commerce_techshop.models.Order;
 
 import org.springframework.data.domain.Page;
 
@@ -17,7 +17,7 @@ public interface IOrderService {
      * @param orderDTO Thông tin checkout
      * @return OrderDTO
      */
-    List<OrderResponse> checkout(String userEmail, OrderDTO orderDTO) throws Exception;
+    List<Order> checkout(String userEmail, OrderDTO orderDTO) throws Exception;
     
     /**
      * Lấy lịch sử đơn hàng
@@ -27,7 +27,7 @@ public interface IOrderService {
      * @param status Trạng thái đơn hàng
      * @return Page<OrderResponse>
      */
-    Page<OrderResponse> getOrderHistory(String userEmail, int page, int size, String status) throws Exception;
+    Page<Order> getOrderHistory(String userEmail, int page, int size, String status) throws Exception;
     
     /**
      * Lấy chi tiết đơn hàng
@@ -35,7 +35,7 @@ public interface IOrderService {
      * @param orderId ID đơn hàng
      * @return OrderResponse
      */
-    OrderResponse getOrderDetail(String userEmail, String orderId) throws Exception;
+    Order getOrderDetail(String userEmail, String orderId) throws Exception;
     
     /**
      * Hủy đơn hàng
@@ -43,7 +43,7 @@ public interface IOrderService {
      * @param orderId ID đơn hàng
      * @return OrderResponse
      */
-    OrderResponse cancelOrder(String userEmail, String orderId) throws Exception;
+    Order cancelOrder(String userEmail, String orderId) throws Exception;
     
     /**
      * Đếm số đơn hàng theo trạng thái

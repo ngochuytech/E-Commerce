@@ -8,6 +8,7 @@ import com.example.e_commerce_techshop.models.Token;
 import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.responses.ApiResponse;
 import com.example.e_commerce_techshop.responses.user.LoginResponse;
+import com.example.e_commerce_techshop.responses.user.UserResponse;
 import com.example.e_commerce_techshop.services.GoogleAuthService;
 import com.example.e_commerce_techshop.services.token.ITokenService;
 import com.example.e_commerce_techshop.services.user.IUserService;
@@ -16,7 +17,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
@@ -35,6 +38,25 @@ public class UserController {
     private final GoogleAuthService googleAuthService;
 
     private final JwtTokenProvider jwtTokenProvider;
+
+    private String getCurrentUserEmail() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getName() == null) {
+            throw new RuntimeException("Không tìm thấy thông tin người dùng");
+        }
+        return authentication.getName(); // Returns email
+    }
+
+    @GetMapping("/current")
+    public ResponseEntity<?> getCurrentUser() {
+        try {
+            String email = getCurrentUserEmail();
+            UserResponse userResponse = userService.getCurrentUser(email);
+            return ResponseEntity.ok(ApiResponse.ok(userResponse));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody @Valid UserLoginDTO userLoginDTO, BindingResult result, HttpServletRequest request){

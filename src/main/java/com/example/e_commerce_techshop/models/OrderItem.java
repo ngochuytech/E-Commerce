@@ -1,32 +1,28 @@
 package com.example.e_commerce_techshop.models;
 
-import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.DBRef;
 
-@Entity
-@Table(name = "order_items")
+@Document(collection = "order_items")
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class OrderItem {
+public class OrderItem extends BaseEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @Column(name = "quantity", nullable = false)
     private Integer quantity;
 
-    @Column(name = "price", nullable = false)
     private Long price;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id")
+    @DBRef
     private Order order;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_variant_id")
+    @DBRef
     private ProductVariant productVariant;
 }
 

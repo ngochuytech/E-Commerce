@@ -1,8 +1,6 @@
 package com.example.e_commerce_techshop.dtos;
 
-import com.example.e_commerce_techshop.models.User;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import jakarta.persistence.Column;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

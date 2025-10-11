@@ -1,27 +1,28 @@
 package com.example.e_commerce_techshop.repositories;
 
 import com.example.e_commerce_techshop.models.Promotion;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
+import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-public interface PromotionRepository extends JpaRepository<Promotion, String> {
+@Repository
+public interface PromotionRepository extends MongoRepository<Promotion, String> {
     List<Promotion> findByStoreId(String storeId);
     List<Promotion> findByStatus(String status);
     List<Promotion> findByType(String type);
     
-    @Query("SELECT p FROM Promotion p WHERE p.status = 'ACTIVE' AND p.startDate <= :now AND p.endDate >= :now")
-    List<Promotion> findActivePromotions(@Param("now") LocalDateTime now);
+    @Query("{ 'status': 'ACTIVE', 'startDate': { '$lte': ?0 }, 'endDate': { '$gte': ?0 } }")
+    List<Promotion> findActivePromotions(LocalDateTime now);
     
-    @Query("SELECT p FROM Promotion p WHERE p.store.id = :storeId AND p.status = 'ACTIVE' AND p.startDate <= :now AND p.endDate >= :now")
-    List<Promotion> findActivePromotionsByStore(@Param("storeId") String storeId, @Param("now") LocalDateTime now);
+    @Query("{ 'store.$id': ?0, 'status': 'ACTIVE', 'startDate': { '$lte': ?1 }, 'endDate': { '$gte': ?1 } }")
+    List<Promotion> findActivePromotionsByStore(String storeId, LocalDateTime now);
     
-    @Query("SELECT p FROM Promotion p WHERE p.endDate < :now")
-    List<Promotion> findExpiredPromotions(@Param("now") LocalDateTime now);
+    @Query("{ 'endDate': { '$lt': ?0 } }")
+    List<Promotion> findExpiredPromotions(LocalDateTime now);
 
     Optional<Promotion> findByIdAndStoreId(String id, String storeId);
     

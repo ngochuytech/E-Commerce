@@ -1,8 +1,8 @@
 package com.example.e_commerce_techshop.services;
 
 import com.example.e_commerce_techshop.dtos.GoogleCodeRequest;
+import com.example.e_commerce_techshop.models.Role;
 import com.example.e_commerce_techshop.models.User;
-import com.example.e_commerce_techshop.repositories.RoleRepository;
 import com.example.e_commerce_techshop.repositories.UserRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
@@ -12,14 +12,13 @@ import org.springframework.web.client.RestTemplate;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class GoogleAuthService {
     private final UserRepository userRepository;
-
-    private final RoleRepository roleRepository;
 
     @Value("${spring.security.oauth2.client.registration.google.client-id}")
     private String clientId;
@@ -86,7 +85,7 @@ public class GoogleAuthService {
                         .avatarUrl(picture)
                         .isActive(true)
                         .enable(true)
-                        .role(roleRepository.getReferenceById(1L)) // User
+                        .roles(List.of(Role.USER)) // User
                         .build()
         );
 

@@ -1,10 +1,9 @@
 package com.example.e_commerce_techshop.services.order;
 
-import com.example.e_commerce_techshop.dtos.buyer.order.OrderDTO;
+import com.example.e_commerce_techshop.dtos.OrderDTO;
 import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
 import com.example.e_commerce_techshop.models.*;
 import com.example.e_commerce_techshop.repositories.*;
-import com.example.e_commerce_techshop.responses.buyer.OrderResponse;
 import com.example.e_commerce_techshop.services.cart.ICartService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -21,7 +20,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -31,7 +29,6 @@ public class OrderService implements IOrderService {
     private final OrderItemRepository orderItemRepository;
     private final UserRepository userRepository;
     private final ProductVariantRepository productVariantRepository;
-    private final AddressRepository addressRepository;
     private final PromotionRepository promotionRepository;
     private final StoreRepository storeRepository;
     private final CartRepository cartRepository;
@@ -39,15 +36,13 @@ public class OrderService implements IOrderService {
     
     @Override
     @Transactional
-    public List<OrderResponse> checkout(String userEmail, OrderDTO orderDTO) throws Exception {
+    public List<Order> checkout(String userEmail, OrderDTO orderDTO) throws Exception {
         // 1. Convert email to User object
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy người dùng với Email: " + userEmail));
         
         // 2. Validate address exists
-        Address address = addressRepository.findById(orderDTO.getAddressId())
-                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy địa chỉ với ID: " + orderDTO.getAddressId()));
-        
+
         // 3. Validate payment method
         if (!isValidPaymentMethod(orderDTO.getPaymentMethod())) {
             throw new IllegalArgumentException("Phương thức thanh toán không hợp lệ: " + orderDTO.getPaymentMethod());
@@ -74,38 +69,46 @@ public class OrderService implements IOrderService {
             }
             
             // Kiểm tra trạng thái sản phẩm
-            if (!"ACTIVE".equals(productVariant.getProduct().getStatus().toString())) {
+            if (!"ACTIVE".equals(productVariant.getProduct().getStatus())) {
                 throw new IllegalArgumentException("Sản phẩm không khả dụng: " + productVariant.getName());
             }
             
             // Kiểm tra trạng thái store
-            if (!"APPROVED".equals(productVariant.getProduct().getStore().getStatus().toString())) {
+            if (!"APPROVED".equals(productVariant.getProduct().getStore().getStatus())) {
                 throw new IllegalArgumentException("Cửa hàng tạm thời đóng cửa: " + productVariant.getProduct().getStore().getName());
             }
         }
         
         // 7. Group cart items theo store
-        Map<String, List<CartItem>> itemsByStore = cart.getCartItems().stream()
-                .collect(Collectors.groupingBy(item -> 
-                    item.getProductVariant().getProduct().getStore().getId()
-                ));
+        Map<String, List<Cart.CartItemEmbedded>> itemsByStore = new HashMap<>();
         
-        List<OrderResponse> orderResponses = new ArrayList<>();
+        for (var cartItem : cart.getCartItems()) {
+            ProductVariant productVariant = productVariantRepository.findById(cartItem.getProductVariant().getId())
+                    .orElseThrow(() -> new DataNotFoundException("Không tìm thấy sản phẩm: " + cartItem.getProductVariant().getId()));
+
+            String storeId = productVariant.getProduct().getStore().getId();
+            itemsByStore.computeIfAbsent(storeId, k -> new ArrayList<>()).add(cartItem);
+        }
+        
+        List<Order> orders = new ArrayList<>();
         
         // 8. Tạo 1 đơn hàng cho mỗi store
-        for (Map.Entry<String, List<CartItem>> storeEntry : itemsByStore.entrySet()) {
+        for (Map.Entry<String, List<Cart.CartItemEmbedded>> storeEntry : itemsByStore.entrySet()) {
             String storeId = storeEntry.getKey();
-            List<CartItem> storeItems = storeEntry.getValue();
+            List<Cart.CartItemEmbedded> storeItems = storeEntry.getValue();
             
             // 8.1. Lấy thông tin store
             Store store = storeRepository.findById(storeId)
                     .orElseThrow(() -> new DataNotFoundException("Không tìm thấy cửa hàng với ID: " + storeId));
             
             // 8.2. Tính tổng tiền cho store này
-            BigDecimal storeTotal = storeItems.stream()
-                    .map(item -> BigDecimal.valueOf(item.getProductVariant().getPrice())
-                            .multiply(BigDecimal.valueOf(item.getQuantity())))
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal storeTotal = BigDecimal.ZERO;
+            for (Cart.CartItemEmbedded item : storeItems) {
+                ProductVariant productVariant = productVariantRepository.findById(item.getProductVariant().getId()).get();
+                BigDecimal itemTotal = BigDecimal.valueOf(productVariant.getPrice())
+                        .multiply(BigDecimal.valueOf(item.getQuantity()));
+                storeTotal = storeTotal.add(itemTotal);
+            }
             
             // 8.3. Xử lý promotion (nếu có)
             Promotion promotion = null;
@@ -133,7 +136,13 @@ public class OrderService implements IOrderService {
                     .store(store)
                     .promotion(promotion)
                     .totalPrice(finalTotal)
-                    .address(address)
+                    .address(Address.builder()
+                            .province(orderDTO.getAddress().getProvince())
+                            .district(orderDTO.getAddress().getDistrict())
+                            .ward(orderDTO.getAddress().getWard())
+                            .homeAddress(orderDTO.getAddress().getHomeAddress())
+                            .build()
+                    )
                     .paymentMethod(orderDTO.getPaymentMethod())
                     .status("PENDING")
                     .note(orderDTO.getNote())
@@ -143,7 +152,7 @@ public class OrderService implements IOrderService {
             
             // 8.5. Tạo OrderItems cho store này và trừ stock
             List<OrderItem> orderItems = new ArrayList<>();
-            for (CartItem cartItem : storeItems) {
+            for (Cart.CartItemEmbedded cartItem : storeItems) {
                 ProductVariant productVariant = productVariantRepository.findById(cartItem.getProductVariant().getId()).get();
                 
                 int newStock = productVariant.getStock() - cartItem.getQuantity();
@@ -166,20 +175,19 @@ public class OrderService implements IOrderService {
             
             orderItemRepository.saveAll(orderItems);
             order.setOrderItems(orderItems);
-            // 8.6. Convert to model -> response và add vào result
-            OrderResponse orderResponse = OrderResponse.fromOrder(order);
-            orderResponses.add(orderResponse);
+            // 8.6.  Add order into order list
+            orders.add(order);
         }
         
         // 9. Clear cart
         cartService.clearCart(userEmail);
         
         // 10. Return danh sách orders
-        return orderResponses;
+        return orders;
     }
     
     @Override
-    public Page<OrderResponse> getOrderHistory(String userEmail, int page, int size, String status) throws Exception {
+    public Page<Order> getOrderHistory(String userEmail, int page, int size, String status) throws Exception {
         // 1. Convert email to User object
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy người dùng với Email: " + userEmail));
@@ -197,11 +205,11 @@ public class OrderService implements IOrderService {
         }
 
         // 4. Convert to Response
-        return orders.map(OrderResponse::fromOrder);
+        return orders;
     }
     
     @Override
-    public OrderResponse getOrderDetail(String userEmail, String orderId) throws Exception {
+    public Order getOrderDetail(String userEmail, String orderId) throws Exception {
         // 1. Convert email to User object
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy người dùng với Email: " + userEmail));
@@ -212,12 +220,12 @@ public class OrderService implements IOrderService {
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy đơn hàng"));
         
         // 3. Convert to OrderResponse của Buyer
-        return OrderResponse.fromOrder(order);
+        return order;
     }
     
     @Override
     @Transactional
-    public OrderResponse cancelOrder(String userEmail, String orderId) throws Exception {
+    public Order cancelOrder(String userEmail, String orderId) throws Exception {
         // 1. Convert email to User object
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy người dùng với Email: " + userEmail));
@@ -244,7 +252,7 @@ public class OrderService implements IOrderService {
         }
         
         // 6. Return updated order
-        return OrderResponse.fromOrder(order);
+        return order;
     }
     
     

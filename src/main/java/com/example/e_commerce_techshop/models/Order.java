@@ -1,13 +1,14 @@
 package com.example.e_commerce_techshop.models;
 
-import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.DBRef;
 
 import java.math.BigDecimal;
 import java.util.List;
 
-@Entity
-@Table(name = "orders")
+@Document(collection = "orders")
 @Getter
 @Setter
 @AllArgsConstructor
@@ -15,38 +16,28 @@ import java.util.List;
 @Builder
 public class Order extends BaseEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @Column(name = "total_price", nullable = false)
     private BigDecimal totalPrice;
 
-    @Column(name = "payment_method", nullable = false)
     private String paymentMethod;
 
-    @Column(name = "status", nullable = false)
     private String status; // PENDING, CONFIRMED, SHIPPING, DELIVERED, CANCELLED
     
-    @Column(name = "note")
     private String note;
 
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @DBRef
     private List<OrderItem> orderItems;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "buyer_id")
+    @DBRef
     private User buyer;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "store_id")
+    @DBRef
     private Store store;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "promotion_id")
+    @DBRef
     private Promotion promotion;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "address_id")
     private Address address;
 }
 

@@ -1,6 +1,7 @@
 package com.example.e_commerce_techshop.controllers.buyer.order;
 
-import com.example.e_commerce_techshop.dtos.buyer.order.OrderDTO;
+import com.example.e_commerce_techshop.dtos.OrderDTO;
+import com.example.e_commerce_techshop.models.Order;
 import com.example.e_commerce_techshop.responses.ApiResponse;
 import com.example.e_commerce_techshop.responses.buyer.OrderResponse;
 import com.example.e_commerce_techshop.services.order.IOrderService;
@@ -44,9 +45,12 @@ public class BuyerOrderController {
         
         try {
             String userEmail = getCurrentUserEmail();
-            List<OrderResponse> orderResponses = orderService.checkout(userEmail, orderDTO);
+            List<Order> orderResponses = orderService.checkout(userEmail, orderDTO);
+            List<OrderResponse> orderResponseList = orderResponses.stream()
+                    .map(OrderResponse::fromOrder)
+                    .toList();
 
-            return ResponseEntity.ok(ApiResponse.ok(orderResponses));
+            return ResponseEntity.ok(ApiResponse.ok(orderResponseList));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(
                 ApiResponse.error(e.getMessage())
@@ -64,9 +68,10 @@ public class BuyerOrderController {
     ) {
         try {
             String userEmail = getCurrentUserEmail();
-            Page<OrderResponse> orderPage = orderService.getOrderHistory(userEmail, page, size, status);
+            Page<Order> orderPage = orderService.getOrderHistory(userEmail, page, size, status);
+            Page<OrderResponse> orderResponsePage = orderPage.map(OrderResponse::fromOrder);
             
-            return ResponseEntity.ok(ApiResponse.ok(orderPage));
+            return ResponseEntity.ok(orderResponsePage);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(
                 ApiResponse.error(e.getMessage())
@@ -78,8 +83,8 @@ public class BuyerOrderController {
     public ResponseEntity<?> getOrderDetail(@PathVariable String orderId) {
         try {
             String userEmail = getCurrentUserEmail();
-            OrderResponse orderDetail = orderService.getOrderDetail(userEmail, orderId);
-            return ResponseEntity.ok(ApiResponse.ok(orderDetail));
+            Order order = orderService.getOrderDetail(userEmail, orderId);
+            return ResponseEntity.ok(ApiResponse.ok(OrderResponse.fromOrder(order)));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(
                 ApiResponse.error(e.getMessage())
@@ -94,8 +99,8 @@ public class BuyerOrderController {
     ) {
         try {
             String userEmail = getCurrentUserEmail();
-            OrderResponse cancelledOrder = orderService.cancelOrder(userEmail, orderId);
-            return ResponseEntity.ok(ApiResponse.ok(cancelledOrder));
+            Order cancelledOrder = orderService.cancelOrder(userEmail, orderId);
+            return ResponseEntity.ok(ApiResponse.ok(OrderResponse.fromOrder(cancelledOrder)));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(
                 ApiResponse.error(e.getMessage())

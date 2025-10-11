@@ -64,7 +64,7 @@ public class ReviewController {
     @PutMapping("/{reviewId}/respond")
     public ResponseEntity<?> respondToReview(@PathVariable String reviewId, @RequestParam String response) {
         try {
-            ReviewResponse review = reviewService.respondToReview(reviewId, response);
+            reviewService.respondToReview(reviewId, response);
             return ResponseEntity.ok(ApiResponse.ok("Phản hồi đánh giá thành công!"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
@@ -77,21 +77,6 @@ public class ReviewController {
         try {
             List<ReviewResponse> reviews = reviewService.getPendingReviewsByStore(storeId);
             return ResponseEntity.ok(ApiResponse.ok(reviews));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
-        }
-    }
-    
-    // Get review statistics
-    @GetMapping("/store/{storeId}/statistics")
-    public ResponseEntity<?> getReviewStatistics(@PathVariable String storeId) {
-        try {
-            Double averageRating = reviewService.getAverageRatingByStore(storeId);
-            Long totalReviews = reviewService.getReviewCountByStore(storeId);
-            
-            return ResponseEntity.ok(ApiResponse.ok(
-                String.format("Đánh giá trung bình: %.1f/5.0, Tổng số đánh giá: %d", 
-                    averageRating != null ? averageRating : 0.0, totalReviews)));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         }
