@@ -1,8 +1,6 @@
 package com.example.e_commerce_techshop.responses;
 
-import com.example.e_commerce_techshop.models.ProductImage;
 import com.example.e_commerce_techshop.models.ProductVariant;
-import com.example.e_commerce_techshop.models.ProductVariantAttribute;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.*;
@@ -10,7 +8,6 @@ import lombok.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Getter
 @Setter
@@ -49,10 +46,9 @@ public class ProductVariantResponse {
     }
 
     public static ProductVariantResponse fromProductVariant(ProductVariant productVariant){
-        Map<String, String> attributes = new HashMap<>();
-        for (ProductVariantAttribute variantAttribute : productVariant.getAttributes()) {
-            attributes.put(variantAttribute.getAttribute().getName(), variantAttribute.getValue());
-        }
+        // Use the attributes Map directly from MongoDB
+        Map<String, String> attributes = productVariant.getAttributes() != null ? 
+            new HashMap<>(productVariant.getAttributes()) : new HashMap<>();
 
         StoreResponse storeResponse = StoreResponse.builder()
                 .id(productVariant.getProduct().getStore().getId())
@@ -60,17 +56,15 @@ public class ProductVariantResponse {
                 .logo(productVariant.getProduct().getStore().getLogoUrl())
                 .build();
 
-        // Xử lý danh sách ảnh
-        List<String> imageUrls = productVariant.getImages().stream()
-                .map(ProductImage::getMediaPath)
-                .collect(Collectors.toList());
+        // Use imageUrls List directly from MongoDB
+        List<String> imageUrls = productVariant.getImageUrls() != null ? 
+            productVariant.getImageUrls() : List.of();
         
-        // Tìm ảnh chính
-        String primaryImageUrl = productVariant.getImages().stream()
-                .filter(img -> Boolean.TRUE.equals(img.getIsPrimary()))
-                .map(ProductImage::getMediaPath)
-                .findFirst()
-                .orElse(imageUrls.isEmpty() ? null : imageUrls.get(0));
+        // Use primaryImageUrl directly from MongoDB, fallback to first image if not set
+        String primaryImageUrl = productVariant.getPrimaryImageUrl();
+        if (primaryImageUrl == null && !imageUrls.isEmpty()) {
+            primaryImageUrl = imageUrls.get(0);
+        }
 
         return ProductVariantResponse.builder()
                 .id(productVariant.getId())

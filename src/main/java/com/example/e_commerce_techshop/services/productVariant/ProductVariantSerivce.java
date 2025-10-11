@@ -3,11 +3,9 @@ package com.example.e_commerce_techshop.services.productVariant;
 import com.example.e_commerce_techshop.dtos.ProductFilterDTO;
 import com.example.e_commerce_techshop.dtos.ProductVariantDTO;
 import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
-import com.example.e_commerce_techshop.models.Attribute;
+import com.example.e_commerce_techshop.models.Category;
 import com.example.e_commerce_techshop.models.Product;
-import com.example.e_commerce_techshop.models.ProductImage;
 import com.example.e_commerce_techshop.models.ProductVariant;
-import com.example.e_commerce_techshop.models.ProductVariantAttribute;
 import com.example.e_commerce_techshop.repositories.*;
 import com.example.e_commerce_techshop.responses.ProductVariantResponse;
 import com.example.e_commerce_techshop.services.FileUploadService;
@@ -20,10 +18,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -33,73 +29,37 @@ public class ProductVariantSerivce implements IProductVariantService{
 
     private final ProductRepository productRepository;
 
-    private final AttributeRepository attributeRepository;
-
-    private final ProductVariantAttributeRepository productAttributeRepository;
-
-    private final ProductRepositoryCustom productRepositoryCustom;
+    private final CategoryRepository categoryRepository;
 
     private final FileUploadService fileUploadService;
-    
-    private final ProductImageRepository productImageRepository;
 
     @Override
     @Transactional
     public void createProductVariant(ProductVariantDTO productVariantDTO, List<MultipartFile> imageFiles) throws Exception {
         Product product = productRepository.findById(productVariantDTO.getProductId())
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy product này"));
+
+        // Xử lý upload ảnh
+        List<String> imageUrls = new ArrayList<>();
+        String primaryImageUrl = null;
+        
+        if (imageFiles != null && !imageFiles.isEmpty()) {
+            imageUrls = fileUploadService.uploadFiles(imageFiles, "product-variants");
+            primaryImageUrl = imageUrls.get(0); // Ảnh đầu tiên là ảnh chính
+        }
+
         ProductVariant productVariant = ProductVariant.builder()
                 .product(product)
                 .name(productVariantDTO.getName())
                 .price(productVariantDTO.getPrice())
                 .description(productVariantDTO.getDescription())
                 .stock(productVariantDTO.getStock())
+                .attributes(productVariantDTO.getAttributes()) // Lưu trực tiếp Map
+                .imageUrls(imageUrls) // Lưu trực tiếp List<String>
+                .primaryImageUrl(primaryImageUrl)
                 .build();
 
-        // Lưu product variant trước
         productVariantRepository.save(productVariant);
-
-        // Xử lý nhiều ảnh
-        if (imageFiles != null && !imageFiles.isEmpty()) {
-            List<String> imageUrls = fileUploadService.uploadFiles(imageFiles, "product-variants");
-            
-            for (int i = 0; i < imageUrls.size(); i++) {
-                String imageUrl = imageUrls.get(i);
-                MultipartFile file = imageFiles.get(i);
-                
-                ProductImage productImage = ProductImage.builder()
-                        .productVariant(productVariant)
-                        .mediaPath(imageUrl)
-                        .mediaType(file.getContentType())
-                        .isPrimary(i == 0) // Ảnh đầu tiên là ảnh chính
-                        .build();
-                
-                productImageRepository.save(productImage);
-            }
-        }
-
-        // Xử lý lưu các attributes
-        Map<String, String> attributeMaps = productVariantDTO.getAttributes();
-        if(attributeMaps != null){
-            for(Map.Entry<String, String> entry : attributeMaps.entrySet()){
-                String attrName = entry.getKey();
-                String value = entry.getValue();
-
-                // Tạo attribute nếu chưa tồn tại
-                Attribute attribute = attributeRepository.findByName(attrName)
-                        .orElseGet(() -> {
-                            Attribute newAttr = new Attribute();
-                            newAttr.setName(attrName);
-                            return attributeRepository.save(newAttr);
-                        });
-                ProductVariantAttribute productVariantAttribute = ProductVariantAttribute.builder()
-                        .productVariant(productVariant)
-                        .attribute(attribute)
-                        .value(value)
-                        .build();
-                productAttributeRepository.save(productVariantAttribute);
-            }
-        }
     }
 
     @Override
@@ -121,26 +81,58 @@ public class ProductVariantSerivce implements IProductVariantService{
     public List<ProductVariantResponse> getByProduct(String productId) throws Exception {
         if(!productRepository.existsById(productId))
             throw new DataNotFoundException("Không tìm thấy sản phẩm với id được cung cấp");
-        List<ProductVariant> productVariant = productVariantRepository.findByProductId(productId);
-        return productVariant.stream().map(ProductVariantResponse::fromProductVariant).toList();
+        
+        // Debug: In ra productId để kiểm tra
+        System.out.println("Searching for ProductVariants with productId: " + productId);
+        
+        // Thử method đầu tiên
+        List<ProductVariant> productVariants = productVariantRepository.findByProductId(productId);
+        System.out.println("Method 1 - findByProductId: Found " + productVariants.size() + " results");
+        
+        // Nếu không tìm được, thử method thứ 2
+        if (productVariants.isEmpty()) {
+            productVariants = productVariantRepository.findByProductIdWithQuery(productId);
+            System.out.println("Method 2 - findByProductIdWithQuery: Found " + productVariants.size() + " results");
+        }
+        
+        // Nếu vẫn không tìm được, thử method thứ 3
+        if (productVariants.isEmpty()) {
+            productVariants = productVariantRepository.findByProductIdWithObjectId(productId);
+            System.out.println("Method 3 - findByProductIdWithObjectId: Found " + productVariants.size() + " results");
+        }
+        
+        // Debug: In ra thông tin của từng ProductVariant
+        for (ProductVariant pv : productVariants) {
+            System.out.println("ProductVariant ID: " + pv.getId() + 
+                             ", Name: " + pv.getName() + 
+                             ", Product ID: " + (pv.getProduct() != null ? pv.getProduct().getId() : "null"));
+        }
+        
+        return productVariants.stream().map(ProductVariantResponse::fromProductVariant).toList();
     }
 
     @Override
     public List<ProductVariantResponse> getByCategory(String category) throws Exception {
-        List<ProductVariant> productVariant = productVariantRepository.findByProduct_Category(category);
-        return productVariant.stream().map(ProductVariantResponse::fromProductVariant).toList();
+        Category cate = categoryRepository.findByName(category).orElse(null);
+        if (cate == null) {
+            return List.of();
+        }
+        List<ProductVariant> productVariants = productVariantRepository.findByProductCategoryId(cate.getId());
+        
+        return productVariants.stream().map(ProductVariantResponse::fromProductVariant).toList();
     }
 
     @Override
     public List<ProductVariantResponse> getByCategoryAndBrand(String category, String brand) {
-        List<ProductVariant> productVariant = productVariantRepository.findByProduct_CategoryAndProduct_Brand_Name(category, brand);
+        List<ProductVariant> productVariant = productVariantRepository.findByProductCategoryAndProductBrandName(category, brand);
         return productVariant.stream().map(ProductVariantResponse::fromProductVariant).toList();
     }
 
     @Override
     public List<ProductVariantResponse> filterProducts(ProductFilterDTO filterDTO) {
-        List<ProductVariant> productVariants = productRepositoryCustom.findProductsByFilters(filterDTO);
-        return productVariants.stream().map(ProductVariantResponse::fromProductVariant).toList();
+        // Tạm thời return empty list vì productRepositoryCustom chưa được implement cho MongoDB
+        // Cần implement MongoDB aggregation pipeline cho complex filtering
+        return new ArrayList<>();
     }
 
     @Override
@@ -148,35 +140,36 @@ public class ProductVariantSerivce implements IProductVariantService{
     public void updateProductVariant(String productVariantId, ProductVariantDTO productVariantDTO, MultipartFile imageFile) throws Exception {
         ProductVariant productVariant = productVariantRepository.findById(productVariantId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy mẫu sản phẩm này"));
+        
+        // Cập nhật thông tin cơ bản
         productVariant.setName(productVariantDTO.getName());
         productVariant.setPrice(productVariantDTO.getPrice());
         productVariant.setDescription(productVariantDTO.getDescription());
         productVariant.setStock(productVariantDTO.getStock());
 
-        // Xử lý ảnh (tạm thời giữ logic cũ cho updateProductVariant với 1 ảnh)
+        // Xử lý ảnh đơn
         if (imageFile != null && !imageFile.isEmpty()) {
-            // Xóa tất cả ảnh cũ
-            List<ProductImage> existingImages = productImageRepository.findByProductVariant(productVariant);
-            for (ProductImage img : existingImages) {
-                fileUploadService.deleteFile(img.getMediaPath());
+            // Xóa ảnh cũ nếu có
+            if (productVariant.getImageUrls() != null && !productVariant.getImageUrls().isEmpty()) {
+                for (String oldImageUrl : productVariant.getImageUrls()) {
+                    fileUploadService.deleteFile(oldImageUrl);
+                }
             }
-            productImageRepository.deleteByProductVariant(productVariant);
 
-            // Lưu ảnh mới
+            // Upload ảnh mới
             String newImageUrl = fileUploadService.uploadFile(imageFile, "product-variants");
             if (newImageUrl != null) {
-                ProductImage productImage = ProductImage.builder()
-                        .productVariant(productVariant)
-                        .mediaPath(newImageUrl)
-                        .mediaType(imageFile.getContentType())
-                        .isPrimary(true)
-                        .build();
-                productImageRepository.save(productImage);
+                List<String> newImageUrls = new ArrayList<>();
+                newImageUrls.add(newImageUrl);
+                productVariant.setImageUrls(newImageUrls);
+                productVariant.setPrimaryImageUrl(newImageUrl);
             }
         }
 
-        // Xử lý attributes
-        updateAttributes(productVariant, productVariantDTO.getAttributes());
+        // Cập nhật attributes
+        if (productVariantDTO.getAttributes() != null) {
+            productVariant.setAttributes(productVariantDTO.getAttributes());
+        }
 
         productVariantRepository.save(productVariant);
     }
@@ -187,6 +180,7 @@ public class ProductVariantSerivce implements IProductVariantService{
         ProductVariant productVariant = productVariantRepository.findById(productVariantId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy mẫu sản phẩm này"));
         
+        // Cập nhật thông tin cơ bản
         productVariant.setName(productVariantDTO.getName());
         productVariant.setPrice(productVariantDTO.getPrice());
         productVariant.setDescription(productVariantDTO.getDescription());
@@ -194,90 +188,27 @@ public class ProductVariantSerivce implements IProductVariantService{
 
         // Xử lý nhiều ảnh
         if (imageFiles != null && !imageFiles.isEmpty()) {
-            // Xóa tất cả ảnh cũ
-            List<ProductImage> existingImages = productImageRepository.findByProductVariant(productVariant);
-            for (ProductImage img : existingImages) {
-                fileUploadService.deleteFile(img.getMediaPath());
+            // Xóa ảnh cũ nếu có
+            if (productVariant.getImageUrls() != null && !productVariant.getImageUrls().isEmpty()) {
+                for (String oldImageUrl : productVariant.getImageUrls()) {
+                    fileUploadService.deleteFile(oldImageUrl);
+                }
             }
-            productImageRepository.deleteByProductVariant(productVariant);
 
-            // Lưu các ảnh mới
-            List<String> imageUrls = fileUploadService.uploadFiles(imageFiles, "product-variants");
-            
-            for (int i = 0; i < imageUrls.size(); i++) {
-                String imageUrl = imageUrls.get(i);
-                MultipartFile file = imageFiles.get(i);
-                
-                ProductImage productImage = ProductImage.builder()
-                        .productVariant(productVariant)
-                        .mediaPath(imageUrl)
-                        .mediaType(file.getContentType())
-                        .isPrimary(i == 0) // Ảnh đầu tiên là ảnh chính
-                        .build();
-                
-                productImageRepository.save(productImage);
+            // Upload ảnh mới
+            List<String> newImageUrls = fileUploadService.uploadFiles(imageFiles, "product-variants");
+            productVariant.setImageUrls(newImageUrls);
+            if (!newImageUrls.isEmpty()) {
+                productVariant.setPrimaryImageUrl(newImageUrls.get(0)); // Ảnh đầu tiên là ảnh chính
             }
         }
 
-        // Xử lý attributes
-        updateAttributes(productVariant, productVariantDTO.getAttributes());
+        // Cập nhật attributes
+        if (productVariantDTO.getAttributes() != null) {
+            productVariant.setAttributes(productVariantDTO.getAttributes());
+        }
 
         productVariantRepository.save(productVariant);
-    }
-
-    private void updateAttributes(ProductVariant variant, Map<String, String> newAttributes) {
-        // Lấy danh sách attributes hiện tại
-        List<ProductVariantAttribute> existingAttributes = productAttributeRepository.findByProductVariant(variant);
-
-        // Tạo map để so sánh
-        Map<String, String> newAttrMap = new HashMap<>();
-        if (newAttributes != null) {
-            newAttributes.forEach((key, values) -> {
-                newAttrMap.put(key, values.isEmpty() ? "" : values);
-            });
-        }
-
-        // Xóa attributes không còn trong DTO
-        List<ProductVariantAttribute> toRemove = existingAttributes.stream()
-                .filter(attr -> !newAttrMap.containsKey(attr.getAttribute().getName()))
-                .toList();
-        productAttributeRepository.deleteAll(toRemove);
-
-        // Cập nhật hoặc thêm attributes
-        for (Map.Entry<String, String> entry : newAttrMap.entrySet()) {
-            String attrName = entry.getKey();
-            String attrValue = entry.getValue();
-
-            // Tìm hoặc tạo Attribute
-            Attribute attribute = attributeRepository.findByName(attrName)
-                    .orElseGet(() -> {
-                        Attribute newAttr = new Attribute();
-                        newAttr.setName(attrName);
-                        return attributeRepository.save(newAttr);
-                    });
-
-            // Kiểm tra attribute hiện có
-            Optional<ProductVariantAttribute> existingAttr = existingAttributes.stream()
-                    .filter(attr -> attr.getAttribute().getName().equals(attrName))
-                    .findFirst();
-
-            if (existingAttr.isPresent()) {
-                // Cập nhật giá trị nếu khác
-                ProductVariantAttribute attr = existingAttr.get();
-                if (!attr.getValue().equals(attrValue)) {
-                    attr.setValue(attrValue);
-                    productAttributeRepository.save(attr);
-                }
-            } else {
-                // Thêm mới attribute
-                ProductVariantAttribute newAttr = ProductVariantAttribute.builder()
-                        .productVariant(variant)
-                        .attribute(attribute)
-                        .value(attrValue)
-                        .build();
-                productAttributeRepository.save(newAttr);
-            }
-        }
     }
 
     @Override
@@ -298,5 +229,38 @@ public class ProductVariantSerivce implements IProductVariantService{
         Page<ProductVariant> variantPage = productVariantRepository.findByProductStoreId(storeId, pageable);
         
         return variantPage.map(ProductVariantResponse::fromProductVariant);
+    }
+    
+    // Debug method để kiểm tra tất cả ProductVariants
+    public void debugAllProductVariants() {
+        List<ProductVariant> allVariants = productVariantRepository.findAll();
+        System.out.println("=== ALL PRODUCT VARIANTS IN DATABASE ===");
+        System.out.println("Total count: " + allVariants.size());
+        
+        for (ProductVariant pv : allVariants) {
+            System.out.println("ProductVariant ID: " + pv.getId());
+            System.out.println("  - Name: " + pv.getName());
+            System.out.println("  - Product: " + (pv.getProduct() != null ? pv.getProduct().getId() : "null"));
+            System.out.println("  - Product Name: " + (pv.getProduct() != null ? pv.getProduct().getName() : "null"));
+            System.out.println("  - Category: " + (pv.getProduct() != null && pv.getProduct().getCategory() != null ? 
+                                                  pv.getProduct().getCategory().getName() : "null"));
+            System.out.println("  - Category ID: " + (pv.getProduct() != null && pv.getProduct().getCategory() != null ? 
+                                                     pv.getProduct().getCategory().getId() : "null"));
+            System.out.println("---");
+        }
+    }
+    
+    // Debug method để kiểm tra tất cả Categories
+    public void debugAllCategories() {
+        List<Category> allCategories = categoryRepository.findAll();
+        System.out.println("=== ALL CATEGORIES IN DATABASE ===");
+        System.out.println("Total count: " + allCategories.size());
+        
+        for (Category cat : allCategories) {
+            System.out.println("Category ID: " + cat.getId());
+            System.out.println("  - Name: " + cat.getName());
+            System.out.println("  - Description: " + cat.getDescription());
+            System.out.println("---");
+        }
     }
 }

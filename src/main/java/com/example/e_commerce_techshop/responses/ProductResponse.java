@@ -48,7 +48,7 @@ public class ProductResponse {
         return ProductResponse.builder()
                 .id(product.getId())
                 .name(product.getName())
-                .category(product.getCategory())
+                .category(product.getCategory().getDescription())
                 .description(product.getDescription())
                 .price(product.getPrice())
                 .condition(product.getProductCondition())

@@ -2,6 +2,7 @@ package com.example.e_commerce_techshop.controllers.buyer.cart;
 
 import com.example.e_commerce_techshop.dtos.buyer.cart.CartDTO;
 import com.example.e_commerce_techshop.dtos.buyer.cart.UpdateQuantityDTO;
+import com.example.e_commerce_techshop.models.Cart;
 import com.example.e_commerce_techshop.responses.ApiResponse;
 import com.example.e_commerce_techshop.responses.buyer.CartItemCountResponse;
 import com.example.e_commerce_techshop.responses.buyer.CartResponse;
@@ -62,9 +63,10 @@ public class CartController {
     public ResponseEntity<?> getCart() {
         try {
             String userEmail = getCurrentUserEmail();
-            CartResponse cartResponse = cartService.getCart(userEmail);
+            Cart cart = cartService.getCart(userEmail);
+
             
-            return ResponseEntity.ok(ApiResponse.ok(cartResponse));
+            return ResponseEntity.ok(ApiResponse.ok(CartResponse.fromCart(cart)));
             
         } catch (Exception e) {
             return ResponseEntity.badRequest()
@@ -99,10 +101,10 @@ public class CartController {
             }
             
             String userEmail = getCurrentUserEmail();
-            CartResponse cartResponse = cartService.updateCartItem(userEmail, cartItemId, quantity);
-            
-            return ResponseEntity.ok(ApiResponse.ok(cartResponse));
-            
+            Cart cart = cartService.updateCartItem(userEmail, cartItemId, quantity);
+
+            return ResponseEntity.ok(ApiResponse.ok(CartResponse.fromCart(cart)));
+
         } catch (Exception e) {
             e.printStackTrace(); // Debug log
             return ResponseEntity.badRequest()

@@ -54,7 +54,7 @@ public class FileUploadService {
 
         // Validate định dạng và kích thước
         String contentType = file.getContentType();
-        if (!contentType.equals("image/jpeg") && !contentType.equals("image/png")) {
+        if (!contentType.equals("image/jpeg") && !contentType.equals("image/png") && !contentType.equals("image/webp")) {
             throw new RuntimeException("Only JPEG or PNG images are allowed");
         }
         if (file.getSize() > 30 * 1024 * 1024) { // Giới hạn 30MB

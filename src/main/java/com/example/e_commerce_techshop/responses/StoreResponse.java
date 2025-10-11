@@ -15,11 +15,31 @@ public class StoreResponse {
     private String logoUrl;
     private String bannerUrl;
     private String status;
-    private String ownerId;
+    private UserResponse owner;
     private String ownerName;
-    private String addressId;
+    private AddressResponse address;
     private String createdAt;
     private String updatedAt;
+
+    @Getter
+    @Setter
+    @Builder
+    static class AddressResponse {
+        private String province;
+        private String ward;
+        private String homeAddress;
+        private String suggestedName;
+    }
+
+        @Getter
+    @Setter
+    @Builder
+    static class UserResponse {
+        private String id;
+        private String fullName;
+        private String email;
+        private String phone;
+    }
 
     public static StoreResponse fromStore(Store store) {
         return StoreResponse.builder()
@@ -29,9 +49,18 @@ public class StoreResponse {
                 .logoUrl(store.getLogoUrl())
                 .bannerUrl(store.getBanner_url())
                 .status(store.getStatus())
-                .ownerId(store.getOwner() != null ? store.getOwner().getId() : null)
-                .ownerName(store.getOwner() != null ? store.getOwner().getFullName() : null)
-                .addressId(store.getAddress() != null ? store.getAddress().getId() : null)
+                .owner(UserResponse.builder()
+                        .id(store.getOwner() != null ? store.getOwner().getId() : null)
+                        .fullName(store.getOwner() != null ? store.getOwner().getFullName() : null)
+                        .email(store.getOwner() != null ? store.getOwner().getEmail() : null)
+                        .phone(store.getOwner() != null ? store.getOwner().getPhone() : null)
+                        .build())
+                .address(AddressResponse.builder()
+                        .province(store.getAddress() != null ? store.getAddress().getProvince() : null)
+                        .ward(store.getAddress() != null ? store.getAddress().getWard() : null)
+                        .homeAddress(store.getAddress() != null ? store.getAddress().getHomeAddress() : null)
+                        .suggestedName(store.getAddress() != null ? store.getAddress().getSuggestedName() : null)
+                        .build())
                 .createdAt(store.getCreatedAt() != null ? store.getCreatedAt().toString() : null)
                 .updatedAt(store.getUpdatedAt() != null ? store.getUpdatedAt().toString() : null)
                 .build();

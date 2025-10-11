@@ -4,8 +4,6 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import com.example.e_commerce_techshop.models.Cart;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import lombok.*;
 
 @Getter
@@ -19,45 +17,9 @@ public class CartResponse {
     
     private UserResponse user;
     
-    @JsonProperty("cart_items")
     private List<CartItemResponse> cartItems;
 
-    @JsonProperty("total_price")
     private BigDecimal totalPrice;
-
-    @Getter
-    @Setter
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @Builder
-    static class UserResponse {
-        private String id;
-        private String fullName;
-        private String email;
-        private String phone;
-    }
-
-    @Getter
-    @Setter
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @Builder
-    static class CartItemResponse {
-        private String id;
-
-        @JsonProperty("product_id")
-        private String productId;
-
-        @JsonProperty("product_name")
-        private String productName;
-
-        @JsonProperty("image_url")
-        private String imageUrl;
-
-        private int quantity;
-
-        private BigDecimal price;
-    }
 
     public static CartResponse fromCart(Cart cart) {
         UserResponse user = UserResponse.builder()
@@ -69,13 +31,13 @@ public class CartResponse {
 
         List<CartItemResponse> cartItems = cart.getCartItems().stream()
             .map(cartItem -> CartItemResponse.builder()
-                        .id(cartItem.getId())
-                        .productId(cartItem.getProductVariant() != null ? cartItem.getProductVariant().getProduct().getId() : null)
-                        .productName(cartItem.getProductVariant() != null ? cartItem.getProductVariant().getName() : null)
-                        .quantity(cartItem.getQuantity())
-                        .price(cartItem.getProductVariant() != null ? BigDecimal.valueOf(cartItem.getProductVariant().getPrice()) : null)
-                        .build()
-            ).toList();
+                    .productId(cartItem.getProductVariant() != null ? cartItem.getProductVariant().getId() : null)
+                    .productName(cartItem.getProductVariant() != null ? cartItem.getProductVariant().getName() : null)
+                    .imageUrl(cartItem.getProductVariant() != null ? cartItem.getProductVariant().getPrimaryImageUrl() : null)
+                    .quantity(cartItem.getQuantity())
+                    .price(cartItem.getProductVariant() != null ? BigDecimal.valueOf(cartItem.getProductVariant().getPrice()) : null)
+                    .build()
+            ).collect(java.util.stream.Collectors.toList());
 
         BigDecimal totalPrice = cartItems.stream()
             .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
@@ -90,3 +52,34 @@ public class CartResponse {
     }
     
 }
+
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+class UserResponse {
+    private String id;
+    private String fullName;
+    private String email;
+    private String phone;
+}
+
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+class CartItemResponse {
+
+    private String productId;
+
+    private String productName;
+
+    private String imageUrl;
+
+    private int quantity;
+
+    private BigDecimal price;
+}
+

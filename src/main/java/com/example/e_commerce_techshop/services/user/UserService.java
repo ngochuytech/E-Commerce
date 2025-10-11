@@ -7,7 +7,6 @@ import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
 import com.example.e_commerce_techshop.exceptions.ExpiredTokenException;
 import com.example.e_commerce_techshop.models.Role;
 import com.example.e_commerce_techshop.models.User;
-import com.example.e_commerce_techshop.repositories.RoleRepository;
 import com.example.e_commerce_techshop.repositories.UserRepository;
 import com.example.e_commerce_techshop.responses.user.UserResponse;
 
@@ -25,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.UnsupportedEncodingException;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -32,8 +32,6 @@ import java.util.UUID;
 public class UserService implements IUserService{
 
     private final UserRepository userRepository;
-
-    private final RoleRepository roleRepository;
 
     private final AuthenticationManager authenticationManager;
 
@@ -63,10 +61,8 @@ public class UserService implements IUserService{
         if(userRepository.existsByEmail(email)){
             throw new Exception("Email đã tồn tại");
         }
-        Role role = roleRepository.findById(userDTO.getRoleId())
-                .orElseThrow(() -> new Exception("Role not found"));
 
-        if(role.getName().toUpperCase().equals(Role.ADMIN)){
+        if(userDTO.getRole().equals(Role.ADMIN)){
             throw new Exception("You can't register an admin account");
         }
 
@@ -76,7 +72,7 @@ public class UserService implements IUserService{
                 .email(email)
                 .password(passwordEncoder.encode(userDTO.getPassword()))
                 .fullName(userDTO.getFullName())
-                .role(role)
+                .roles(List.of(userDTO.getRole()))
                 .isActive(true)
                 .enable(false)
                 .verificationCode(verificationCode)

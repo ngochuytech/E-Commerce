@@ -51,28 +51,6 @@ public class OrderResponse {
     @AllArgsConstructor
     @NoArgsConstructor
     @Builder
-    static class OrderItemResponse {
-        private String id;
-
-        @JsonProperty("product_variant_id")
-        private String productVariantId;
-
-        @JsonProperty("product_name")
-        private String productName;
-
-        @JsonProperty("product_image")
-        private String productImage;
-
-        private Integer quantity;
-
-        private BigDecimal price;
-    }
-
-    @Getter
-    @Setter
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @Builder
     static class UserResponse {
         private String id;
         private String username;
@@ -97,7 +75,6 @@ public class OrderResponse {
     @NoArgsConstructor
     @Builder
     static class AddressResponse {
-        private String id;
         private String province;
         private String district;
         private String ward;
@@ -108,12 +85,7 @@ public class OrderResponse {
     public static OrderResponse fromOrder(Order order) {
         List<OrderItemResponse> orderItems = order.getOrderItems().stream()
                 .map(orderItem -> {
-                    String primaryImageUrl = orderItem.getProductVariant().getImages().stream()
-                            .filter(img -> Boolean.TRUE.equals(img.getIsPrimary()))
-                            .map(img -> img.getMediaPath())
-                            .findFirst()
-                            .orElse(orderItem.getProductVariant().getImages().isEmpty() ? 
-                                null : orderItem.getProductVariant().getImages().get(0).getMediaPath());
+                    String primaryImageUrl = orderItem.getProductVariant().getPrimaryImageUrl();
                     
                     return OrderItemResponse.builder()
                             .id(orderItem.getId())
@@ -140,7 +112,6 @@ public class OrderResponse {
                 .build();
 
         AddressResponse address = AddressResponse.builder()
-                .id(order.getAddress().getId())
                 .province(order.getAddress().getProvince())
                 .district(order.getAddress().getDistrict())
                 .ward(order.getAddress().getWard())
@@ -234,4 +205,23 @@ public class OrderResponse {
             return BigDecimal.ZERO;
         }
     }
+}
+
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+class OrderItemResponse {
+    private String id;
+
+    private String productVariantId;
+
+    private String productName;
+
+    private String productImage;
+
+    private Integer quantity;
+
+    private BigDecimal price;
 }

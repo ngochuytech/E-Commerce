@@ -3,7 +3,6 @@ package com.example.e_commerce_techshop.dtos;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -52,7 +51,5 @@ public class UserDTO {
     @JsonProperty("address_id")
     private String addressId;
 
-    @JsonProperty("role_id")
-    @NotNull(message = "Role id is required")
-    private Long roleId = 1L;
+    private String role = "USER"; // Default role is USER
 }

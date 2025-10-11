@@ -2,15 +2,15 @@ package com.example.e_commerce_techshop.repositories;
 
 import com.example.e_commerce_techshop.models.CartItem;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
-public interface CartItemRepository extends JpaRepository<CartItem, String> {
+@Repository
+public interface CartItemRepository extends MongoRepository<CartItem, String> {
     
     /**
      * Tìm tất cả items trong giỏ hàng
@@ -50,13 +50,12 @@ public interface CartItemRepository extends JpaRepository<CartItem, String> {
     /**
      * Xóa item theo ID và cart ID (sử dụng custom query)
      */
-    @Query("DELETE FROM CartItem ci WHERE ci.id = :itemId AND ci.cart.id = :cartId")
-    @Modifying
-    void deleteByIdAndCartId(@Param("itemId") String itemId, @Param("cartId") String cartId);
+    @Query(value = "{ 'id': ?0, 'cart.$id': ?1 }", delete = true)
+    void deleteByIdAndCartId(String itemId, String cartId);
     
     /**
      * Tìm tất cả items của user thông qua cart
      */
-    @Query("SELECT ci FROM CartItem ci JOIN Cart c ON ci.cart.id = c.id WHERE c.user.id = :userId")
-    List<CartItem> findByUserId(@Param("userId") String userId);
+    @Query("{ 'cart.user.$id': ?0 }")
+    List<CartItem> findByUserId(String userId);
 }

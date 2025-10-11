@@ -1,7 +1,7 @@
 package com.example.e_commerce_techshop.services.cart;
 
 import com.example.e_commerce_techshop.dtos.buyer.cart.CartDTO;
-import com.example.e_commerce_techshop.responses.buyer.CartResponse;
+import com.example.e_commerce_techshop.models.Cart;
 
 public interface ICartService {
     
@@ -13,12 +13,12 @@ public interface ICartService {
     /**
      * Lấy tất cả sản phẩm trong giỏ hàng
      */
-    CartResponse getCart(String userEmail) throws Exception;
+    Cart getCart(String userEmail) throws Exception;
     
     /**
      * Cập nhật số lượng sản phẩm trong giỏ hàng
      */
-    CartResponse updateCartItem(String userEmail, String cartItemId, Integer quantity) throws Exception;
+    Cart updateCartItem(String userEmail, String cartItemId, Integer quantity) throws Exception;
     
     /**
      * Xóa sản phẩm khỏi giỏ hàng

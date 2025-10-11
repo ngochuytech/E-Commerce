@@ -21,7 +21,7 @@ public class ProductController {
     private final IProductService productService;
 
     @PostMapping("/create")
-    public ResponseEntity<?> craeteProduct(@RequestBody @Valid ProductDTO productDTO, BindingResult result){
+    public ResponseEntity<?> createProduct(@RequestBody @Valid ProductDTO productDTO, BindingResult result){
         try {
             if(result.hasErrors()){
                 List<String> errorMessages = result.getFieldErrors()

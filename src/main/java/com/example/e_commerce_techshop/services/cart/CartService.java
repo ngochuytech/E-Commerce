@@ -3,36 +3,28 @@ package com.example.e_commerce_techshop.services.cart;
 import com.example.e_commerce_techshop.dtos.buyer.cart.CartDTO;
 import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
 import com.example.e_commerce_techshop.models.Cart;
-import com.example.e_commerce_techshop.models.CartItem;
 import com.example.e_commerce_techshop.models.ProductVariant;
-import com.example.e_commerce_techshop.repositories.CartItemRepository;
 import com.example.e_commerce_techshop.repositories.CartRepository;
 import com.example.e_commerce_techshop.repositories.ProductVariantRepository;
 import com.example.e_commerce_techshop.repositories.UserRepository;
-import com.example.e_commerce_techshop.responses.buyer.CartResponse;
 import com.example.e_commerce_techshop.models.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class CartService implements ICartService {
     
     private final CartRepository cartRepository;
-    private final CartItemRepository cartItemRepository;
     private final ProductVariantRepository productVariantRepository;
     private final UserRepository userRepository;
     
     // Giới hạn giỏ hàng
     private static final int MAX_CART_ITEMS = 50;
     private static final int MAX_QUANTITY_PER_ITEM = 999;
-    private static final double VAT_RATE = 0.1; // 10%
     
     @Override
     @Transactional
@@ -66,6 +58,7 @@ public class CartService implements ICartService {
         Cart cart = cartRepository.findByUserId(user.getId())
                 .orElse(Cart.builder()
                         .user(user)
+                        .cartItems(new ArrayList<>())
                         .build());
         
         if (cart.getId() == null) {
@@ -73,33 +66,24 @@ public class CartService implements ICartService {
         }
         
         // 4. Kiểm tra giới hạn giỏ hàng
-        long currentCartItems = cartItemRepository.countByCartId(cart.getId());
-        if (currentCartItems >= MAX_CART_ITEMS) {
+        if (cart.getCartItems().size() >= MAX_CART_ITEMS) {
             throw new IllegalArgumentException("Giỏ hàng đã đầy (tối đa " + MAX_CART_ITEMS + " sản phẩm)");
         }
         
-        // 5. Batch processing
-        
-        // Lấy tất cả existing items trong một query
-        List<CartItem> existingItems = cartItemRepository.findByCartId(cart.getId());
-        Map<String, CartItem> existingItemMap = existingItems.stream()
-                .collect(Collectors.toMap(
-                    item -> item.getProductVariant().getId(),
-                    item -> item
-                ));
-        
-        // 6. Xử lý từng item
-        List<CartItem> itemsToSave = new ArrayList<>();
-        
+        // 5. Xử lý từng item với embedded approach
         for (CartDTO.CartItemDTO itemDTO : cartDTO.getItems()) {
             ProductVariant productVariant = productVariantRepository.findById(itemDTO.getProductVariantId())
                     .orElseThrow(() -> new DataNotFoundException("Không tìm thấy sản phẩm với ID: " + itemDTO.getProductVariantId()));
             
-            CartItem cartItem = existingItemMap.get(itemDTO.getProductVariantId());
+            // Tìm item đã tồn tại trong cart
+            Cart.CartItemEmbedded existingItem = cart.getCartItems().stream()
+                    .filter(item -> item.getProductVariant().getId().equals(itemDTO.getProductVariantId()))
+                    .findFirst()
+                    .orElse(null);
             
-            if (cartItem != null) {
+            if (existingItem != null) {
                 // Update existing item
-                int newQuantity = cartItem.getQuantity() + itemDTO.getQuantity();
+                int newQuantity = existingItem.getQuantity() + itemDTO.getQuantity();
                 
                 // Validation
                 if (newQuantity > productVariant.getStock()) {
@@ -110,31 +94,31 @@ public class CartService implements ICartService {
                     throw new IllegalArgumentException("Số lượng tối đa cho mỗi sản phẩm là " + MAX_QUANTITY_PER_ITEM);
                 }
                 
-                cartItem.setQuantity(newQuantity);
-                itemsToSave.add(cartItem);
+                existingItem.setQuantity(newQuantity);
+                existingItem.setUnitPrice(productVariant.getPrice());
             } else {
-                // Create new item
+                // Create new embedded item
                 if (itemDTO.getQuantity() > productVariant.getStock()) {
                     throw new IllegalArgumentException("Số lượng vượt quá tồn kho hiện có (" + 
                             productVariant.getStock() + " sản phẩm)");
                 }
                 
-                CartItem newItem = CartItem.builder()
-                        .cart(cart)
+                Cart.CartItemEmbedded newItem = Cart.CartItemEmbedded.builder()
                         .productVariant(productVariant)
                         .quantity(itemDTO.getQuantity())
+                        .unitPrice(productVariant.getPrice())
                         .build();
                 
-                itemsToSave.add(newItem);
+                cart.getCartItems().add(newItem);
             }
         }
         
-        // Batch save all items
-        cartItemRepository.saveAll(itemsToSave);
+        // Save cart với embedded items
+        cartRepository.save(cart);
     }
     
     @Override
-    public CartResponse getCart(String userEmail) throws Exception {
+    public Cart getCart(String userEmail) throws Exception {
         // Convert email to User object
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy người dùng với Email: " + userEmail));
@@ -143,19 +127,19 @@ public class CartService implements ICartService {
         Cart cart = cartRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy giỏ hàng"));
         
-        return CartResponse.fromCart(cart);
+        return cart;
     }
     
     @Override
     @Transactional
-    public CartResponse updateCartItem(String userEmail, String cartItemId, Integer quantity) throws Exception {
+    public Cart updateCartItem(String userEmail, String cartItemId, Integer quantity) throws Exception {
         System.out.println("DEBUG CartService: userEmail = " + userEmail + ", cartItemId = " + cartItemId + ", quantity = " + quantity);
         // 1. Validate input
-        if (quantity == null || quantity <= 0) {
+        if (quantity == null || quantity < 0) {
             throw new IllegalArgumentException("Số lượng không hợp lệ");
         }
         
-        // 1.5. Convert email to User object (y chang như B2C)
+        // 1.5. Convert email to User object
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy người dùng với Email: " + userEmail));
         String userId = user.getId();
@@ -164,24 +148,17 @@ public class CartService implements ICartService {
         Cart cart = cartRepository.findByUserId(userId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy giỏ hàng"));
         
-        // 3. Tìm card item
-        CartItem cartItem = cartItemRepository.findByIdAndCartId(cartItemId, cart.getId())
+        // 3. Tìm cart item trong embedded list
+        Cart.CartItemEmbedded cartItem = cart.getCartItems().stream()
+                .filter(item -> item.getId().equals(cartItemId))
+                .findFirst()
                 .orElseThrow(() -> new DataNotFoundException("Sản phẩm không tồn tại trong giỏ hàng"));
         
         // 4. Nếu số lượng = 0, xóa sản phẩm
         if (quantity == 0) {
             System.out.println("DEBUG updateCartItem: quantity = 0, removing item");
-            
-            // Xóa từ collection trước
             cart.getCartItems().removeIf(item -> item.getId().equals(cartItemId));
-            
-            // Xóa từ database bằng custom query
-            cartItemRepository.deleteByIdAndCartId(cartItemId, cart.getId());
-            cartItemRepository.flush();
-            
-            // Cập nhật cart
-            cartRepository.saveAndFlush(cart);
-            
+            cartRepository.save(cart);
             return getCart(userEmail);
         }
         
@@ -193,8 +170,8 @@ public class CartService implements ICartService {
         if (productVariant.getProduct() == null || productVariant.getProduct().getStore() == null) {
             throw new IllegalArgumentException("Sản phẩm không gắn với cửa hàng hợp lệ");
         }
-        String storeStatus2 = String.valueOf(productVariant.getProduct().getStore().getStatus());
-        if (!"APPROVED".equalsIgnoreCase(storeStatus2)) {
+        String storeStatus = productVariant.getProduct().getStore().getStatus();
+        if (!"APPROVED".equalsIgnoreCase(storeStatus)) {
             throw new IllegalArgumentException("Cửa hàng tạm thời đóng cửa: " + productVariant.getProduct().getStore().getName());
         }
         
@@ -213,9 +190,11 @@ public class CartService implements ICartService {
             throw new IllegalArgumentException("Số lượng tối đa cho mỗi sản phẩm là " + MAX_QUANTITY_PER_ITEM);
         }
         
-        // 8. Cập nhật số lượng
+        // 8. Cập nhật số lượng trong embedded item
         cartItem.setQuantity(quantity);
-        cartItemRepository.save(cartItem);
+        cartItem.setUnitPrice(productVariant.getPrice()); // Update price if needed
+        
+        cartRepository.save(cart);
         
         return getCart(userEmail);
     }
@@ -231,27 +210,19 @@ public class CartService implements ICartService {
         Cart cart = cartRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy giỏ hàng"));
 
-        cartItemRepository.findByIdAndCartId(cartItemId, cart.getId())
-                .orElseThrow(() -> new DataNotFoundException("Sản phẩm không tồn tại trong giỏ hàng"));
+        // Kiểm tra item tồn tại trong embedded list
+        boolean itemExists = cart.getCartItems().stream()
+                .anyMatch(item -> item.getId().equals(cartItemId));
         
-        // Xóa cart item - sử dụng nhiều phương pháp để đảm bảo xóa thành công
-        try {
-            // Phương pháp 1: Xóa từ collection trong Cart entity (để tránh cascade conflict)
-            cart.getCartItems().removeIf(item -> item.getId().equals(cartItemId));
-            
-            // Phương pháp 2: Xóa bằng custom query (recommended cho entities có cascade)
-            cartItemRepository.deleteByIdAndCartId(cartItemId, cart.getId());
-            
-            // Flush để đảm bảo thay đổi được commit ngay lập tức
-            cartItemRepository.flush();
-            
-            // Cập nhật lại cart để đồng bộ
-            cartRepository.saveAndFlush(cart);
-            
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException("Lỗi khi xóa sản phẩm khỏi giỏ hàng: " + e.getMessage());
+        if (!itemExists) {
+            throw new DataNotFoundException("Sản phẩm không tồn tại trong giỏ hàng");
         }
+        
+        // Xóa từ embedded list
+        cart.getCartItems().removeIf(item -> item.getId().equals(cartItemId));
+        
+        // Save cart
+        cartRepository.save(cart);
     }
     
     @Override
@@ -265,22 +236,9 @@ public class CartService implements ICartService {
                 .orElse(null);
         
         if (cart != null) {
-            try {
-                // Xóa từ collection trước
-                cart.getCartItems().clear();
-                
-                // Xóa tất cả cart items từ database
-                cartItemRepository.deleteByCartId(cart.getId());
-                cartItemRepository.flush();
-                
-                // Cập nhật cart
-                cartRepository.saveAndFlush(cart);
-                
-            } catch (Exception e) {
-                System.err.println("ERROR clearing cart: " + e.getMessage());
-                e.printStackTrace();
-                throw new RuntimeException("Lỗi khi xóa giỏ hàng: " + e.getMessage());
-            }
+            // Xóa tất cả embedded items
+            cart.getCartItems().clear();
+            cartRepository.save(cart);
         }
     }
     
@@ -292,7 +250,7 @@ public class CartService implements ICartService {
         Cart cart = cartRepository.findByUserId(userId).orElse(null);
         if (cart == null) return true;
         
-        return cartItemRepository.countByCartId(cart.getId()) == 0;
+        return cart.getCartItems().isEmpty();
     }
     
     @Override
@@ -302,7 +260,7 @@ public class CartService implements ICartService {
         String userId = user.getId();
         Cart cart = cartRepository.findByUserId(userId).orElse(null);
         if (cart == null) return 0;
-        return cart.getCartItems().stream().mapToInt(CartItem::getQuantity).sum();
+        return cart.getCartItems().stream().mapToInt(Cart.CartItemEmbedded::getQuantity).sum();
     }
     
     /**

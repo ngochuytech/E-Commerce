@@ -1,40 +1,39 @@
 package com.example.e_commerce_techshop.models;
 
-import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.DBRef;
 
 import java.util.List;
+import java.util.Map;
 
-@Entity
-@Table(name = "product_variants")
+@Document(collection = "product_variants")
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class ProductVariant {
+public class ProductVariant extends BaseEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
     private Long price;
 
     private String description;
 
-    @Column(nullable = false)
     private int stock;
 
-    @ManyToOne
-    @JoinColumn(name = "product_id")
+    @DBRef
     private Product product;
 
-    @OneToMany(mappedBy = "productVariant", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<ProductVariantAttribute> attributes;
+    // Store attributes as Map instead of separate entity
+    private Map<String, String> attributes;
 
-    @OneToMany(mappedBy = "productVariant", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<ProductImage> images;
+    // Store image URLs directly instead of separate entity
+    private List<String> imageUrls;
+    
+    private String primaryImageUrl;
 }

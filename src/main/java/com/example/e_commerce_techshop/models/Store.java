@@ -1,14 +1,15 @@
 package com.example.e_commerce_techshop.models;
 
-import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.DBRef;
 
 enum StoreStatus {
     PENDING, APPROVED, REJECTED, DELETED
 }
 
-@Entity
-@Table(name = "stores")
+@Document(collection = "stores")
 @Getter
 @Setter
 @AllArgsConstructor
@@ -16,28 +17,21 @@ enum StoreStatus {
 @Builder
 public class Store extends BaseEntity{
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @Column(name = "name", length = 255, nullable = false)
     private String name;
 
     private String description;
 
-    @Column(name = "logo_url")
     private String logoUrl;
 
     private String banner_url;
 
-    @Column(name = "status", length = 50)
     private String status; // PENDING, APPROVED, REJECTED, DELETED
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "owner_id")
+    @DBRef
     private User owner;
 
-    @OneToOne
-    @JoinColumn(name = "address_id")
     private Address address;
 
     // Validation method for Store status

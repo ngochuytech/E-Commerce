@@ -8,8 +8,6 @@ import com.example.e_commerce_techshop.services.FileUploadService;
 import com.example.e_commerce_techshop.models.Store;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.BindingResult;
-import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -29,26 +27,16 @@ public class StoreController {
 
     // Store Management APIs
     @PostMapping("/create")
-    public ResponseEntity<?> createStore(@RequestPart("storeDTO") @Valid StoreDTO storeDTO,
-                                        @RequestPart(value = "logo", required = false) MultipartFile logo,
-                                         BindingResult result) {
+    public ResponseEntity<?> createStore(@Valid @RequestPart("storeDTO") StoreDTO storeDTO,
+                                        @RequestPart(value = "logo", required = false) MultipartFile logo) {
         try {
-            if (result.hasErrors()) {
-                List<String> errorMessages = result.getFieldErrors()
-                        .stream()
-                        .map(FieldError::getDefaultMessage)
-                        .toList();
-                return ResponseEntity.badRequest().body(new ApiResponse<>(false, null, String.join(", ", errorMessages)));
-            }
-            
-            // Lấy user ID từ JWT token
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String currentUserId = authentication.getName(); // Lấy user ID từ JWT
+            String currentUserId = authentication.getName();
             
             // Set owner_id từ JWT, bỏ qua owner_id trong JSON
             storeDTO.setOwnerId(currentUserId);
             
-            StoreResponse storeResponse = storeService.createStore(storeDTO, logo);
+            storeService.createStore(storeDTO, logo);
             return ResponseEntity.ok(ApiResponse.ok("Tạo cửa hàng thành công!"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
@@ -56,40 +44,10 @@ public class StoreController {
     }
 
     @PutMapping("/{storeId}")
-    public ResponseEntity<?> updateStore(@PathVariable String storeId, @RequestBody StoreDTO storeDTO, BindingResult result) {
-        try {
-            if (result.hasErrors()) {
-                List<String> errorMessages = result.getFieldErrors()
-                        .stream()
-                        .map(FieldError::getDefaultMessage)
-                        .toList();
-                return ResponseEntity.badRequest().body(new ApiResponse<>(false, null, String.join(", ", errorMessages)));
-            }
-            
-            StoreResponse storeResponse = storeService.updateStore(storeId, storeDTO);
+    public ResponseEntity<?> updateStore(@PathVariable String storeId, @RequestBody @Valid StoreDTO storeDTO) {
+        try {    
+            storeService.updateStore(storeId, storeDTO);
             return ResponseEntity.ok(ApiResponse.ok("Cập nhật cửa hàng thành công!"));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
-        }
-    }
-
-    @PutMapping("/{storeId}/with-media")
-    public ResponseEntity<?> updateStoreWithMedia(@PathVariable String storeId,
-                                                 @RequestPart("storeDTO") @Valid StoreDTO storeDTO,
-                                                 @RequestPart(value = "logo", required = false) MultipartFile logo,
-                                                 @RequestPart(value = "banner", required = false) MultipartFile banner,
-                                                 BindingResult result) {
-        try {
-            if (result.hasErrors()) {
-                List<String> errorMessages = result.getFieldErrors()
-                        .stream()
-                        .map(FieldError::getDefaultMessage)
-                        .toList();
-                return ResponseEntity.badRequest().body(new ApiResponse<>(false, null, String.join(", ", errorMessages)));
-            }
-            
-            StoreResponse storeResponse = storeService.updateStoreWithMedia(storeId, storeDTO, logo, banner);
-            return ResponseEntity.ok(ApiResponse.ok("Cập nhật cửa hàng với media thành công!"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         }
@@ -121,7 +79,7 @@ public class StoreController {
     @PutMapping("/{storeId}/approve")
     public ResponseEntity<?> approveStore(@PathVariable String storeId) {
         try {
-            StoreResponse storeResponse = storeService.approveStore(storeId);
+            storeService.approveStore(storeId);
             return ResponseEntity.ok(ApiResponse.ok("Duyệt cửa hàng thành công!"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
@@ -132,7 +90,7 @@ public class StoreController {
     public ResponseEntity<?> rejectStore(@PathVariable String storeId, @RequestParam String reason) {
         try {
             // REASON lưu vào đâu ??
-            StoreResponse storeResponse = storeService.rejectStore(storeId, reason);
+            storeService.rejectStore(storeId, reason);
             return ResponseEntity.ok(ApiResponse.ok("Từ chối cửa hàng thành công!"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
@@ -202,19 +160,7 @@ public class StoreController {
             String logoUrl = fileUploadService.uploadFile(file, "stores");
             System.out.println("Logo uploaded successfully: " + logoUrl);
             
-            // Update store with new logo URL
-            StoreDTO updateDTO = new StoreDTO();
-            updateDTO.setName(store.getName());
-            updateDTO.setDescription(store.getDescription());
-            updateDTO.setLogoUrl(logoUrl);
-            updateDTO.setBannerUrl(store.getBannerUrl());
-            updateDTO.setStatus(store.getStatus());
-            
-            System.out.println("Updating store with new logo URL...");
-            storeService.updateStore(storeId, updateDTO);
-            System.out.println("Store updated successfully");
-            
-            return ResponseEntity.ok(ApiResponse.ok(logoUrl));
+            return ResponseEntity.ok(ApiResponse.ok("Cập nhật logo thành công: "));
         } catch (Exception e) {
             System.err.println("Error uploading logo: " + e.getMessage());
             e.printStackTrace();
@@ -226,36 +172,8 @@ public class StoreController {
     @PostMapping("/{storeId}/banner")
     public ResponseEntity<?> uploadStoreBanner(@PathVariable String storeId, @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
         try {
-            System.out.println("Uploading banner for store: " + storeId);
-            
-            // Validate store exists and user has permission (from JWT)
-            StoreResponse store = storeService.getStoreById(storeId);
-            System.out.println("Found store: " + store.getName());
-            
-            // Delete old banner if exists
-            if (store.getBannerUrl() != null && !store.getBannerUrl().isEmpty()) {
-                System.out.println("Deleting old banner: " + store.getBannerUrl());
-                fileUploadService.deleteFile(store.getBannerUrl());
-            }
-            
-            // Upload new banner
-            System.out.println("Uploading new banner file...");
-            String bannerUrl = fileUploadService.uploadFile(file, "stores");
-            System.out.println("Banner uploaded successfully: " + bannerUrl);
-            
-            // Update store with new banner URL
-            StoreDTO updateDTO = new StoreDTO();
-            updateDTO.setName(store.getName());
-            updateDTO.setDescription(store.getDescription());
-            updateDTO.setLogoUrl(store.getLogoUrl());
-            updateDTO.setBannerUrl(bannerUrl);
-            updateDTO.setStatus(store.getStatus());
-            
-            System.out.println("Updating store with new banner URL...");
-            storeService.updateStore(storeId, updateDTO);
-            System.out.println("Store updated successfully");
-            
-            return ResponseEntity.ok(ApiResponse.ok(bannerUrl));
+            storeService.uploadBanner(storeId, file);
+            return ResponseEntity.ok(ApiResponse.ok("Cập nhật banner thành công"));
         } catch (Exception e) {
             System.err.println("Error uploading banner: " + e.getMessage());
             e.printStackTrace();

@@ -1,29 +1,28 @@
 package com.example.e_commerce_techshop.models;
 
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.DBRef;
 
-@Entity
-@Table(name = "card_items")
-@Data
+@Document(collection = "cart_items")
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CartItem {
+@EqualsAndHashCode(callSuper = false)
+public class CartItem extends BaseEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @ManyToOne
-    @JoinColumn(name = "cart_id")
+    @DBRef
     private Cart cart;
 
-    @ManyToOne
-    @JoinColumn(name = "product_variant_id")
+    @DBRef
     private ProductVariant productVariant;
 
     private int quantity;
+    
+    private Long unitPrice; // Store price at time of adding to cart
 }
