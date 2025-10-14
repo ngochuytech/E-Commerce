@@ -20,6 +20,12 @@ public class ProductVariant extends BaseEntity {
 
     private String name;
 
+    private String categoryName;
+
+    private String brandName;
+
+    private String storeId;
+
     private Long price;
 
     private String description;
@@ -36,4 +42,20 @@ public class ProductVariant extends BaseEntity {
     private List<String> imageUrls;
     
     private String primaryImageUrl;
+
+    private List<ColorOption> colors;
+
+    @Getter
+    @Setter
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class ColorOption {
+        private String id;
+        private String colorName;
+        private Long price;
+        private int stock;
+        private String image;
+    }
+
 }

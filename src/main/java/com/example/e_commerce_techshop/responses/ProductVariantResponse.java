@@ -32,6 +32,8 @@ public class ProductVariantResponse {
 
     private Map<String, String> attributes;
 
+    private List<ColorResponse> colors;
+
     private StoreResponse store;
 
     @Getter
@@ -45,10 +47,34 @@ public class ProductVariantResponse {
         private String logo;
     }
 
+    @Getter
+    @Setter
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class ColorResponse {
+        private String id;
+        private String name;
+        private Long price;
+        private int stock;
+        private String image;
+    }
+
     public static ProductVariantResponse fromProductVariant(ProductVariant productVariant){
         // Use the attributes Map directly from MongoDB
         Map<String, String> attributes = productVariant.getAttributes() != null ? 
             new HashMap<>(productVariant.getAttributes()) : new HashMap<>();
+        
+        List<ColorResponse> colors = productVariant.getColors() != null ? 
+            productVariant.getColors().stream().map(color -> 
+                ColorResponse.builder()
+                    .id(color.getId())
+                    .name(color.getColorName())
+                    .price(color.getPrice())
+                    .stock(color.getStock())
+                    .image(color.getImage())
+                    .build()
+            ).toList() : List.of();
 
         StoreResponse storeResponse = StoreResponse.builder()
                 .id(productVariant.getProduct().getStore().getId())
@@ -75,6 +101,7 @@ public class ProductVariantResponse {
                 .description(productVariant.getDescription())
                 .stock(productVariant.getStock())
                 .attributes(attributes)
+                .colors(colors)
                 .store(storeResponse)
                 .build();
     }

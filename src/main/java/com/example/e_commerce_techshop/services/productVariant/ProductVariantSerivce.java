@@ -1,14 +1,14 @@
 package com.example.e_commerce_techshop.services.productVariant;
 
-import com.example.e_commerce_techshop.dtos.ProductFilterDTO;
 import com.example.e_commerce_techshop.dtos.ProductVariantDTO;
+import com.example.e_commerce_techshop.dtos.b2c.ProductVariant.ColorOption;
 import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
-import com.example.e_commerce_techshop.models.Category;
 import com.example.e_commerce_techshop.models.Product;
 import com.example.e_commerce_techshop.models.ProductVariant;
 import com.example.e_commerce_techshop.repositories.*;
 import com.example.e_commerce_techshop.responses.ProductVariantResponse;
 import com.example.e_commerce_techshop.services.FileUploadService;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -20,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -28,8 +29,6 @@ public class ProductVariantSerivce implements IProductVariantService{
     private final ProductVariantRepository productVariantRepository;
 
     private final ProductRepository productRepository;
-
-    private final CategoryRepository categoryRepository;
 
     private final FileUploadService fileUploadService;
 
@@ -51,11 +50,22 @@ public class ProductVariantSerivce implements IProductVariantService{
         ProductVariant productVariant = ProductVariant.builder()
                 .product(product)
                 .name(productVariantDTO.getName())
+                .categoryName(product.getCategory().getName())
+                .brandName(product.getBrand().getName())
+                .storeId(product.getStore().getId())
                 .price(productVariantDTO.getPrice())
                 .description(productVariantDTO.getDescription())
                 .stock(productVariantDTO.getStock())
-                .attributes(productVariantDTO.getAttributes()) // Lưu trực tiếp Map
-                .imageUrls(imageUrls) // Lưu trực tiếp List<String>
+                .colors(productVariantDTO.getColors().stream().map(color -> 
+                    ProductVariant.ColorOption.builder()
+                        .colorName(color.getColorName())
+                        .price(color.getPrice())
+                        .stock(color.getStock())
+                        .image(color.getImage())
+                        .build()
+                ).toList())
+                .attributes(productVariantDTO.getAttributes())
+                .imageUrls(imageUrls)
                 .primaryImageUrl(primaryImageUrl)
                 .build();
 
@@ -82,57 +92,22 @@ public class ProductVariantSerivce implements IProductVariantService{
         if(!productRepository.existsById(productId))
             throw new DataNotFoundException("Không tìm thấy sản phẩm với id được cung cấp");
         
-        // Debug: In ra productId để kiểm tra
-        System.out.println("Searching for ProductVariants with productId: " + productId);
-        
-        // Thử method đầu tiên
         List<ProductVariant> productVariants = productVariantRepository.findByProductId(productId);
-        System.out.println("Method 1 - findByProductId: Found " + productVariants.size() + " results");
-        
-        // Nếu không tìm được, thử method thứ 2
-        if (productVariants.isEmpty()) {
-            productVariants = productVariantRepository.findByProductIdWithQuery(productId);
-            System.out.println("Method 2 - findByProductIdWithQuery: Found " + productVariants.size() + " results");
-        }
-        
-        // Nếu vẫn không tìm được, thử method thứ 3
-        if (productVariants.isEmpty()) {
-            productVariants = productVariantRepository.findByProductIdWithObjectId(productId);
-            System.out.println("Method 3 - findByProductIdWithObjectId: Found " + productVariants.size() + " results");
-        }
-        
-        // Debug: In ra thông tin của từng ProductVariant
-        for (ProductVariant pv : productVariants) {
-            System.out.println("ProductVariant ID: " + pv.getId() + 
-                             ", Name: " + pv.getName() + 
-                             ", Product ID: " + (pv.getProduct() != null ? pv.getProduct().getId() : "null"));
-        }
         
         return productVariants.stream().map(ProductVariantResponse::fromProductVariant).toList();
     }
 
     @Override
     public List<ProductVariantResponse> getByCategory(String category) throws Exception {
-        Category cate = categoryRepository.findByName(category).orElse(null);
-        if (cate == null) {
-            return List.of();
-        }
-        List<ProductVariant> productVariants = productVariantRepository.findByProductCategoryId(cate.getId());
-        
+        List<ProductVariant> productVariants = productVariantRepository.findByCategoryName(category);
+
         return productVariants.stream().map(ProductVariantResponse::fromProductVariant).toList();
     }
 
     @Override
     public List<ProductVariantResponse> getByCategoryAndBrand(String category, String brand) {
-        List<ProductVariant> productVariant = productVariantRepository.findByProductCategoryAndProductBrandName(category, brand);
+        List<ProductVariant> productVariant = productVariantRepository.findByCategoryNameAndBrandName(category, brand);
         return productVariant.stream().map(ProductVariantResponse::fromProductVariant).toList();
-    }
-
-    @Override
-    public List<ProductVariantResponse> filterProducts(ProductFilterDTO filterDTO) {
-        // Tạm thời return empty list vì productRepositoryCustom chưa được implement cho MongoDB
-        // Cần implement MongoDB aggregation pipeline cho complex filtering
-        return new ArrayList<>();
     }
 
     @Override
@@ -140,7 +115,7 @@ public class ProductVariantSerivce implements IProductVariantService{
     public void updateProductVariant(String productVariantId, ProductVariantDTO productVariantDTO, MultipartFile imageFile) throws Exception {
         ProductVariant productVariant = productVariantRepository.findById(productVariantId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy mẫu sản phẩm này"));
-        
+
         // Cập nhật thông tin cơ bản
         productVariant.setName(productVariantDTO.getName());
         productVariant.setPrice(productVariantDTO.getPrice());
@@ -165,6 +140,17 @@ public class ProductVariantSerivce implements IProductVariantService{
                 productVariant.setPrimaryImageUrl(newImageUrl);
             }
         }
+    
+        if(productVariantDTO.getColors() != null && !productVariantDTO.getColors().isEmpty()) {
+            productVariant.setColors(productVariantDTO.getColors().stream().map(color -> 
+                ProductVariant.ColorOption.builder()
+                    .colorName(color.getColorName())
+                    .price(color.getPrice())
+                    .stock(color.getStock())
+                    .image(color.getImage())
+                    .build()
+            ).toList());
+        }
 
         // Cập nhật attributes
         if (productVariantDTO.getAttributes() != null) {
@@ -179,7 +165,6 @@ public class ProductVariantSerivce implements IProductVariantService{
     public void updateProductVariantWithImages(String productVariantId, ProductVariantDTO productVariantDTO, List<MultipartFile> imageFiles) throws Exception {
         ProductVariant productVariant = productVariantRepository.findById(productVariantId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy mẫu sản phẩm này"));
-        
         // Cập nhật thông tin cơ bản
         productVariant.setName(productVariantDTO.getName());
         productVariant.setPrice(productVariantDTO.getPrice());
@@ -201,6 +186,17 @@ public class ProductVariantSerivce implements IProductVariantService{
             if (!newImageUrls.isEmpty()) {
                 productVariant.setPrimaryImageUrl(newImageUrls.get(0)); // Ảnh đầu tiên là ảnh chính
             }
+        }
+
+        if(productVariantDTO.getColors() != null && !productVariantDTO.getColors().isEmpty()) {
+            productVariant.setColors(productVariantDTO.getColors().stream().map(color -> 
+                ProductVariant.ColorOption.builder()
+                    .colorName(color.getColorName())
+                    .price(color.getPrice())
+                    .stock(color.getStock())
+                    .image(color.getImage())
+                    .build()
+            ).toList());
         }
 
         // Cập nhật attributes
@@ -226,41 +222,59 @@ public class ProductVariantSerivce implements IProductVariantService{
         Pageable pageable = PageRequest.of(page, size, 
             sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending());
         
-        Page<ProductVariant> variantPage = productVariantRepository.findByProductStoreId(storeId, pageable);
+        Page<ProductVariant> variantPage = productVariantRepository.findByStoreId(storeId, pageable);
         
         return variantPage.map(ProductVariantResponse::fromProductVariant);
     }
     
-    // Debug method để kiểm tra tất cả ProductVariants
-    public void debugAllProductVariants() {
-        List<ProductVariant> allVariants = productVariantRepository.findAll();
-        System.out.println("=== ALL PRODUCT VARIANTS IN DATABASE ===");
-        System.out.println("Total count: " + allVariants.size());
-        
-        for (ProductVariant pv : allVariants) {
-            System.out.println("ProductVariant ID: " + pv.getId());
-            System.out.println("  - Name: " + pv.getName());
-            System.out.println("  - Product: " + (pv.getProduct() != null ? pv.getProduct().getId() : "null"));
-            System.out.println("  - Product Name: " + (pv.getProduct() != null ? pv.getProduct().getName() : "null"));
-            System.out.println("  - Category: " + (pv.getProduct() != null && pv.getProduct().getCategory() != null ? 
-                                                  pv.getProduct().getCategory().getName() : "null"));
-            System.out.println("  - Category ID: " + (pv.getProduct() != null && pv.getProduct().getCategory() != null ? 
-                                                     pv.getProduct().getCategory().getId() : "null"));
-            System.out.println("---");
+
+    @Override
+    public void addProductVariantColors(String productVariantId, ColorOption colorOptionDTO, MultipartFile image) throws Exception {
+        ProductVariant productVariant = productVariantRepository.findById(productVariantId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy mẫu sản phẩm này"));
+
+        List<ProductVariant.ColorOption> colors = productVariant.getColors();
+        if (colors == null) {
+            colors = new ArrayList<>();
         }
+
+        String image_url = fileUploadService.uploadFile(image, "product-variants");
+
+        // Thêm màu mới
+        ProductVariant.ColorOption newColor = ProductVariant.ColorOption.builder()
+                .id(UUID.randomUUID().toString())
+                .colorName(colorOptionDTO.getColorName())
+                .price(colorOptionDTO.getPrice())
+                .stock(colorOptionDTO.getStock())
+                .image(image_url)
+                .build();
+        colors.add(newColor);
+        productVariant.setColors(colors);
+
+        productVariantRepository.save(productVariant);
     }
-    
-    // Debug method để kiểm tra tất cả Categories
-    public void debugAllCategories() {
-        List<Category> allCategories = categoryRepository.findAll();
-        System.out.println("=== ALL CATEGORIES IN DATABASE ===");
-        System.out.println("Total count: " + allCategories.size());
-        
-        for (Category cat : allCategories) {
-            System.out.println("Category ID: " + cat.getId());
-            System.out.println("  - Name: " + cat.getName());
-            System.out.println("  - Description: " + cat.getDescription());
-            System.out.println("---");
+
+    @Override
+    public void updateProductVariantColors(String productVariantId, String colorId, ColorOption colorOptionDTO, MultipartFile imageFile)
+            throws Exception {
+        ProductVariant productVariant = productVariantRepository.findById(productVariantId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy mẫu sản phẩm này"));
+        ProductVariant.ColorOption colorToUpdate = productVariant.getColors().stream()
+                .filter(color -> color.getId().equals(colorId))
+                .findFirst()
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy màu sắc với id được cung cấp"));
+        colorToUpdate.setColorName(colorOptionDTO.getColorName());
+        colorToUpdate.setPrice(colorOptionDTO.getPrice());
+        colorToUpdate.setStock(colorOptionDTO.getStock());
+        if(imageFile != null && !imageFile.isEmpty()) {
+            // Xóa ảnh cũ nếu có
+            if (colorToUpdate.getImage() != null && !colorToUpdate.getImage().isEmpty()) {
+                fileUploadService.deleteFile(colorToUpdate.getImage());
+            }
+            // Upload ảnh mới
+            String newImageUrl = fileUploadService.uploadFile(imageFile, "product-variants");
+            colorToUpdate.setImage(newImageUrl);
         }
+        productVariantRepository.save(productVariant);
     }
 }

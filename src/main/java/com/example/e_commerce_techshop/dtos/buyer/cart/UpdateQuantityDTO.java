@@ -8,7 +8,7 @@ import lombok.Data;
 @Data
 public class UpdateQuantityDTO {
     @NotNull
-    @Min(1)
+    @Min(0)
     @Max(999)
     private Integer quantity;
 }

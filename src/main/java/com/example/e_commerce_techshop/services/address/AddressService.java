@@ -38,7 +38,6 @@ public class AddressService implements IAddressService {
             // Update existing embedded address
             address = user.getAddress();
             address.setProvince(addressDTO.getProvince());
-            address.setDistrict(addressDTO.getDistrict());
             address.setWard(addressDTO.getWard());
             address.setHomeAddress(addressDTO.getHomeAddress());
             address.setSuggestedName(addressDTO.getSuggestedName());

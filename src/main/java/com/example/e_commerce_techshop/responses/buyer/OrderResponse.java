@@ -113,7 +113,6 @@ public class OrderResponse {
 
         AddressResponse address = AddressResponse.builder()
                 .province(order.getAddress().getProvince())
-                .district(order.getAddress().getDistrict())
                 .ward(order.getAddress().getWard())
                 .homeAddress(order.getAddress().getHomeAddress())
                 .suggestedName(order.getAddress().getSuggestedName())

@@ -1,7 +1,6 @@
 package com.example.e_commerce_techshop.services.analytics;
 
 import com.example.e_commerce_techshop.models.Order;
-import com.example.e_commerce_techshop.models.Review;
 import com.example.e_commerce_techshop.repositories.OrderRepository;
 import com.example.e_commerce_techshop.repositories.ReviewRepository;
 import com.example.e_commerce_techshop.responses.AnalyticsResponse;
