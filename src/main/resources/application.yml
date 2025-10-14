@@ -1,7 +1,7 @@
 spring:
   data:
     mongodb:
-      uri: mongodb+srv://${DB_MONGODB_USERNAME:ngochuytech23_db_user}:${DB_MONGODB_PASSWORD:lTEnu72em1WH2JWE}@cluster0.7wqi5cz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+      uri: mongodb+srv://${DB_MONGODB_USERNAME}:${DB_MONGODB_PASSWORD}@cluster0.7wqi5cz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
       database: ${DB_MONGODB_NAME:e-commerce}
       auto-index-creation: true
       max-connections-per-host: 100
@@ -36,9 +36,9 @@ spring:
             redirect-uri: http://localhost:5173/oauth2/callback
 
 cloudinary:
-  cloud-name: ${CLOUDINARY_CLOUD_NAME:dz1rdfbnl}
-  api-key: ${CLOUDINARY_API_KEY:927223941116566}
-  api-secret: ${CLOUDINARY_API_SECRET:nD5uy2bZtCtf2LrKRmeLNLdNtiY}
+  cloud-name: ${CLOUDINARY_CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}
 
 api:
   prefix: api/v1
