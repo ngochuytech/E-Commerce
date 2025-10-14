@@ -1,4 +1,4 @@
-package com.example.e_commerce_techshop.controllers.b2c.promotion;
+package com.example.e_commerce_techshop.controllers.b2c;
 
 import com.example.e_commerce_techshop.dtos.b2c.promotion.PromotionDTO;
 import com.example.e_commerce_techshop.responses.ApiResponse;
@@ -15,7 +15,7 @@ import java.util.List;
 @RestController
 @RequestMapping("${api.prefix}/b2c/promotions")
 @RequiredArgsConstructor
-public class PromotionController {
+public class B2CPromotionController {
     
     private final IPromotionService promotionService;
 

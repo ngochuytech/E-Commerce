@@ -15,7 +15,7 @@ public interface IStoreService {
     StoreResponse updateStore(String storeId, StoreDTO storeDTO) throws Exception;
     StoreResponse getStoreById(String storeId) throws Exception;
     List<StoreResponse> getAllStores();
-    List<StoreResponse> getStoresByOwner(String ownerId);
+    List<Store> getStoresByOwner(String ownerId);
 
     // Store Approval APIs
     StoreResponse approveStore(String storeId) throws Exception;

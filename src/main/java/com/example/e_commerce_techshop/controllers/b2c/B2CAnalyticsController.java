@@ -1,4 +1,4 @@
-package com.example.e_commerce_techshop.controllers.b2c.analytics;
+package com.example.e_commerce_techshop.controllers.b2c;
 
 import com.example.e_commerce_techshop.responses.ApiResponse;
 import com.example.e_commerce_techshop.responses.AnalyticsResponse;
@@ -12,7 +12,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("${api.prefix}/b2c/analytics")
 @RequiredArgsConstructor
-public class AnalyticsController {
+public class B2CAnalyticsController {
     
     private final IAnalyticsService analyticsService;
     

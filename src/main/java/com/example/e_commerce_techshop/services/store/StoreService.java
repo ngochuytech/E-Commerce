@@ -112,9 +112,9 @@ public class StoreService implements IStoreService {
     }
 
     @Override
-    public List<StoreResponse> getStoresByOwner(String ownerId) {
+    public List<Store> getStoresByOwner(String ownerId) {
         List<Store> stores = storeRepository.findByOwnerId(ownerId);
-        return stores.stream().map(StoreResponse::fromStore).toList();
+        return stores;
     }
 
     @Override

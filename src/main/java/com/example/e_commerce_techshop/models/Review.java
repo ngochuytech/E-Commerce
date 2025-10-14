@@ -20,10 +20,6 @@ public class Review extends BaseEntity {
 
     private String comment;
 
-    // Seller Response dùng để làm gì ?
-    //    @Column(name = "seller_response")
-    //    private String sellerResponse;
-
     @DBRef
     private Order order;
 

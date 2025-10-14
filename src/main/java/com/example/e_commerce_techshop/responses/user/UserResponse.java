@@ -46,7 +46,6 @@ public class UserResponse {
         }
         AddressResponse addressResponse = AddressResponse.builder()
                 .province(user.getAddress() != null ? user.getAddress().getProvince() : null)
-                .district(user.getAddress() != null ? user.getAddress().getDistrict() : null)
                 .ward(user.getAddress() != null ? user.getAddress().getWard() : null)
                 .homeAddress(user.getAddress() != null ? user.getAddress().getHomeAddress() : null)
                 .suggestedName(user.getAddress() != null ? user.getAddress().getSuggestedName() : null)

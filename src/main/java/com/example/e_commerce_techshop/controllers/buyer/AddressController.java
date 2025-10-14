@@ -1,4 +1,4 @@
-package com.example.e_commerce_techshop.controllers.buyer.address;
+package com.example.e_commerce_techshop.controllers.buyer;
 
 import com.example.e_commerce_techshop.dtos.buyer.address.AddressDTO;
 import com.example.e_commerce_techshop.responses.ApiResponse;

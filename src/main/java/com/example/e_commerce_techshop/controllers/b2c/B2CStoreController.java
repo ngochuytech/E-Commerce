@@ -1,4 +1,4 @@
-package com.example.e_commerce_techshop.controllers.b2c.store;
+package com.example.e_commerce_techshop.controllers.b2c;
 
 import com.example.e_commerce_techshop.dtos.b2c.store.StoreDTO;
 import com.example.e_commerce_techshop.responses.ApiResponse;
@@ -6,6 +6,8 @@ import com.example.e_commerce_techshop.responses.StoreResponse;
 import com.example.e_commerce_techshop.services.store.IStoreService;
 import com.example.e_commerce_techshop.services.FileUploadService;
 import com.example.e_commerce_techshop.models.Store;
+import com.example.e_commerce_techshop.models.User;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.Valid;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
@@ -20,10 +23,26 @@ import java.util.List;
 @RestController
 @RequestMapping("${api.prefix}/b2c/stores")
 @RequiredArgsConstructor
-public class StoreController {
+public class B2CStoreController {
     
     private final IStoreService storeService;
     private final FileUploadService fileUploadService;
+
+    // Get current user's stores
+    @GetMapping("/my-stores")
+    public ResponseEntity<?> getMyStores(@AuthenticationPrincipal User currentUser) {
+        try {
+            List<Store> stores = storeService.getStoresByOwner(currentUser.getId());
+            
+            List<StoreResponse> storeResponses = stores.stream()
+                .map(StoreResponse::fromStore)
+                .toList();
+            
+            return ResponseEntity.ok(ApiResponse.ok(storeResponses));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
 
     // Store Management APIs
     @PostMapping("/create")
@@ -53,29 +72,6 @@ public class StoreController {
         }
     }
 
-    @GetMapping("/{storeId}")
-    public ResponseEntity<?> getStoreById(@PathVariable String storeId) {
-        try {
-            StoreResponse storeResponse = storeService.getStoreById(storeId);
-            return ResponseEntity.ok(ApiResponse.ok(storeResponse));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
-        }
-    }
-
-    @GetMapping
-    public ResponseEntity<?> getAllStores() {
-        List<StoreResponse> stores = storeService.getAllStores();
-        return ResponseEntity.ok(ApiResponse.ok(stores));
-    }
-
-    @GetMapping("/owner/{ownerId}")
-    public ResponseEntity<?> getStoresByOwner(@PathVariable String ownerId) {
-        List<StoreResponse> stores = storeService.getStoresByOwner(ownerId);
-        return ResponseEntity.ok(ApiResponse.ok(stores));
-    }
-
-    // Store Approval APIs
     @PutMapping("/{storeId}/approve")
     public ResponseEntity<?> approveStore(@PathVariable String storeId) {
         try {
@@ -89,7 +85,6 @@ public class StoreController {
     @PutMapping("/{storeId}/reject")
     public ResponseEntity<?> rejectStore(@PathVariable String storeId, @RequestParam String reason) {
         try {
-            // REASON lưu vào đâu ??
             storeService.rejectStore(storeId, reason);
             return ResponseEntity.ok(ApiResponse.ok("Từ chối cửa hàng thành công!"));
         } catch (Exception e) {
@@ -97,38 +92,6 @@ public class StoreController {
         }
     }
 
-    @GetMapping("/pending")
-    public ResponseEntity<?> getPendingStores() {
-        List<StoreResponse> stores = storeService.getPendingStores();
-        return ResponseEntity.ok(ApiResponse.ok(stores));
-    }
-
-    @GetMapping("/approved")
-    public ResponseEntity<?> getApprovedStores() {
-        List<StoreResponse> stores = storeService.getApprovedStores();
-        return ResponseEntity.ok(ApiResponse.ok(stores));
-    }
-
-    // Store Status Management
-    @PutMapping("/{storeId}/status")
-    public ResponseEntity<?> updateStoreStatus(@PathVariable String storeId, @RequestParam String status) {
-        try {
-            // ✅ VALIDATE STATUS TRƯỚC KHI GỌI SERVICE
-            if (!Store.isValidStatus(status)) {
-                String validStatuses = String.join(", ", Store.getValidStatuses());
-                return ResponseEntity.badRequest().body(
-                    ApiResponse.error("Status không hợp lệ: '" + status + "'. Chỉ chấp nhận: " + validStatuses)
-                );
-            }
-            
-            storeService.updateStoreStatus(storeId, status);
-            return ResponseEntity.ok(ApiResponse.ok("Cập nhật trạng thái cửa hàng thành công!"));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
-        }
-    }
-
-    // Soft delete: anyone with owner or admin can delete
     @DeleteMapping("/{storeId}")
     public ResponseEntity<?> softDelete(@PathVariable String storeId) {
         try {

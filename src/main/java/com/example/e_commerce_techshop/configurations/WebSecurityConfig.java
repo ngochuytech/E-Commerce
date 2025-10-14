@@ -30,18 +30,30 @@ public class WebSecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception{
         http
-
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> {})
                 .sessionManagement(c -> c.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(request -> request
+                        // Swagger UI endpoints - PHẢI LÀ ĐẦU TIÊN
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**",
+                                "/v3/api-docs",
+                                "/api-docs/**",
+                                "/swagger-resources/**",
+                                "/webjars/**"
+                        ).permitAll()
+                        // User authentication endpoints  
                         .requestMatchers(
                                 String.format("%s/users/register", apiPrefix),
                                 String.format("%s/users/login", apiPrefix),
-                                String.format("%s/verify/**", apiPrefix),
+                                String.format("%s/users/verify/**", apiPrefix),
                                 String.format("%s/users/auth/social-login", apiPrefix),
-                                String.format("%s/users/auth/social/callback", apiPrefix)
+                                String.format("%s/users/auth/social/callback", apiPrefix),
+                                "/forgot-password",
+                                "/reset-password"
                         ).permitAll()
                         // Cho phép truy cập ảnh tĩnh đã upload
                         .requestMatchers("/image/**").permitAll()

@@ -1,8 +1,9 @@
-package com.example.e_commerce_techshop.controllers.buyer.cart;
+package com.example.e_commerce_techshop.controllers.buyer;
 
 import com.example.e_commerce_techshop.dtos.buyer.cart.CartDTO;
 import com.example.e_commerce_techshop.dtos.buyer.cart.UpdateQuantityDTO;
 import com.example.e_commerce_techshop.models.Cart;
+import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.responses.ApiResponse;
 import com.example.e_commerce_techshop.responses.buyer.CartItemCountResponse;
 import com.example.e_commerce_techshop.responses.buyer.CartResponse;
@@ -10,8 +11,7 @@ import com.example.e_commerce_techshop.services.cart.ICartService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,8 +30,9 @@ public class CartController {
      */
     @PostMapping("/add")
     public ResponseEntity<?> addToCart(
-            @RequestBody @Valid CartDTO cartDTO,
-            BindingResult result) {
+            @RequestBody @Valid List<CartDTO> cartDTO,
+            BindingResult result,
+            @AuthenticationPrincipal User currentUser) {
         try {
             if (result.hasErrors()) {
                 List<String> errorMessages = result.getFieldErrors()
@@ -42,10 +43,8 @@ public class CartController {
                         .body(ApiResponse.error("Dữ liệu không hợp lệ: " + String.join(", ", errorMessages)));
             }
             
-            String userEmail = getCurrentUserEmail();
-            
             // Thêm vào giỏ hàng
-            cartService.addToCart(userEmail, cartDTO);
+            cartService.addToCart(currentUser.getEmail(), cartDTO);
 
             return ResponseEntity.ok(ApiResponse.ok("Thêm sản phẩm vào giỏ hàng thành công"));
 
@@ -60,12 +59,10 @@ public class CartController {
      * GET /api/v1/buyer/cart
      */
     @GetMapping
-    public ResponseEntity<?> getCart() {
+    public ResponseEntity<?> getCart(@AuthenticationPrincipal User currentUser) {
         try {
-            String userEmail = getCurrentUserEmail();
-            Cart cart = cartService.getCart(userEmail);
+            Cart cart = cartService.getCart(currentUser.getEmail());
 
-            
             return ResponseEntity.ok(ApiResponse.ok(CartResponse.fromCart(cart)));
             
         } catch (Exception e) {
@@ -76,32 +73,21 @@ public class CartController {
     
     /**
      * Cập nhật số lượng sản phẩm trong giỏ hàng
-     * PUT /api/v1/buyer/cart/{cartItemId}
+     * PUT /api/v1/buyer/cart/{productVariantId}
      */
-    @PutMapping("/{cartItemId}")
+    @PutMapping("/{productVariantId}")
     public ResponseEntity<?> updateCartItem(
-            @PathVariable String cartItemId,
+            @PathVariable String productVariantId,
             @RequestBody @Valid UpdateQuantityDTO updateQuantityDTO,
-            BindingResult result) {
+            @AuthenticationPrincipal User currentUser) {
         try {
-            if (result.hasErrors()) {
-                List<String> errorMessages = result.getFieldErrors()
-                        .stream()
-                        .map(error -> error.getDefaultMessage())
-                        .toList();
-                return ResponseEntity.badRequest()
-                        .body(ApiResponse.error("Dữ liệu không hợp lệ: " + String.join(", ", errorMessages)));
-            }
             Integer quantity = updateQuantityDTO.getQuantity();
-            System.out.println("DEBUG CartController: quantity = " + quantity); // Debug log
             if (quantity == null) {
-                System.out.println("DEBUG CartController: quantity is null");
                 return ResponseEntity.badRequest()
                         .body(ApiResponse.error("Số lượng không được để trống"));
             }
             
-            String userEmail = getCurrentUserEmail();
-            Cart cart = cartService.updateCartItem(userEmail, cartItemId, quantity);
+            Cart cart = cartService.updateCartItem(currentUser.getEmail(), productVariantId, quantity);
 
             return ResponseEntity.ok(ApiResponse.ok(CartResponse.fromCart(cart)));
 
@@ -116,11 +102,12 @@ public class CartController {
      * Xóa sản phẩm khỏi giỏ hàng
      * DELETE /api/v1/buyer/cart/{cartItemId}
      */
-    @DeleteMapping("/{cartItemId}")
-    public ResponseEntity<?> removeCartItem(@PathVariable String cartItemId) {
+    @DeleteMapping("/{productVariantId}")
+    public ResponseEntity<?> removeCartItem(
+            @PathVariable String productVariantId,
+            @AuthenticationPrincipal User currentUser) {
         try {
-            String userEmail = getCurrentUserEmail();
-            cartService.removeCartItem(userEmail, cartItemId);
+            cartService.removeCartItem(currentUser.getEmail(), productVariantId);
 
             return ResponseEntity.ok(ApiResponse.ok("Sản phẩm đã được xóa khỏi giỏ hàng"));
 
@@ -135,10 +122,9 @@ public class CartController {
      * DELETE /api/v1/buyer/cart/clear
      */
     @DeleteMapping("/clear")
-    public ResponseEntity<?> clearCart() {
+    public ResponseEntity<?> clearCart(@AuthenticationPrincipal User currentUser) {
         try {
-            String userEmail = getCurrentUserEmail();
-            cartService.clearCart(userEmail);
+            cartService.clearCart(currentUser.getEmail());
 
             return ResponseEntity.ok(ApiResponse.ok("Giỏ hàng đã được xóa"));
 
@@ -153,11 +139,10 @@ public class CartController {
      * GET /api/v1/buyer/cart/count
      */
     @GetMapping("/count")
-    public ResponseEntity<?> getCartItemCount() {
+    public ResponseEntity<?> getCartItemCount(@AuthenticationPrincipal User currentUser) {
         try {
-            String userEmail = getCurrentUserEmail();
-            int count = cartService.getCartItemCount(userEmail);
-            boolean isEmpty = cartService.isCartEmpty(userEmail);
+            int count = cartService.getCartItemCount(currentUser.getEmail());
+            boolean isEmpty = cartService.isCartEmpty(currentUser.getEmail());
             
             return ResponseEntity.ok(ApiResponse.ok(
                 new CartItemCountResponse(count, isEmpty)
@@ -167,17 +152,6 @@ public class CartController {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("Lỗi khi lấy số lượng giỏ hàng: " + e.getMessage()));
         }
-    }
-    
-    /**
-     * Lấy user email từ JWT token
-     */
-    private String getCurrentUserEmail() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || authentication.getName() == null) {
-            throw new RuntimeException("Không tìm thấy thông tin người dùng");
-        }
-        return authentication.getName(); // Trong hệ thống hiện tại, getName() trả về email
     }
     
 }

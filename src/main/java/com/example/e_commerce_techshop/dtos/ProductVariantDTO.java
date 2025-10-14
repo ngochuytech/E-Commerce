@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.List;
 import java.util.Map;
 
 @Getter
@@ -16,7 +17,7 @@ import java.util.Map;
 public class ProductVariantDTO {
     @NotNull(message = "Name is required")
     private String name;
-
+    
     @NotNull(message = "Price is required")
     @PositiveOrZero(message = "Price must be a positive number")
     private Long price;
@@ -31,4 +32,23 @@ public class ProductVariantDTO {
 
     @NotNull(message = "ProductId is required")
     private String productId;
+
+    private List<ColorOption> colors;
+
+    @Getter
+    @Setter
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class ColorOption {
+        @NotNull(message = "Color name is required")
+        private String colorName;
+        @NotNull(message = "Price is required")
+        @PositiveOrZero(message = "Price must be a positive number")
+        private Long price;
+        @NotNull(message = "Stock is required")
+        @PositiveOrZero(message = "Stock must be a positive number")
+        private int stock;
+        @NotNull(message = "Image is required")
+        private String image;
+    }
 }

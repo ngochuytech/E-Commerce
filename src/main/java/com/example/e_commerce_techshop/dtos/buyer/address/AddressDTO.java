@@ -19,10 +19,6 @@ public class AddressDTO {
     @Size(max = 255, message = "Tỉnh/Thành phố không được vượt quá 255 ký tự")
     private String province;
 
-    @NotBlank(message = "Quận/Huyện không được để trống")
-    @Size(max = 255, message = "Quận/Huyện không được vượt quá 255 ký tự")
-    private String district;
-
     @NotBlank(message = "Phường/Xã không được để trống")
     @Size(max = 255, message = "Phường/Xã không được vượt quá 255 ký tự")
     private String ward;
@@ -40,7 +36,6 @@ public class AddressDTO {
     public static Address toEntity(AddressDTO dto) {
         return Address.builder()
                 .province(dto.getProvince())
-                .district(dto.getDistrict())
                 .ward(dto.getWard())
                 .homeAddress(dto.getHomeAddress())
                 .suggestedName(dto.getSuggestedName())
@@ -54,7 +49,6 @@ public class AddressDTO {
         return AddressDTO.builder()
                 .id(null) // No ID for embedded documents
                 .province(address.getProvince())
-                .district(address.getDistrict())
                 .ward(address.getWard())
                 .homeAddress(address.getHomeAddress())
                 .suggestedName(address.getSuggestedName())
@@ -74,11 +68,6 @@ public class AddressDTO {
         if (ward != null && !ward.trim().isEmpty()) {
             if (fullAddress.length() > 0) fullAddress.append(", ");
             fullAddress.append(ward.trim());
-        }
-        
-        if (district != null && !district.trim().isEmpty()) {
-            if (fullAddress.length() > 0) fullAddress.append(", ");
-            fullAddress.append(district.trim());
         }
         
         if (province != null && !province.trim().isEmpty()) {

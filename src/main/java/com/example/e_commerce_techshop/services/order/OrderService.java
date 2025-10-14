@@ -40,24 +40,22 @@ public class OrderService implements IOrderService {
         // 1. Convert email to User object
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy người dùng với Email: " + userEmail));
-        
-        // 2. Validate address exists
 
-        // 3. Validate payment method
+        // 2. Validate payment method
         if (!isValidPaymentMethod(orderDTO.getPaymentMethod())) {
             throw new IllegalArgumentException("Phương thức thanh toán không hợp lệ: " + orderDTO.getPaymentMethod());
         }
         
-        // 4. Lấy cart hiện tại
+        // 3. Lấy cart hiện tại
         Cart cart = cartRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy giỏ hàng"));
 
-        // 5. Validate cart không rỗng
+        // 4. Validate cart không rỗng
         if (cart.getCartItems().isEmpty()) {
             throw new IllegalArgumentException("Giỏ hàng trống, không thể đặt hàng");
         }
         
-        // 6. Validate từng sản phẩm trong cart
+        // 5. Validate từng sản phẩm trong cart
         for (var cartItem : cart.getCartItems()) {
             ProductVariant productVariant = productVariantRepository.findById(cartItem.getProductVariant().getId())
                     .orElseThrow(() -> new DataNotFoundException("Không tìm thấy sản phẩm: " + cartItem.getProductVariant().getId()));
@@ -68,18 +66,13 @@ public class OrderService implements IOrderService {
                         ", Số lượng còn lại: " + productVariant.getStock());
             }
             
-            // Kiểm tra trạng thái sản phẩm
-            if (!"ACTIVE".equals(productVariant.getProduct().getStatus())) {
-                throw new IllegalArgumentException("Sản phẩm không khả dụng: " + productVariant.getName());
-            }
-            
             // Kiểm tra trạng thái store
             if (!"APPROVED".equals(productVariant.getProduct().getStore().getStatus())) {
                 throw new IllegalArgumentException("Cửa hàng tạm thời đóng cửa: " + productVariant.getProduct().getStore().getName());
             }
         }
         
-        // 7. Group cart items theo store
+        // 6. Group cart items theo store
         Map<String, List<Cart.CartItemEmbedded>> itemsByStore = new HashMap<>();
         
         for (var cartItem : cart.getCartItems()) {
@@ -92,16 +85,16 @@ public class OrderService implements IOrderService {
         
         List<Order> orders = new ArrayList<>();
         
-        // 8. Tạo 1 đơn hàng cho mỗi store
+        // 7. Tạo 1 đơn hàng cho mỗi store
         for (Map.Entry<String, List<Cart.CartItemEmbedded>> storeEntry : itemsByStore.entrySet()) {
             String storeId = storeEntry.getKey();
             List<Cart.CartItemEmbedded> storeItems = storeEntry.getValue();
             
-            // 8.1. Lấy thông tin store
+            // 7.1. Lấy thông tin store
             Store store = storeRepository.findById(storeId)
                     .orElseThrow(() -> new DataNotFoundException("Không tìm thấy cửa hàng với ID: " + storeId));
             
-            // 8.2. Tính tổng tiền cho store này
+            // 7.2. Tính tổng tiền cho store này
             BigDecimal storeTotal = BigDecimal.ZERO;
             for (Cart.CartItemEmbedded item : storeItems) {
                 ProductVariant productVariant = productVariantRepository.findById(item.getProductVariant().getId()).get();
@@ -110,7 +103,7 @@ public class OrderService implements IOrderService {
                 storeTotal = storeTotal.add(itemTotal);
             }
             
-            // 8.3. Xử lý promotion (nếu có)
+            // 7.3. Xử lý promotion (nếu có)
             Promotion promotion = null;
             BigDecimal finalTotal = storeTotal;
             
@@ -130,7 +123,7 @@ public class OrderService implements IOrderService {
                 }
             }
     
-            // 8.4. Tạo Order cho store này
+            // 7.4. Tạo Order cho store này
             Order order = Order.builder()
                     .buyer(user)
                     .store(store)
@@ -138,7 +131,6 @@ public class OrderService implements IOrderService {
                     .totalPrice(finalTotal)
                     .address(Address.builder()
                             .province(orderDTO.getAddress().getProvince())
-                            .district(orderDTO.getAddress().getDistrict())
                             .ward(orderDTO.getAddress().getWard())
                             .homeAddress(orderDTO.getAddress().getHomeAddress())
                             .build()
@@ -150,7 +142,7 @@ public class OrderService implements IOrderService {
             
             order = orderRepository.save(order);
             
-            // 8.5. Tạo OrderItems cho store này và trừ stock
+            // 7.5. Tạo OrderItems cho store này và trừ stock
             List<OrderItem> orderItems = new ArrayList<>();
             for (Cart.CartItemEmbedded cartItem : storeItems) {
                 ProductVariant productVariant = productVariantRepository.findById(cartItem.getProductVariant().getId()).get();
@@ -175,14 +167,14 @@ public class OrderService implements IOrderService {
             
             orderItemRepository.saveAll(orderItems);
             order.setOrderItems(orderItems);
-            // 8.6.  Add order into order list
+            // 7.6.  Add order into order list
             orders.add(order);
         }
         
-        // 9. Clear cart
+        // 8. Clear cart
         cartService.clearCart(userEmail);
         
-        // 10. Return danh sách orders
+        // 9. Return danh sách orders
         return orders;
     }
     
@@ -204,7 +196,11 @@ public class OrderService implements IOrderService {
             orders = orderRepository.findByBuyerIdAndStatusOrderByCreatedAtDesc(buyerId, status, pageable);
         }
 
-        // 4. Convert to Response
+        for (Order order : orders.getContent()) {
+            List<OrderItem> orderItems = orderItemRepository.findByOrderId(order.getId());
+            order.setOrderItems(orderItems);
+        }
+
         return orders;
     }
     
@@ -219,13 +215,15 @@ public class OrderService implements IOrderService {
         Order order = orderRepository.findByIdAndBuyerId(orderId, buyerId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy đơn hàng"));
         
-        // 3. Convert to OrderResponse của Buyer
+        List<OrderItem> orderItems = orderItemRepository.findByOrderId(order.getId());
+        order.setOrderItems(orderItems);
+
         return order;
     }
     
     @Override
     @Transactional
-    public Order cancelOrder(String userEmail, String orderId) throws Exception {
+    public void cancelOrder(String userEmail, String orderId) throws Exception {
         // 1. Convert email to User object
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy người dùng với Email: " + userEmail));
@@ -250,9 +248,6 @@ public class OrderService implements IOrderService {
             productVariant.setStock(productVariant.getStock() + item.getQuantity());
             productVariantRepository.save(productVariant);
         }
-        
-        // 6. Return updated order
-        return order;
     }
     
     
@@ -344,5 +339,140 @@ public class OrderService implements IOrderService {
         }
         
         return orderTotal.subtract(discount);
+    }
+    
+    // ===== SELLER METHODS =====
+    
+    @Override
+    public Page<Order> getStoreOrders(String storeId, int page, int size, String status) throws Exception {
+        // Tạo Pageable (page bắt đầu từ 0)
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        
+        Page<Order> orders;
+        if (status != null && !status.trim().isEmpty()) {
+            orders = orderRepository.findByStoreIdAndStatus(storeId, status, pageable);
+        } else {
+            orders = orderRepository.findByStoreId(storeId, pageable);
+        }
+        
+        // Load orderItems cho mỗi order
+        for (Order order : orders.getContent()) {
+            List<OrderItem> orderItems = orderItemRepository.findByOrderId(order.getId());
+            order.setOrderItems(orderItems);
+        }
+        
+        return orders;
+    }
+    
+    @Override
+    public Order getStoreOrderDetail(String storeId, String orderId) throws Exception {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy đơn hàng với ID: " + orderId));
+        
+        // Kiểm tra order có thuộc về store này không
+        if (!order.getStore().getId().equals(storeId)) {
+            throw new IllegalArgumentException("Đơn hàng không thuộc về cửa hàng này");
+        }
+        
+        // Load orderItems
+        List<OrderItem> orderItems = orderItemRepository.findByOrderId(order.getId());
+        order.setOrderItems(orderItems);
+        
+        return order;
+    }
+    
+    @Override
+    public Order updateOrderStatus(String storeId, String orderId, String newStatus) throws Exception {
+        Order order = getStoreOrderDetail(storeId, orderId);
+        
+        // Kiểm tra trạng thái hợp lệ
+        String currentStatus = order.getStatus();
+        if (!isValidStatusTransition(currentStatus, newStatus)) {
+            throw new IllegalArgumentException(
+                String.format("Không thể chuyển từ trạng thái %s sang %s", currentStatus, newStatus)
+            );
+        }
+        
+        order.setStatus(newStatus);
+        return orderRepository.save(order);
+    }
+    
+    @Override
+    public Map<String, Object> getStoreOrderStatistics(String storeId) throws Exception {
+        Map<String, Object> stats = new HashMap<>();
+        
+        // Tổng số đơn hàng
+        long totalOrders = orderRepository.countByStoreId(storeId);
+        stats.put("totalOrders", totalOrders);
+        
+        // Đếm theo trạng thái
+        stats.put("pending", orderRepository.countByStoreIdAndStatus(storeId, "PENDING"));
+        stats.put("confirmed", orderRepository.countByStoreIdAndStatus(storeId, "CONFIRMED"));
+        stats.put("shipping", orderRepository.countByStoreIdAndStatus(storeId, "SHIPPING"));
+        stats.put("delivered", orderRepository.countByStoreIdAndStatus(storeId, "DELIVERED"));
+        stats.put("cancelled", orderRepository.countByStoreIdAndStatus(storeId, "CANCELLED"));
+        
+        // Tính tổng doanh thu (chỉ đơn hàng hoàn thành)
+        List<Order> completedOrders = orderRepository.findByStoreIdAndStatus(storeId, "DELIVERED");
+        BigDecimal totalRevenue = completedOrders.stream()
+                .map(Order::getTotalPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        stats.put("totalRevenue", totalRevenue);
+        
+        return stats;
+    }
+    
+    @Override
+    public Map<String, Object> getStoreRevenue(String storeId, String startDate, String endDate) throws Exception {
+        LocalDateTime start = LocalDateTime.parse(startDate + "T00:00:00");
+        LocalDateTime end = LocalDateTime.parse(endDate + "T23:59:59");
+        
+        List<Order> orders = orderRepository.findByStoreIdAndDateRange(storeId, start, end);
+        
+        Map<String, Object> revenue = new HashMap<>();
+        
+        // Lọc theo trạng thái và tính doanh thu
+        BigDecimal totalRevenue = BigDecimal.ZERO;
+        BigDecimal pendingRevenue = BigDecimal.ZERO;
+        long totalOrders = 0;
+        long completedOrders = 0;
+        
+        for (Order order : orders) {
+            totalOrders++;
+            if ("DELIVERED".equals(order.getStatus())) {
+                totalRevenue = totalRevenue.add(order.getTotalPrice());
+                completedOrders++;
+            } else if (!"CANCELLED".equals(order.getStatus())) {
+                pendingRevenue = pendingRevenue.add(order.getTotalPrice());
+            }
+        }
+        
+        revenue.put("totalRevenue", totalRevenue);
+        revenue.put("pendingRevenue", pendingRevenue);
+        revenue.put("totalOrders", totalOrders);
+        revenue.put("completedOrders", completedOrders);
+        revenue.put("startDate", startDate);
+        revenue.put("endDate", endDate);
+        
+        return revenue;
+    }
+    
+    /**
+     * Kiểm tra việc chuyển trạng thái có hợp lệ không
+     */
+    private boolean isValidStatusTransition(String currentStatus, String newStatus) {
+        switch (currentStatus) {
+            case "PENDING":
+                return "CONFIRMED".equals(newStatus) || "CANCELLED".equals(newStatus);
+            case "CONFIRMED":
+                return "SHIPPING".equals(newStatus) || "CANCELLED".equals(newStatus);
+            case "SHIPPING":
+                return "DELIVERED".equals(newStatus);
+            case "DELIVERED":
+            case "CANCELLED":
+                return false; // Không thể thay đổi trạng thái cuối
+            default:
+                return false;
+        }
     }
 }

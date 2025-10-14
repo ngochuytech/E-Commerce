@@ -22,7 +22,6 @@ public class PromotionService implements IPromotionService {
 
     @Override
     public PromotionResponse createPromotion(PromotionDTO promotionDTO) throws Exception {
-        // Validate store exists
         Store store = storeRepository.findById(promotionDTO.getStoreId())
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy cửa hàng"));
 
@@ -31,7 +30,6 @@ public class PromotionService implements IPromotionService {
             throw new Exception("Ngày bắt đầu không thể sau ngày kết thúc");
         }
 
-        // Create promotion
         Promotion promotion = Promotion.builder()
                 .title(promotionDTO.getTitle())
                 .store(store)
