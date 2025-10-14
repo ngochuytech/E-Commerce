@@ -72,7 +72,6 @@ public class B2CStoreController {
         }
     }
 
-    // Store Approval APIs
     @PutMapping("/{storeId}/approve")
     public ResponseEntity<?> approveStore(@PathVariable String storeId) {
         try {
@@ -86,7 +85,6 @@ public class B2CStoreController {
     @PutMapping("/{storeId}/reject")
     public ResponseEntity<?> rejectStore(@PathVariable String storeId, @RequestParam String reason) {
         try {
-            // REASON lưu vào đâu ??
             storeService.rejectStore(storeId, reason);
             return ResponseEntity.ok(ApiResponse.ok("Từ chối cửa hàng thành công!"));
         } catch (Exception e) {
@@ -94,37 +92,6 @@ public class B2CStoreController {
         }
     }
 
-    @GetMapping("/pending")
-    public ResponseEntity<?> getPendingStores() {
-        List<StoreResponse> stores = storeService.getPendingStores();
-        return ResponseEntity.ok(ApiResponse.ok(stores));
-    }
-
-    @GetMapping("/approved")
-    public ResponseEntity<?> getApprovedStores() {
-        List<StoreResponse> stores = storeService.getApprovedStores();
-        return ResponseEntity.ok(ApiResponse.ok(stores));
-    }
-
-    // Store Status Management
-    @PutMapping("/{storeId}/status")
-    public ResponseEntity<?> updateStoreStatus(@PathVariable String storeId, @RequestParam String status) {
-        try {
-            if (!Store.isValidStatus(status)) {
-                String validStatuses = String.join(", ", Store.getValidStatuses());
-                return ResponseEntity.badRequest().body(
-                    ApiResponse.error("Status không hợp lệ: '" + status + "'. Chỉ chấp nhận: " + validStatuses)
-                );
-            }
-            
-            storeService.updateStoreStatus(storeId, status);
-            return ResponseEntity.ok(ApiResponse.ok("Cập nhật trạng thái cửa hàng thành công!"));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
-        }
-    }
-
-    // Soft delete: anyone with owner or admin can delete
     @DeleteMapping("/{storeId}")
     public ResponseEntity<?> softDelete(@PathVariable String storeId) {
         try {

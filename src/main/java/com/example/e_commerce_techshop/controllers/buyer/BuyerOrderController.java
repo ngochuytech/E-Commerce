@@ -1,4 +1,4 @@
-package com.example.e_commerce_techshop.controllers.buyer.order;
+package com.example.e_commerce_techshop.controllers.buyer;
 
 import com.example.e_commerce_techshop.dtos.OrderDTO;
 import com.example.e_commerce_techshop.models.Order;

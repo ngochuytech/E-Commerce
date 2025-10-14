@@ -31,6 +31,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,@NonNull HttpServletResponse response,@NonNull FilterChain filterChain) throws ServletException, IOException {
+        String requestPath = request.getRequestURI();
+        
+        // Bỏ qua JWT filter cho Swagger endpoints
+        if (isSwaggerEndpoint(requestPath)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+        
         String authHeader = request.getHeader("Authorization");
         String token = null;
         String username = null;
@@ -74,5 +82,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         ObjectMapper objectMapper = new ObjectMapper();
         
         response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
+    }
+    
+    private boolean isSwaggerEndpoint(String requestPath) {
+        return requestPath.startsWith("/swagger-ui") ||
+               requestPath.startsWith("/v3/api-docs") ||
+               requestPath.startsWith("/api-docs") ||
+               requestPath.startsWith("/swagger-resources") ||
+               requestPath.startsWith("/webjars") ||
+               requestPath.equals("/swagger-ui.html");
     }
 }

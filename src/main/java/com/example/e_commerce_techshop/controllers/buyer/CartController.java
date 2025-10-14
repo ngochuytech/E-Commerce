@@ -1,4 +1,4 @@
-package com.example.e_commerce_techshop.controllers.buyer.cart;
+package com.example.e_commerce_techshop.controllers.buyer;
 
 import com.example.e_commerce_techshop.dtos.buyer.cart.CartDTO;
 import com.example.e_commerce_techshop.dtos.buyer.cart.UpdateQuantityDTO;

@@ -13,7 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AddressService implements IAddressService {
 
-    // No longer need AddressRepository since Address is embedded
     private final UserRepository userRepository;
 
     @Override
@@ -47,7 +46,6 @@ public class AddressService implements IAddressService {
             user.setAddress(address);
         }
         
-        // Save user with embedded address
         userRepository.save(user);
         
         return AddressDTO.fromEntity(address);
@@ -62,7 +60,6 @@ public class AddressService implements IAddressService {
             throw new DataNotFoundException("Người dùng không có địa chỉ để xóa");
         }
         
-        // Remove embedded address
         user.setAddress(null);
         userRepository.save(user);
     }

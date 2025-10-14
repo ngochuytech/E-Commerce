@@ -14,70 +14,30 @@ import java.util.Optional;
 @Repository
 public interface OrderRepository extends MongoRepository<Order, String> {
     
-    /**
-     * Tìm orders theo buyerId với phân trang
-     */
     Page<Order> findByBuyerIdOrderByCreatedAtDesc(String buyerId, Pageable pageable);
     
-    /**
-     * Tìm orders theo buyerId và status với phân trang
-     */
     Page<Order> findByBuyerIdAndStatusOrderByCreatedAtDesc(String buyerId, String status, Pageable pageable);
     
-    /**
-     * Tìm order theo buyerId và orderId
-     */
     Optional<Order> findByIdAndBuyerId(String orderId, String buyerId);
     
-    /**
-     * Đếm orders theo buyerId và status
-     */
     long countByBuyerIdAndStatus(String buyerId, String status);
     
-    /**
-     * Đếm tổng orders theo buyerId
-     */
     long countByBuyerId(String buyerId);
     
-    /**
-     * Lấy tất cả orders theo buyerId để đếm
-     */
     List<Order> findByBuyerId(String buyerId);
     
-    // B2C Methods - cho store owner
-    /**
-     * Tìm orders theo storeId
-     */
     List<Order> findByStoreId(String storeId);
     
-    /**
-     * Tìm orders theo storeId và status
-     */
     List<Order> findByStoreIdAndStatus(String storeId, String status);
     
-    /**
-     * Đếm orders theo storeId và status
-     */
     long countByStoreIdAndStatus(String storeId, String status);
     
-    /**
-     * Tìm orders theo storeId và khoảng thời gian
-     */
     @Query("{ 'store.$id': ?0, 'createdAt': { '$gte': ?1, '$lte': ?2 } }")
     List<Order> findByStoreIdAndDateRange(String storeId, LocalDateTime start, LocalDateTime end);
     
-    /**
-     * Tìm orders theo storeId với phân trang
-     */
     Page<Order> findByStoreId(String storeId, Pageable pageable);
     
-    /**
-     * Tìm orders theo storeId và status với phân trang
-     */
     Page<Order> findByStoreIdAndStatus(String storeId, String status, Pageable pageable);
     
-    /**
-     * Đếm orders theo storeId
-     */
     long countByStoreId(String storeId);
 }

@@ -8,7 +8,6 @@ spring:
       server-selection-timeout-ms: 30000
       connect-timeout-ms: 10000
       socket-timeout-ms: 30000
-
   servlet:
     multipart:
       max-file-size: 30MB
@@ -36,14 +35,27 @@ spring:
             client-secret:
             redirect-uri: http://localhost:5173/oauth2/callback
 
-
-
-file:
-  upload-dir: ./uploads/images
-  base-url: /image
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:dz1rdfbnl}
+  api-key: ${CLOUDINARY_API_KEY:927223941116566}
+  api-secret: ${CLOUDINARY_API_SECRET:nD5uy2bZtCtf2LrKRmeLNLdNtiY}
 
 api:
   prefix: api/v1
+
+# Swagger/OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operationsSorter: method
+    tagsSorter: alpha
+    tryItOutEnabled: true
+    filter: true
+  show-actuator: false
+  packages-to-scan: com.example.e_commerce_techshop.controllers
 
 jwt:
   secret: EQOIAUgMdB/GxPmYT+uew/HLvOkYDOrAo3ihcFynD+Y=

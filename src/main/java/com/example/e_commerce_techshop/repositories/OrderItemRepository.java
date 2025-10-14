@@ -9,13 +9,7 @@ import java.util.List;
 @Repository
 public interface OrderItemRepository extends MongoRepository<OrderItem, String> {
     
-    /**
-     * Tìm order items theo orderId
-     */
     List<OrderItem> findByOrderId(String orderId);
     
-    /**
-     * Đếm số order items theo orderId
-     */
     long countByOrderId(String orderId);
 }

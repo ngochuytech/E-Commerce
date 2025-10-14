@@ -25,10 +25,7 @@ public interface PromotionRepository extends MongoRepository<Promotion, String> 
     List<Promotion> findExpiredPromotions(LocalDateTime now);
 
     Optional<Promotion> findByIdAndStoreId(String id, String storeId);
-    
-    /**
-     * Tìm promotion theo code
-     */
+
     Optional<Promotion> findByCode(String code);
 }
 

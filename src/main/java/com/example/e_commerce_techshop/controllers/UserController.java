@@ -12,6 +12,9 @@ import com.example.e_commerce_techshop.responses.user.UserResponse;
 import com.example.e_commerce_techshop.services.GoogleAuthService;
 import com.example.e_commerce_techshop.services.token.ITokenService;
 import com.example.e_commerce_techshop.services.user.IUserService;
+
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -28,6 +31,7 @@ import java.io.IOException;
 import java.util.List;
 
 @RestController
+@Tag(name = "User Management", description = "APIs for user registration, authentication and profile management")
 @RequestMapping("${api.prefix}/users")
 @RequiredArgsConstructor
 public class UserController {

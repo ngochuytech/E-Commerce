@@ -11,11 +11,9 @@ import java.util.List;
 public interface ProductVariantRepository extends MongoRepository<ProductVariant, String> {
     List<ProductVariant> findByProductId(String productId);
     
-    // Alternative method sử dụng @Query với ObjectId
     @Query("{'product.$id': ObjectId(?0)}")
     List<ProductVariant> findByProductIdWithObjectId(String productId);
     
-    // Alternative method sử dụng @Query với string
     @Query("{'product.$id': ?0}")
     List<ProductVariant> findByProductIdWithQuery(String productId);
 
