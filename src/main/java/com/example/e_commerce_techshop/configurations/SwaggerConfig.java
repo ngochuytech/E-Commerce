@@ -36,10 +36,24 @@ public class SwaggerConfig {
                 .servers(List.of(
                         new Server()
                                 .url("http://localhost:8080")
-                                .description("Development server"),
+                                .description("Local Development server"),
                         new Server()
-                                .url("https://api.techshop.com")
-                                .description("Production server")))
+                                .url("https://your-production-domain.com")
+                                .description("Production server"),
+                        new Server()
+                                .url("{protocol}://{host}:{port}")
+                                .description("Configurable server")
+                                .variables(new io.swagger.v3.oas.models.servers.ServerVariables()
+                                        .addServerVariable("protocol", 
+                                            new io.swagger.v3.oas.models.servers.ServerVariable()
+                                                ._default("https")
+                                                ._enum(List.of("http", "https")))
+                                        .addServerVariable("host", 
+                                            new io.swagger.v3.oas.models.servers.ServerVariable()
+                                                ._default("localhost"))
+                                        .addServerVariable("port", 
+                                            new io.swagger.v3.oas.models.servers.ServerVariable()
+                                                ._default("8080")))))
                 .addSecurityItem(new SecurityRequirement().addList("Bearer Authentication"))
                 .components(new io.swagger.v3.oas.models.Components()
                         .addSecuritySchemes("Bearer Authentication",
