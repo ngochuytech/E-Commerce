@@ -19,15 +19,46 @@ import org.springframework.web.bind.annotation.RestController;
 import java.io.UnsupportedEncodingException;
 import java.util.UUID;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @RestController
 @RequiredArgsConstructor
+@Tag(name = "Password Reset", description = "APIs for forgot password and reset password functionality")
 public class ForgotPasswordController {
     private final JavaMailSender javaMailSender;
 
     private final IUserService userService;
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<?> processForgotPassword(HttpServletRequest request, @RequestParam String email){
+    @Operation(summary = "Request password reset", 
+               description = "Send password reset email with token to user's email address")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "Reset email sent successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ApiResponse.class)
+            )
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "400",
+            description = "Email not found or sending failed",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ApiResponse.class)
+            )
+        )
+    })
+    public ResponseEntity<?> processForgotPassword(
+            HttpServletRequest request, 
+            @Parameter(description = "User's email address", example = "user@example.com")
+            @RequestParam String email){
         try {
             String token = UUID.randomUUID().toString();
             userService.updateResetPasswordToken(token, email);
@@ -41,7 +72,29 @@ public class ForgotPasswordController {
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordDTO resetPasswordDTO){
+    @Operation(summary = "Reset password with token", 
+               description = "Reset user password using the token received via email")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "Password reset successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ApiResponse.class)
+            )
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "400",
+            description = "Invalid token or reset failed",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ApiResponse.class)
+            )
+        )
+    })
+    public ResponseEntity<?> resetPassword(
+            @Parameter(description = "Reset password data with token and new password")
+            @RequestBody ResetPasswordDTO resetPasswordDTO){
         User user = userService.getUserByResetPasswordToken(resetPasswordDTO.getToken());
         if(user == null)
             return ResponseEntity.badRequest().body(ApiResponse.error("Mã token không hợp lệ"));

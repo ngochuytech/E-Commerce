@@ -1,7 +1,7 @@
 package com.example.e_commerce_techshop.services.productVariant;
 
-import com.example.e_commerce_techshop.dtos.ProductVariantDTO;
 import com.example.e_commerce_techshop.dtos.b2c.ProductVariant.ColorOption;
+import com.example.e_commerce_techshop.dtos.b2c.ProductVariant.ProductVariantDTO;
 import com.example.e_commerce_techshop.responses.ProductVariantResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.web.multipart.MultipartFile;
@@ -10,6 +10,8 @@ import java.util.List;
 
 public interface IProductVariantService {
     void createProductVariant(ProductVariantDTO productVariantDTO, List<MultipartFile> imageFiles) throws Exception;
+
+    void createProductVariant(ProductVariantDTO productVariantDTO) throws Exception;
 
     void addProductVariantColors(String productVariantId, ColorOption colorOptionDTO, MultipartFile imageFile) throws Exception;
 
