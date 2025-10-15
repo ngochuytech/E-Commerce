@@ -1,7 +1,7 @@
 package com.example.e_commerce_techshop.services.productVariant;
 
-import com.example.e_commerce_techshop.dtos.ProductVariantDTO;
 import com.example.e_commerce_techshop.dtos.b2c.ProductVariant.ColorOption;
+import com.example.e_commerce_techshop.dtos.b2c.ProductVariant.ProductVariantDTO;
 import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
 import com.example.e_commerce_techshop.models.Product;
 import com.example.e_commerce_techshop.models.ProductVariant;
@@ -56,17 +56,29 @@ public class ProductVariantSerivce implements IProductVariantService{
                 .price(productVariantDTO.getPrice())
                 .description(productVariantDTO.getDescription())
                 .stock(productVariantDTO.getStock())
-                .colors(productVariantDTO.getColors().stream().map(color -> 
-                    ProductVariant.ColorOption.builder()
-                        .colorName(color.getColorName())
-                        .price(color.getPrice())
-                        .stock(color.getStock())
-                        .image(color.getImage())
-                        .build()
-                ).toList())
                 .attributes(productVariantDTO.getAttributes())
                 .imageUrls(imageUrls)
                 .primaryImageUrl(primaryImageUrl)
+                .build();
+
+        productVariantRepository.save(productVariant);
+    }
+
+    @Override
+    public void createProductVariant(ProductVariantDTO productVariantDTO) throws Exception {
+                Product product = productRepository.findById(productVariantDTO.getProductId())
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy product này"));
+
+        ProductVariant productVariant = ProductVariant.builder()
+                .product(product)
+                .name(productVariantDTO.getName())
+                .categoryName(product.getCategory().getName())
+                .brandName(product.getBrand().getName())
+                .storeId(product.getStore().getId())
+                .price(productVariantDTO.getPrice())
+                .description(productVariantDTO.getDescription())
+                .stock(productVariantDTO.getStock())
+                .attributes(productVariantDTO.getAttributes())
                 .build();
 
         productVariantRepository.save(productVariant);
@@ -117,10 +129,12 @@ public class ProductVariantSerivce implements IProductVariantService{
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy mẫu sản phẩm này"));
 
         // Cập nhật thông tin cơ bản
-        productVariant.setName(productVariantDTO.getName());
-        productVariant.setPrice(productVariantDTO.getPrice());
-        productVariant.setDescription(productVariantDTO.getDescription());
-        productVariant.setStock(productVariantDTO.getStock());
+        if(productVariantDTO != null){
+            productVariant.setName(productVariantDTO.getName());
+            productVariant.setPrice(productVariantDTO.getPrice());
+            productVariant.setDescription(productVariantDTO.getDescription());
+            productVariant.setStock(productVariantDTO.getStock());
+        }
 
         // Xử lý ảnh đơn
         if (imageFile != null && !imageFile.isEmpty()) {
@@ -139,17 +153,6 @@ public class ProductVariantSerivce implements IProductVariantService{
                 productVariant.setImageUrls(newImageUrls);
                 productVariant.setPrimaryImageUrl(newImageUrl);
             }
-        }
-    
-        if(productVariantDTO.getColors() != null && !productVariantDTO.getColors().isEmpty()) {
-            productVariant.setColors(productVariantDTO.getColors().stream().map(color -> 
-                ProductVariant.ColorOption.builder()
-                    .colorName(color.getColorName())
-                    .price(color.getPrice())
-                    .stock(color.getStock())
-                    .image(color.getImage())
-                    .build()
-            ).toList());
         }
 
         // Cập nhật attributes
@@ -187,18 +190,7 @@ public class ProductVariantSerivce implements IProductVariantService{
                 productVariant.setPrimaryImageUrl(newImageUrls.get(0)); // Ảnh đầu tiên là ảnh chính
             }
         }
-
-        if(productVariantDTO.getColors() != null && !productVariantDTO.getColors().isEmpty()) {
-            productVariant.setColors(productVariantDTO.getColors().stream().map(color -> 
-                ProductVariant.ColorOption.builder()
-                    .colorName(color.getColorName())
-                    .price(color.getPrice())
-                    .stock(color.getStock())
-                    .image(color.getImage())
-                    .build()
-            ).toList());
-        }
-
+        
         // Cập nhật attributes
         if (productVariantDTO.getAttributes() != null) {
             productVariant.setAttributes(productVariantDTO.getAttributes());

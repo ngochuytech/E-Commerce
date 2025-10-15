@@ -13,6 +13,12 @@ import com.example.e_commerce_techshop.services.GoogleAuthService;
 import com.example.e_commerce_techshop.services.token.ITokenService;
 import com.example.e_commerce_techshop.services.user.IUserService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -52,6 +58,27 @@ public class UserController {
     }
 
     @GetMapping("/current")
+    @Operation(summary = "Get current user profile", 
+               description = "Retrieve profile information of the currently authenticated user")
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "User profile retrieved successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = UserResponse.class)
+            )
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "400",
+            description = "User not authenticated or not found",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ApiResponse.class)
+            )
+        )
+    })
     public ResponseEntity<?> getCurrentUser() {
         try {
             String email = getCurrentUserEmail();
@@ -63,7 +90,31 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody @Valid UserLoginDTO userLoginDTO, BindingResult result, HttpServletRequest request){
+    @Operation(summary = "User login", 
+               description = "Authenticate user with email and password, returns JWT token")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "Login successful",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = LoginResponse.class)
+            )
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "400",
+            description = "Invalid credentials or validation errors",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ApiResponse.class)
+            )
+        )
+    })
+    public ResponseEntity<?> login(
+            @Parameter(description = "User login credentials")
+            @RequestBody @Valid UserLoginDTO userLoginDTO, 
+            BindingResult result, 
+            HttpServletRequest request){
         try {
             if(result.hasErrors()){
                 List<String> errorMessages = result.getFieldErrors()
@@ -92,7 +143,31 @@ public class UserController {
 
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(HttpServletRequest request, @RequestBody @Valid UserDTO userDTO, BindingResult result){
+    @Operation(summary = "User registration", 
+               description = "Register a new user account, sends email verification")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "Registration successful, verification email sent",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ApiResponse.class)
+            )
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "400",
+            description = "Validation errors or user already exists",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ApiResponse.class)
+            )
+        )
+    })
+    public ResponseEntity<?> register(
+            HttpServletRequest request, 
+            @Parameter(description = "User registration information")
+            @RequestBody @Valid UserDTO userDTO, 
+            BindingResult result){
         try {
             if(result.hasErrors()){
                 List<String> errorMessages = result.getFieldErrors()
@@ -112,7 +187,29 @@ public class UserController {
     }
 
     @GetMapping("/verify")
-    public ResponseEntity<?> verify(@RequestParam("code") String code){
+    @Operation(summary = "Verify user email", 
+               description = "Verify user account using verification code sent via email")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "Account verified successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ApiResponse.class)
+            )
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "400",
+            description = "Invalid verification code or account already verified",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ApiResponse.class)
+            )
+        )
+    })
+    public ResponseEntity<?> verify(
+            @Parameter(description = "Email verification code", example = "abc123def456")
+            @RequestParam("code") String code){
         if(userService.verifyUser(code))
             return ResponseEntity.ok(ApiResponse.ok("Đã xác minh tài khoản thành công!"));
         else
@@ -136,7 +233,26 @@ public class UserController {
     }
 
     @PostMapping("/auth/social/callback")
-    public ResponseEntity<?> callback(HttpServletRequest httpServletRequest,@RequestBody GoogleCodeRequest request){
+    @Operation(summary = "Google OAuth callback", 
+               description = "Handle Google OAuth authentication callback and login user")
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "Google login successful",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = LoginResponse.class)
+            )
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "400",
+            description = "Google authentication failed"
+        )
+    })
+    public ResponseEntity<?> callback(
+            HttpServletRequest httpServletRequest,
+            @Parameter(description = "Google authorization code")
+            @RequestBody GoogleCodeRequest request){
         try {
             String userAgent = httpServletRequest.getHeader("User-Agent");
             User user = googleAuthService.loginWithGoogle(request);

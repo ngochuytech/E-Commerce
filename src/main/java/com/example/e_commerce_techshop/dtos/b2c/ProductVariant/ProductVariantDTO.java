@@ -1,4 +1,4 @@
-package com.example.e_commerce_techshop.dtos;
+package com.example.e_commerce_techshop.dtos.b2c.ProductVariant;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -7,7 +7,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.List;
 import java.util.Map;
 
 @Getter
@@ -32,23 +31,4 @@ public class ProductVariantDTO {
 
     @NotNull(message = "ProductId is required")
     private String productId;
-
-    private List<ColorOption> colors;
-
-    @Getter
-    @Setter
-    @AllArgsConstructor
-    @NoArgsConstructor
-    public static class ColorOption {
-        @NotNull(message = "Color name is required")
-        private String colorName;
-        @NotNull(message = "Price is required")
-        @PositiveOrZero(message = "Price must be a positive number")
-        private Long price;
-        @NotNull(message = "Stock is required")
-        @PositiveOrZero(message = "Stock must be a positive number")
-        private int stock;
-        @NotNull(message = "Image is required")
-        private String image;
-    }
 }
