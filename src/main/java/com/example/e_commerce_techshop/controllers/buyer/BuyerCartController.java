@@ -146,6 +146,8 @@ public class BuyerCartController {
     public ResponseEntity<?> updateCartItem(
             @Parameter(description = "ID of the product variant to update", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1")
             @PathVariable String productVariantId,
+            @Parameter(description = "Color ID of the product variant (optional)", required = false, example = "red")
+            @RequestParam(required = false) String colorId,
             @Parameter(
                 description = "New quantity for the cart item",
                 required = true,
@@ -160,7 +162,7 @@ public class BuyerCartController {
                         .body(ApiResponse.error("Số lượng không được để trống"));
             }
             
-            Cart cart = cartService.updateCartItem(currentUser.getEmail(), productVariantId, quantity);
+            Cart cart = cartService.updateCartItem(currentUser.getEmail(), productVariantId, colorId, quantity);
 
             return ResponseEntity.ok(ApiResponse.ok(CartResponse.fromCart(cart)));
 
@@ -195,9 +197,11 @@ public class BuyerCartController {
     public ResponseEntity<?> removeCartItem(
             @Parameter(description = "ID of the product variant to remove", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1")
             @PathVariable String productVariantId,
+            @Parameter(description = "Color ID of the product variant (optional)", required = false, example = "red")
+            @RequestParam(required = false) String colorId,
             @Parameter(hidden = true) @AuthenticationPrincipal User currentUser) {
         try {
-            cartService.removeCartItem(currentUser.getEmail(), productVariantId);
+            cartService.removeCartItem(currentUser.getEmail(), productVariantId, colorId);
 
             return ResponseEntity.ok(ApiResponse.ok("Sản phẩm đã được xóa khỏi giỏ hàng"));
 

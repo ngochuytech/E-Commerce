@@ -60,10 +60,12 @@ public class OrderService implements IOrderService {
             ProductVariant productVariant = productVariantRepository.findById(cartItem.getProductVariant().getId())
                     .orElseThrow(() -> new DataNotFoundException("Không tìm thấy sản phẩm: " + cartItem.getProductVariant().getId()));
 
-            // Kiểm tra stock
-            if (productVariant.getStock() < cartItem.getQuantity()) {
+            // Kiểm tra stock theo màu sắc nếu có
+            int availableStock = getAvailableStock(productVariant, cartItem.getColorId());
+            if (availableStock < cartItem.getQuantity()) {
+                String colorInfo = cartItem.getColorId() != null ? " (màu: " + cartItem.getColorId() + ")" : "";
                 throw new IllegalArgumentException("Không đủ hàng trong kho. Sản phẩm: " + productVariant.getName() + 
-                        ", Số lượng còn lại: " + productVariant.getStock());
+                        colorInfo + ", Số lượng còn lại: " + availableStock);
             }
             
             // Kiểm tra trạng thái store
@@ -98,7 +100,8 @@ public class OrderService implements IOrderService {
             BigDecimal storeTotal = BigDecimal.ZERO;
             for (Cart.CartItemEmbedded item : storeItems) {
                 ProductVariant productVariant = productVariantRepository.findById(item.getProductVariant().getId()).get();
-                BigDecimal itemTotal = BigDecimal.valueOf(productVariant.getPrice())
+                Long itemPrice = getProductPrice(productVariant, item.getColorId());
+                BigDecimal itemTotal = BigDecimal.valueOf(itemPrice)
                         .multiply(BigDecimal.valueOf(item.getQuantity()));
                 storeTotal = storeTotal.add(itemTotal);
             }
@@ -147,19 +150,44 @@ public class OrderService implements IOrderService {
             for (Cart.CartItemEmbedded cartItem : storeItems) {
                 ProductVariant productVariant = productVariantRepository.findById(cartItem.getProductVariant().getId()).get();
                 
-                int newStock = productVariant.getStock() - cartItem.getQuantity();
-                if (newStock < 0) {
-                    throw new IllegalArgumentException("Không đủ hàng trong kho. Sản phẩm: " + productVariant.getName() + 
-                            ", Số lượng còn lại: " + productVariant.getStock() + ", Số lượng yêu cầu: " + cartItem.getQuantity());
+                // Trừ stock đúng cách (tổng stock hoặc stock theo màu)
+                if (cartItem.getColorId() != null && productVariant.getColors() != null && !productVariant.getColors().isEmpty()) {
+                    // Có màu sắc -> trừ stock của màu đó và cập nhật tổng stock
+                    ProductVariant.ColorOption color = productVariant.getColors().stream()
+                            .filter(c -> c.getId().equals(cartItem.getColorId()))
+                            .findFirst()
+                            .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy màu sắc"));
+                    
+                    int newColorStock = color.getStock() - cartItem.getQuantity();
+                    if (newColorStock < 0) {
+                        throw new IllegalArgumentException("Không đủ hàng trong kho. Sản phẩm: " + productVariant.getName() + 
+                                " (màu: " + cartItem.getColorId() + "), Số lượng còn lại: " + color.getStock() + 
+                                ", Số lượng yêu cầu: " + cartItem.getQuantity());
+                    }
+                    
+                    color.setStock(newColorStock);
+                    
+                    // Cập nhật tổng stock = tổng stock của tất cả màu
+                    int totalStock = productVariant.getColors().stream().mapToInt(ProductVariant.ColorOption::getStock).sum();
+                    productVariant.setStock(totalStock);
+                } else {
+                    // Không có màu sắc -> trừ stock tổng
+                    int newStock = productVariant.getStock() - cartItem.getQuantity();
+                    if (newStock < 0) {
+                        throw new IllegalArgumentException("Không đủ hàng trong kho. Sản phẩm: " + productVariant.getName() + 
+                                ", Số lượng còn lại: " + productVariant.getStock() + ", Số lượng yêu cầu: " + cartItem.getQuantity());
+                    }
+                    productVariant.setStock(newStock);
                 }
-                productVariant.setStock(newStock);
+                
                 productVariantRepository.save(productVariant);
                 
                 OrderItem orderItem = OrderItem.builder()
                         .order(order)
                         .productVariant(productVariant)
                         .quantity(cartItem.getQuantity())
-                        .price(productVariant.getPrice())
+                        .price(getProductPrice(productVariant, cartItem.getColorId()))
+                        .colorId(cartItem.getColorId())
                         .build();
                 
                 orderItems.add(orderItem);
@@ -245,7 +273,27 @@ public class OrderService implements IOrderService {
         // 5. Hoàn trả stock
         for (OrderItem item : order.getOrderItems()) {
             ProductVariant productVariant = productVariantRepository.findById(item.getProductVariant().getId()).get();
-            productVariant.setStock(productVariant.getStock() + item.getQuantity());
+            
+            // Hoàn trả stock đúng cách (tổng stock hoặc stock theo màu)
+            if (item.getColorId() != null && productVariant.getColors() != null && !productVariant.getColors().isEmpty()) {
+                // Có màu sắc -> hoàn trả stock cho màu đó và cập nhật tổng stock
+                ProductVariant.ColorOption color = productVariant.getColors().stream()
+                        .filter(c -> c.getId().equals(item.getColorId()))
+                        .findFirst()
+                        .orElse(null);
+                
+                if (color != null) {
+                    color.setStock(color.getStock() + item.getQuantity());
+                    
+                    // Cập nhật tổng stock = tổng stock của tất cả màu
+                    int totalStock = productVariant.getColors().stream().mapToInt(ProductVariant.ColorOption::getStock).sum();
+                    productVariant.setStock(totalStock);
+                }
+            } else {
+                // Không có màu sắc -> hoàn trả stock tổng
+                productVariant.setStock(productVariant.getStock() + item.getQuantity());
+            }
+            
             productVariantRepository.save(productVariant);
         }
     }
@@ -473,6 +521,40 @@ public class OrderService implements IOrderService {
                 return false; // Không thể thay đổi trạng thái cuối
             default:
                 return false;
+        }
+    }
+    
+    /**
+     * Lấy số lượng stock có sẵn cho sản phẩm (có thể theo màu)
+     */
+    private int getAvailableStock(ProductVariant productVariant, String colorId) {
+        if (colorId != null && productVariant.getColors() != null && !productVariant.getColors().isEmpty()) {
+            // Có chọn màu sắc cụ thể
+            return productVariant.getColors().stream()
+                    .filter(color -> color.getId().equals(colorId))
+                    .findFirst()
+                    .map(ProductVariant.ColorOption::getStock)
+                    .orElse(0);
+        } else {
+            // Không chọn màu sắc -> dùng stock tổng
+            return productVariant.getStock();
+        }
+    }
+
+    /**
+     * Lấy giá của sản phẩm (có thể theo màu)
+     */
+    private Long getProductPrice(ProductVariant productVariant, String colorId) {
+        if (colorId != null && productVariant.getColors() != null && !productVariant.getColors().isEmpty()) {
+            // Có chọn màu sắc cụ thể
+            return productVariant.getColors().stream()
+                    .filter(color -> color.getId().equals(colorId))
+                    .findFirst()
+                    .map(ProductVariant.ColorOption::getPrice)
+                    .orElse(productVariant.getPrice()); // Fallback về giá chung nếu không tìm thấy màu
+        } else {
+            // Không chọn màu sắc -> dùng giá chung
+            return productVariant.getPrice();
         }
     }
 }

@@ -33,7 +33,6 @@ public class CartService implements ICartService {
         // 1. Validate input
         validateCartInput(cartDTO);
         
-        // 1.5. Convert email to User object
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy người dùng với email: " + userEmail));
 
@@ -50,7 +49,8 @@ public class CartService implements ICartService {
                 throw new IllegalArgumentException("Cửa hàng tạm thời đóng cửa: " + productVariant.getProduct().getStore().getName());
             }
             // 2.2. Kiểm tra sản phẩm còn hàng
-            if (productVariant.getStock() <= 0) {
+            int availableStock = getAvailableStock(productVariant, item.getColorId());
+            if (availableStock <= 0) {
                 throw new DataNotFoundException("Sản phẩm đã hết hàng");
             }
         }
@@ -76,9 +76,11 @@ public class CartService implements ICartService {
             ProductVariant productVariant = productVariantRepository.findById(itemDTO.getProductVariantId())
                     .orElseThrow(() -> new DataNotFoundException("Không tìm thấy sản phẩm với ID: " + itemDTO.getProductVariantId()));
             
-            // Tìm item đã tồn tại trong cart
+            // Tìm item đã tồn tại trong cart (so sánh cả productVariantId và colorId)
             Cart.CartItemEmbedded existingItem = cart.getCartItems().stream()
-                    .filter(item -> item.getProductVariant().getId().equals(itemDTO.getProductVariantId()))
+                    .filter(item -> item.getProductVariant().getId().equals(itemDTO.getProductVariantId()) &&
+                            ((item.getColorId() == null && itemDTO.getColorId() == null) ||
+                             (item.getColorId() != null && item.getColorId().equals(itemDTO.getColorId()))))
                     .findFirst()
                     .orElse(null);
             
@@ -86,28 +88,33 @@ public class CartService implements ICartService {
                 // Update existing item
                 int newQuantity = existingItem.getQuantity() + itemDTO.getQuantity();
                 
-                // Validation
-                if (newQuantity > productVariant.getStock()) {
+                // Validation với stock theo màu sắc
+                int availableStock = getAvailableStock(productVariant, itemDTO.getColorId());
+                if (newQuantity > availableStock) {
                     throw new IllegalArgumentException("Số lượng vượt quá tồn kho hiện có (" + 
-                            productVariant.getStock() + " sản phẩm)");
+                            availableStock + " sản phẩm)");
                 }
                 if (newQuantity > MAX_QUANTITY_PER_ITEM) {
                     throw new IllegalArgumentException("Số lượng tối đa cho mỗi sản phẩm là " + MAX_QUANTITY_PER_ITEM);
                 }
                 
                 existingItem.setQuantity(newQuantity);
-                existingItem.setUnitPrice(productVariant.getPrice());
+                existingItem.setUnitPrice(getProductPrice(productVariant, itemDTO.getColorId()));
+                // Cập nhật colorId nếu có thay đổi
+                existingItem.setColorId(itemDTO.getColorId());
             } else {
                 // Create new embedded item
-                if (itemDTO.getQuantity() > productVariant.getStock()) {
+                int availableStock = getAvailableStock(productVariant, itemDTO.getColorId());
+                if (itemDTO.getQuantity() > availableStock) {
                     throw new IllegalArgumentException("Số lượng vượt quá tồn kho hiện có (" + 
-                            productVariant.getStock() + " sản phẩm)");
+                            availableStock + " sản phẩm)");
                 }
                 
                 Cart.CartItemEmbedded newItem = Cart.CartItemEmbedded.builder()
                         .productVariant(productVariant)
                         .quantity(itemDTO.getQuantity())
-                        .unitPrice(productVariant.getPrice())
+                        .unitPrice(getProductPrice(productVariant, itemDTO.getColorId()))
+                        .colorId(itemDTO.getColorId())
                         .build();
                 
                 cart.getCartItems().add(newItem);
@@ -133,7 +140,7 @@ public class CartService implements ICartService {
     
     @Override
     @Transactional
-    public Cart updateCartItem(String userEmail, String productVariantId, Integer quantity) throws Exception {
+    public Cart updateCartItem(String userEmail, String productVariantId, String colorId, Integer quantity) throws Exception {
         // 1. Validate input
         if (quantity == null || quantity < 0) {
             throw new IllegalArgumentException("Số lượng không hợp lệ");
@@ -148,15 +155,19 @@ public class CartService implements ICartService {
         Cart cart = cartRepository.findByUserId(userId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy giỏ hàng"));
         
-        // 3. Tìm cart item trong embedded list
+        // 3. Tìm cart item trong embedded list (so sánh cả productVariantId và colorId)
         Cart.CartItemEmbedded cartItem = cart.getCartItems().stream()
-                .filter(item -> item.getProductVariant().getId().equals(productVariantId))
+                .filter(item -> item.getProductVariant().getId().equals(productVariantId) &&
+                        ((item.getColorId() == null && colorId == null) ||
+                         (item.getColorId() != null && item.getColorId().equals(colorId))))
                 .findFirst()
                 .orElseThrow(() -> new DataNotFoundException("Sản phẩm không tồn tại trong giỏ hàng"));
         
         // 4. Nếu số lượng = 0, xóa sản phẩm
         if (quantity == 0) {
-            cart.getCartItems().removeIf(item -> item.getProductVariant().getId().equals(productVariantId));
+            cart.getCartItems().removeIf(item -> item.getProductVariant().getId().equals(productVariantId) &&
+                    ((item.getColorId() == null && colorId == null) ||
+                     (item.getColorId() != null && item.getColorId().equals(colorId))));
             cartRepository.save(cart);
             return getCart(userEmail);
         }
@@ -174,14 +185,15 @@ public class CartService implements ICartService {
             throw new IllegalArgumentException("Cửa hàng tạm thời đóng cửa: " + productVariant.getProduct().getStore().getName());
         }
         
-        if (productVariant.getStock() <= 0) {
+        int availableStock = getAvailableStock(productVariant, colorId);
+        if (availableStock <= 0) {
             throw new DataNotFoundException("Sản phẩm đã hết hàng");
         }
         
         // 6. Kiểm tra số lượng không vượt quá tồn kho
-        if (quantity > productVariant.getStock()) {
+        if (quantity > availableStock) {
             throw new IllegalArgumentException("Số lượng vượt quá tồn kho hiện có (" + 
-                    productVariant.getStock() + " sản phẩm)");
+                    availableStock + " sản phẩm)");
         }
         
         // 7. Kiểm tra giới hạn số lượng
@@ -191,7 +203,8 @@ public class CartService implements ICartService {
         
         // 8. Cập nhật số lượng trong embedded item
         cartItem.setQuantity(quantity);
-        cartItem.setUnitPrice(productVariant.getPrice()); // Update price if needed
+        cartItem.setUnitPrice(getProductPrice(productVariant, colorId)); // Update price theo màu sắc
+        cartItem.setColorId(colorId); // Update colorId
         
         cartRepository.save(cart);
         
@@ -200,23 +213,27 @@ public class CartService implements ICartService {
     
     @Override
     @Transactional
-    public void removeCartItem(String userEmail, String productVariantId) throws Exception {
+    public void removeCartItem(String userEmail, String productVariantId, String colorId) throws Exception {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy người dùng với Email: " + userEmail));
         
         Cart cart = cartRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy giỏ hàng"));
 
-        // Kiểm tra item tồn tại trong embedded list
+        // Kiểm tra item tồn tại trong embedded list (so sánh cả productVariantId và colorId)
         boolean itemExists = cart.getCartItems().stream()
-                .anyMatch(item -> item.getProductVariant().getId().equals(productVariantId));
+                .anyMatch(item -> item.getProductVariant().getId().equals(productVariantId) &&
+                        ((item.getColorId() == null && colorId == null) ||
+                         (item.getColorId() != null && item.getColorId().equals(colorId))));
         
         if (!itemExists) {
             throw new DataNotFoundException("Sản phẩm không tồn tại trong giỏ hàng");
         }
         
         // Xóa từ embedded list
-        cart.getCartItems().removeIf(item -> item.getProductVariant().getId().equals(productVariantId));
+        cart.getCartItems().removeIf(item -> item.getProductVariant().getId().equals(productVariantId) &&
+                ((item.getColorId() == null && colorId == null) ||
+                 (item.getColorId() != null && item.getColorId().equals(colorId))));
         
         // Save cart
         cartRepository.save(cart);
@@ -280,6 +297,40 @@ public class CartService implements ICartService {
             if (item.getQuantity() > MAX_QUANTITY_PER_ITEM) {
                 throw new IllegalArgumentException("Số lượng tối đa cho mỗi sản phẩm là " + MAX_QUANTITY_PER_ITEM);
             }
+        }
+    }
+    
+    /**
+     * Lấy số lượng stock có sẵn cho sản phẩm (có thể theo màu)
+     */
+    private int getAvailableStock(ProductVariant productVariant, String colorId) {
+        if (colorId != null && productVariant.getColors() != null && !productVariant.getColors().isEmpty()) {
+            // Có chọn màu sắc cụ thể
+            return productVariant.getColors().stream()
+                    .filter(color -> color.getId().equals(colorId))
+                    .findFirst()
+                    .map(ProductVariant.ColorOption::getStock)
+                    .orElse(0);
+        } else {
+            // Không chọn màu sắc -> dùng stock tổng
+            return productVariant.getStock();
+        }
+    }
+
+    /**
+     * Lấy giá của sản phẩm (có thể theo màu)
+     */
+    private Long getProductPrice(ProductVariant productVariant, String colorId) {
+        if (colorId != null && productVariant.getColors() != null && !productVariant.getColors().isEmpty()) {
+            // Có chọn màu sắc cụ thể
+            return productVariant.getColors().stream()
+                    .filter(color -> color.getId().equals(colorId))
+                    .findFirst()
+                    .map(ProductVariant.ColorOption::getPrice)
+                    .orElse(productVariant.getPrice()); // Fallback về giá chung nếu không tìm thấy màu
+        } else {
+            // Không chọn màu sắc -> dùng giá chung
+            return productVariant.getPrice();
         }
     }
 }

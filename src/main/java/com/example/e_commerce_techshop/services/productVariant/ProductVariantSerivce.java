@@ -89,6 +89,7 @@ public class ProductVariantSerivce implements IProductVariantService{
         ProductVariant productVariant = productVariantRepository.findById(productVariantId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy mẫu sản phẩm này"));
         productVariant.setStock(0);
+        productVariant.setPrice(0L);
         productVariantRepository.save(productVariant);
     }
 
@@ -123,6 +124,26 @@ public class ProductVariantSerivce implements IProductVariantService{
     }
 
     @Override
+    public Page<ProductVariantResponse> getLatestProductVariants(int page, int size, String sortBy, String sortDir) throws Exception {
+        Pageable pageable = PageRequest.of(page, size, 
+            sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending());
+        
+        Page<ProductVariant> variantPage = productVariantRepository.findAll(pageable);
+        
+        return variantPage.map(ProductVariantResponse::fromProductVariant);
+    }
+
+    @Override
+    public Page<ProductVariantResponse> getByStore(String storeId, int page, int size, String sortBy, String sortDir) throws Exception {
+        Pageable pageable = PageRequest.of(page, size, 
+            sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending());
+        
+        Page<ProductVariant> variantPage = productVariantRepository.findByStoreId(storeId, pageable);
+        
+        return variantPage.map(ProductVariantResponse::fromProductVariant);
+    }
+
+    @Override
     @Transactional
     public void updateProductVariant(String productVariantId, ProductVariantDTO productVariantDTO, MultipartFile imageFile) throws Exception {
         ProductVariant productVariant = productVariantRepository.findById(productVariantId)
@@ -131,9 +152,18 @@ public class ProductVariantSerivce implements IProductVariantService{
         // Cập nhật thông tin cơ bản
         if(productVariantDTO != null){
             productVariant.setName(productVariantDTO.getName());
-            productVariant.setPrice(productVariantDTO.getPrice());
             productVariant.setDescription(productVariantDTO.getDescription());
-            productVariant.setStock(productVariantDTO.getStock());
+            
+            // Chỉ cập nhật price và stock nếu không có màu sắc (nếu có màu sắc thì được tính tự động)
+            if (productVariant.getColors() == null || productVariant.getColors().isEmpty()) {
+                productVariant.setPrice(productVariantDTO.getPrice());
+                productVariant.setStock(productVariantDTO.getStock());
+            }
+
+            // Cập nhật attributes
+            if (productVariantDTO.getAttributes() != null) {
+                productVariant.setAttributes(productVariantDTO.getAttributes());
+            }
         }
 
         // Xử lý ảnh đơn
@@ -155,11 +185,6 @@ public class ProductVariantSerivce implements IProductVariantService{
             }
         }
 
-        // Cập nhật attributes
-        if (productVariantDTO.getAttributes() != null) {
-            productVariant.setAttributes(productVariantDTO.getAttributes());
-        }
-
         productVariantRepository.save(productVariant);
     }
 
@@ -169,10 +194,22 @@ public class ProductVariantSerivce implements IProductVariantService{
         ProductVariant productVariant = productVariantRepository.findById(productVariantId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy mẫu sản phẩm này"));
         // Cập nhật thông tin cơ bản
-        productVariant.setName(productVariantDTO.getName());
-        productVariant.setPrice(productVariantDTO.getPrice());
-        productVariant.setDescription(productVariantDTO.getDescription());
-        productVariant.setStock(productVariantDTO.getStock());
+        if(productVariantDTO != null){
+            productVariant.setName(productVariantDTO.getName());
+            productVariant.setDescription(productVariantDTO.getDescription());
+            
+            // Chỉ cập nhật price và stock nếu không có màu sắc (nếu có màu sắc thì được tính tự động)
+            if (productVariant.getColors() == null || productVariant.getColors().isEmpty()) {
+                productVariant.setPrice(productVariantDTO.getPrice());
+                productVariant.setStock(productVariantDTO.getStock());
+            }
+
+            // Cập nhật attributes
+            if (productVariantDTO.getAttributes() != null) {
+                productVariant.setAttributes(productVariantDTO.getAttributes());
+            }
+
+        }
 
         // Xử lý nhiều ảnh
         if (imageFiles != null && !imageFiles.isEmpty()) {
@@ -191,36 +228,11 @@ public class ProductVariantSerivce implements IProductVariantService{
             }
         }
         
-        // Cập nhật attributes
-        if (productVariantDTO.getAttributes() != null) {
-            productVariant.setAttributes(productVariantDTO.getAttributes());
-        }
-
         productVariantRepository.save(productVariant);
     }
 
     @Override
-    public Page<ProductVariantResponse> getLatestProductVariants(int page, int size, String sortBy, String sortDir) throws Exception {
-        Pageable pageable = PageRequest.of(page, size, 
-            sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending());
-        
-        Page<ProductVariant> variantPage = productVariantRepository.findAll(pageable);
-        
-        return variantPage.map(ProductVariantResponse::fromProductVariant);
-    }
-
-    @Override
-    public Page<ProductVariantResponse> getByStore(String storeId, int page, int size, String sortBy, String sortDir) throws Exception {
-        Pageable pageable = PageRequest.of(page, size, 
-            sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending());
-        
-        Page<ProductVariant> variantPage = productVariantRepository.findByStoreId(storeId, pageable);
-        
-        return variantPage.map(ProductVariantResponse::fromProductVariant);
-    }
-    
-
-    @Override
+    @Transactional
     public void addProductVariantColors(String productVariantId, ColorOption colorOptionDTO, MultipartFile image) throws Exception {
         ProductVariant productVariant = productVariantRepository.findById(productVariantId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy mẫu sản phẩm này"));
@@ -243,6 +255,14 @@ public class ProductVariantSerivce implements IProductVariantService{
         colors.add(newColor);
         productVariant.setColors(colors);
 
+        // Cập nhật tổng stock = tổng stock của tất cả màu
+        int totalStock = colors.stream().mapToInt(ProductVariant.ColorOption::getStock).sum();
+        productVariant.setStock(totalStock);
+
+        // Cập nhật price = giá thấp nhất của tất cả màu
+        Long minPrice = colors.stream().mapToLong(ProductVariant.ColorOption::getPrice).min().orElse(0L);
+        productVariant.setPrice(minPrice);
+
         productVariantRepository.save(productVariant);
     }
 
@@ -255,9 +275,11 @@ public class ProductVariantSerivce implements IProductVariantService{
                 .filter(color -> color.getId().equals(colorId))
                 .findFirst()
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy màu sắc với id được cung cấp"));
-        colorToUpdate.setColorName(colorOptionDTO.getColorName());
-        colorToUpdate.setPrice(colorOptionDTO.getPrice());
-        colorToUpdate.setStock(colorOptionDTO.getStock());
+        if(colorOptionDTO != null) {
+            colorToUpdate.setColorName(colorOptionDTO.getColorName());
+            colorToUpdate.setPrice(colorOptionDTO.getPrice());
+            colorToUpdate.setStock(colorOptionDTO.getStock());
+        }
         if(imageFile != null && !imageFile.isEmpty()) {
             // Xóa ảnh cũ nếu có
             if (colorToUpdate.getImage() != null && !colorToUpdate.getImage().isEmpty()) {
@@ -267,6 +289,129 @@ public class ProductVariantSerivce implements IProductVariantService{
             String newImageUrl = fileUploadService.uploadFile(imageFile, "product-variants");
             colorToUpdate.setImage(newImageUrl);
         }
+
+        // Cập nhật tổng stock = tổng stock của tất cả màu
+        int totalStock = productVariant.getColors().stream().mapToInt(ProductVariant.ColorOption::getStock).sum();
+        productVariant.setStock(totalStock);
+
+        // Cập nhật price = giá thấp nhất của tất cả màu
+        Long minPrice = productVariant.getColors().stream().mapToLong(ProductVariant.ColorOption::getPrice).min().orElse(0L);
+        productVariant.setPrice(minPrice);
+
         productVariantRepository.save(productVariant);
     }
+
+    @Override
+    public void updateStock(String productVariantId, int newStock) throws Exception {
+        ProductVariant productVariant = productVariantRepository.findById(productVariantId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy mẫu sản phẩm này"));
+        
+        // Chỉ cho phép cập nhật stock trực tiếp nếu không có màu sắc
+        if (productVariant.getColors() != null && !productVariant.getColors().isEmpty()) {
+            throw new IllegalArgumentException("Không thể cập nhật stock trực tiếp cho sản phẩm có màu sắc. Hãy cập nhật stock của từng màu.");
+        }
+        
+        if (newStock < 0) {
+            throw new IllegalArgumentException("Stock không thể âm");
+        }
+        
+        productVariant.setStock(newStock);
+        productVariantRepository.save(productVariant);
+    }
+
+    /**
+     * Cập nhật price và stock cho ProductVariant không có màu sắc
+     */
+    public void updatePriceAndStock(String productVariantId, Long newPrice, int newStock) throws Exception {
+        ProductVariant productVariant = productVariantRepository.findById(productVariantId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy mẫu sản phẩm này"));
+        
+        // Chỉ cho phép cập nhật trực tiếp nếu không có màu sắc
+        if (productVariant.getColors() != null && !productVariant.getColors().isEmpty()) {
+            throw new IllegalArgumentException("Không thể cập nhật price/stock trực tiếp cho sản phẩm có màu sắc. Hãy cập nhật của từng màu.");
+        }
+        
+        if (newPrice != null && newPrice < 0) {
+            throw new IllegalArgumentException("Price không thể âm");
+        }
+        
+        if (newStock < 0) {
+            throw new IllegalArgumentException("Stock không thể âm");
+        }
+        
+        if (newPrice != null) {
+            productVariant.setPrice(newPrice);
+        }
+        productVariant.setStock(newStock);
+        productVariantRepository.save(productVariant);
+    }
+
+    /**
+     * Xóa màu sắc của product variant và cập nhật tổng stock
+     */
+    @Override
+    public void removeProductVariantColor(String productVariantId, String colorId) throws Exception {
+        ProductVariant productVariant = productVariantRepository.findById(productVariantId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy mẫu sản phẩm này"));
+        
+        List<ProductVariant.ColorOption> colors = productVariant.getColors();
+        if (colors == null || colors.isEmpty()) {
+            throw new DataNotFoundException("Sản phẩm không có màu sắc nào");
+        }
+
+        // Tìm và xóa màu
+        ProductVariant.ColorOption colorToRemove = colors.stream()
+                .filter(color -> color.getId().equals(colorId))
+                .findFirst()
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy màu sắc với id được cung cấp"));
+
+        // Xóa ảnh nếu có
+        if (colorToRemove.getImage() != null && !colorToRemove.getImage().isEmpty()) {
+            fileUploadService.deleteFile(colorToRemove.getImage());
+        }
+
+        // Xóa màu khỏi danh sách
+        colors.remove(colorToRemove);
+        productVariant.setColors(colors);
+
+        // Cập nhật tổng stock = tổng stock của tất cả màu còn lại
+        int totalStock = colors.stream().mapToInt(ProductVariant.ColorOption::getStock).sum();
+        productVariant.setStock(totalStock);
+
+        // Cập nhật price = giá thấp nhất của tất cả màu còn lại
+        if (!colors.isEmpty()) {
+            Long minPrice = colors.stream().mapToLong(ProductVariant.ColorOption::getPrice).min().orElse(0L);
+            productVariant.setPrice(minPrice);
+        } else {
+            // Không còn màu nào -> giữ nguyên price hiện tại (không set về 0)
+            // User có thể tự cập nhật price thông qua updateProductVariant
+        }
+
+        productVariantRepository.save(productVariant);
+    }
+
+    /**
+     * Tính toán lại tổng stock và price từ tất cả màu sắc
+     */
+    public void recalculateStock(String productVariantId) throws Exception {
+        ProductVariant productVariant = productVariantRepository.findById(productVariantId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy mẫu sản phẩm này"));
+
+        if (productVariant.getColors() != null && !productVariant.getColors().isEmpty()) {
+            // Có màu sắc -> tính tổng stock và price từ các màu
+            int totalStock = productVariant.getColors().stream().mapToInt(ProductVariant.ColorOption::getStock).sum();
+            productVariant.setStock(totalStock);
+            
+            // Cập nhật price = giá thấp nhất của tất cả màu (chỉ khi có màu sắc)
+            Long minPrice = productVariant.getColors().stream().mapToLong(ProductVariant.ColorOption::getPrice).min().orElse(0L);
+            productVariant.setPrice(minPrice);
+        } else {
+            // Không có màu sắc -> stock và price hiện tại không thay đổi (do user thiết lập thủ công)
+            // Không cập nhật gì
+        }
+
+        productVariantRepository.save(productVariant);
+    }
+
+
 }

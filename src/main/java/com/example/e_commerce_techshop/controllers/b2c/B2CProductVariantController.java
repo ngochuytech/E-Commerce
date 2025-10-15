@@ -116,52 +116,59 @@ public class B2CProductVariantController {
         }
     }
 
-    @PostMapping(value = "/upload-image/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/upload-image/{productVariantid}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(
-        summary = "Upload image for product variant",
-        description = "Upload a single image for a specific product variant - adds to existing images"
+        summary = "Upload multiple images for product variant",
+        description = "Upload multiple images for a specific product variant - adds to existing images"
     )
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "200", 
-            description = "Image uploaded successfully",
+            description = "Images uploaded successfully",
             content = @Content(schema = @Schema(implementation = ApiResponse.class))
         ),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "400", 
-            description = "Bad request - product variant not found or invalid image file",
+            description = "Bad request - product variant not found or invalid image files",
             content = @Content(schema = @Schema(implementation = ApiResponse.class))
         )
     })
     public ResponseEntity<?> uploadProductVariantImage(
-        @Parameter(description = "ID of the product variant to upload image for", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1")
-        @PathVariable("id") String productVariantId,
+        @Parameter(description = "ID of the product variant to upload images for", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1")
+        @PathVariable("productVariantid") String productVariantId,
         @Parameter(
-            description = "Image file to upload for the product variant",
+            description = "Multiple image files to upload for the product variant",
             required = true,
             content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE)
         )
-        @RequestPart(value = "image") MultipartFile imageFile){
+        @RequestPart(value = "images") List<MultipartFile> imageFiles){
         try {
-            if (imageFile == null || imageFile.isEmpty()) {
-                return ResponseEntity.badRequest().body(ApiResponse.error("Image file is required"));
+            if (imageFiles == null || imageFiles.isEmpty()) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("At least one image file is required"));
             }
             
-            // Validate file type
-            String contentType = imageFile.getContentType();
-            if (contentType == null || !contentType.startsWith("image/")) {
-                return ResponseEntity.badRequest().body(ApiResponse.error("Only image files are allowed"));
+            // Validate each file
+            long maxSize = 10 * 1024 * 1024; // 10MB per file
+            for (MultipartFile imageFile : imageFiles) {
+                if (imageFile.isEmpty()) {
+                    return ResponseEntity.badRequest().body(ApiResponse.error("Empty image file found"));
+                }
+                
+                // Validate file type
+                String contentType = imageFile.getContentType();
+                if (contentType == null || !contentType.startsWith("image/")) {
+                    return ResponseEntity.badRequest().body(ApiResponse.error("Only image files are allowed"));
+                }
+                
+                // Validate file size
+                if (imageFile.getSize() > maxSize) {
+                    return ResponseEntity.badRequest().body(ApiResponse.error("File size too large. Maximum 10MB per file allowed"));
+                }
             }
             
-            // Validate file size (e.g., max 10MB)
-            long maxSize = 10 * 1024 * 1024; // 10MB
-            if (imageFile.getSize() > maxSize) {
-                return ResponseEntity.badRequest().body(ApiResponse.error("File size too large. Maximum 10MB allowed"));
-            }
-            
-            // Use update method with single image
-            productVariantService.updateProductVariant(productVariantId, null, imageFile);
-            return ResponseEntity.ok(ApiResponse.ok("Upload ảnh sản phẩm thành công!"));
+            // Use existing service method that accepts multiple images
+            productVariantService.updateProductVariantWithImages(productVariantId, null, imageFiles);
+            return ResponseEntity.ok(ApiResponse.ok("Upload nhiều ảnh sản phẩm thành công!"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         }
@@ -331,7 +338,7 @@ public class B2CProductVariantController {
             required = true,
             content = @Content(schema = @Schema(implementation = ColorOption.class))
         )
-        @Valid @RequestPart("dto") ColorOption colorOptionDTO,
+        @Valid @RequestPart(value = "dto", required = false) ColorOption colorOptionDTO,
         @Parameter(
             description = "Optional replacement image for this color option",
             content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE)

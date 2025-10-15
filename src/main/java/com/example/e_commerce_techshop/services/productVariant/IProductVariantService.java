@@ -21,6 +21,8 @@ public interface IProductVariantService {
 
     void updateProductVariantColors(String productVariantId, String colorId, ColorOption colorOptionDTO, MultipartFile imageFile) throws Exception;
 
+    void removeProductVariantColor(String productVariantId, String colorId) throws Exception;
+
     void disableProduct(String productVariantId) throws Exception;
 
     ProductVariantResponse getById(String productVariantId) throws Exception;
@@ -34,5 +36,9 @@ public interface IProductVariantService {
     Page<ProductVariantResponse> getLatestProductVariants(int page, int size, String sortBy, String sortDir) throws Exception;
 
     Page<ProductVariantResponse> getByStore(String storeId, int page, int size, String sortBy, String sortDir) throws Exception;
+
+    void updateStock(String productVariantId, int newStock) throws Exception;
+
+    void updatePriceAndStock(String productVariantId, Long newPrice, int newStock) throws Exception;
 
 }

@@ -23,7 +23,6 @@ public class ProductVariantDTO {
 
     private String description;
 
-    @NotNull(message = "Stock is required")
     @PositiveOrZero(message = "Stock must be a positive number")
     private int stock;
 

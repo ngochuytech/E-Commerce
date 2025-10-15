@@ -35,5 +35,6 @@ public class Cart extends BaseEntity {
         private ProductVariant productVariant;
         private int quantity;
         private Long unitPrice;
+        private String colorId;
     }
 }

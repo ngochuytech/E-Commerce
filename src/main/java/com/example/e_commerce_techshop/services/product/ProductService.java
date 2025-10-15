@@ -77,7 +77,6 @@ public class ProductService implements IProductService{
         Product product = Product.builder()
                 .name(productDTO.getName())
                 .category(category)
-                .price(productDTO.getPrice())
                 .brand(brand)
                 .store(store)   
                 .build();
@@ -95,7 +94,6 @@ public class ProductService implements IProductService{
         existingProduct.setName(productDTO.getName());
         existingProduct.setCategory(newCategory);
         existingProduct.setDescription(productDTO.getDescription());
-        existingProduct.setPrice(productDTO.getPrice());
         existingProduct.setBrand(newBrand);
         // Ko update store
         productRepository.save(existingProduct);
