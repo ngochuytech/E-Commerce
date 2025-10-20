@@ -1,24 +1,22 @@
 package com.example.e_commerce_techshop.dtos.b2c.store;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class StoreDTO {
+public class UpdateStoreDTO {
     @NotBlank(message = "Tên cửa hàng không được để trống")
     private String name;
 
     private String description;
-
-    @JsonProperty("owner_id")
-    private String ownerId;
 
     @NotNull(message = "Địa chỉ không được để trống")
     @Valid

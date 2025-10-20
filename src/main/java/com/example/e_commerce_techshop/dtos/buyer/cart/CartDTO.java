@@ -12,6 +12,8 @@ import lombok.*;
 public class CartDTO {
     @NotBlank(message = "Product variant ID không được để trống")
     private String productVariantId;
+
+    private String colorId; // Mã màu sản phẩm, có thể null nếu sản phẩm không có tùy chọn màu
         
     @NotNull(message = "Số lượng không được để trống")
     @Min(value = 1, message = "Số lượng phải lớn hơn 0")

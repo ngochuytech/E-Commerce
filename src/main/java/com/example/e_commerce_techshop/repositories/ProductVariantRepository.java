@@ -17,13 +17,17 @@ public interface ProductVariantRepository extends MongoRepository<ProductVariant
     @Query("{'product.$id': ?0}")
     List<ProductVariant> findByProductIdWithQuery(String productId);
 
-    List<ProductVariant> findByCategoryName(String categoryName);
+    Page<ProductVariant> findByCategoryNameAndStatus(String categoryName, String status, Pageable pageable);
 
-    List<ProductVariant> findByCategoryNameAndBrandName(String category, String brand);
+    Page<ProductVariant> findByCategoryNameAndBrandNameAndStatus(String category, String brand, String status, Pageable pageable);
 
-    List<ProductVariant> findByStockLessThan(Integer stock);
+    Page<ProductVariant> findByStockLessThan(Integer stock, Pageable pageable);
 
     List<ProductVariant> findByStockEquals(Integer stock);
 
-    Page<ProductVariant> findByStoreId(String storeId, Pageable pageable);
+    Page<ProductVariant> findByStoreIdAndStatus(String storeId, String status, Pageable pageable);
+
+    Page<ProductVariant> findByStatus(String status, Pageable pageable);
+
+    Page<ProductVariant> findByProductIdAndStatus(String productId, String status, Pageable pageable);
 }

@@ -28,9 +28,9 @@ public class Product extends BaseEntity{
 
     private Long price;
 
-    private String productCondition;
+    private String status; // PENDING, APPROVED, REJECTED
 
-    private String status;
+    private String rejectionReason;
 
     @DBRef
     private Brand brand;
@@ -38,7 +38,13 @@ public class Product extends BaseEntity{
     @DBRef
     private Store store;
 
-    public static boolean getValidStatus(String status){
+    public enum ProductStatus {
+        PENDING,
+        APPROVED,
+        REJECTED
+    }
+
+    public static boolean isValidStatus(String status){
         try {
             ProductStatus.valueOf(status.toUpperCase());
             return true;

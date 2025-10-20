@@ -30,11 +30,26 @@ public class OrderResponse {
     private String addressDetails;
 
     public static OrderResponse fromOrder(Order order) {
+        List<OrderItemResponse> orderItems = null;
+        if (order.getOrderItems() != null) {
+            orderItems = order.getOrderItems().stream()
+                    .map(orderItem -> OrderItemResponse.builder()
+                            .id(orderItem.getId())
+                            .productVariantId(orderItem.getProductVariant().getId())
+                            .quantity(orderItem.getQuantity())
+                            .price(BigDecimal.valueOf(orderItem.getPrice()))
+                            .productName(orderItem.getProductVariant().getProduct().getName())
+                            .variantName(orderItem.getProductVariant().getName())
+                            .colorId(orderItem.getColorId())
+                            .build())
+                    .collect(java.util.stream.Collectors.toList());
+        }
+        
         return OrderResponse.builder()
                 .id(order.getId())
                 .buyerId(order.getBuyer().getId())
                 .storeId(order.getStore().getId())
-                .promotionId(order.getPromotion().getId())
+                .promotionId(order.getPromotion() != null ? order.getPromotion().getId() : null)
                 .totalPrice(order.getTotalPrice())
                 .address(order.getAddress() != null ? AddressResponse.builder()
                         .province(order.getAddress().getProvince())
@@ -46,6 +61,7 @@ public class OrderResponse {
                 .status(order.getStatus())
                 .createdAt(order.getCreatedAt())
                 .updatedAt(order.getUpdatedAt())
+                .orderItems(orderItems)
                 .build();
     }
 }
@@ -61,6 +77,7 @@ class OrderItemResponse {
     private BigDecimal price;
     private String productName;
     private String variantName;
+    private String colorId;
 }
 
 @Data

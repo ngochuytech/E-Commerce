@@ -19,8 +19,6 @@ public class ProductResponse {
 
     private Long price;
 
-    private String condition;
-
     private String status;
 
     private String brand;
@@ -51,7 +49,6 @@ public class ProductResponse {
                 .category(product.getCategory().getDescription())
                 .description(product.getDescription())
                 .price(product.getPrice())
-                .condition(product.getProductCondition())
                 .status(product.getStatus())
                 .store(storeResponse)
                 .build();

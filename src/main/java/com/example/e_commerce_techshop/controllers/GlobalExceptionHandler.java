@@ -49,4 +49,45 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(ApiResponse.error("Bạn không có quyền truy cập tài nguyên này"));
     }
+    
+    @ExceptionHandler(NullPointerException.class)
+    public ResponseEntity<ApiResponse<Object>> handleNullPointerException(NullPointerException ex) {
+        // Xử lý trường hợp @AuthenticationPrincipal null hoặc currentUser.getEmail() null
+        String errorMessage = ex.getMessage();
+        StackTraceElement[] stackTrace = ex.getStackTrace();
+        
+        // Kiểm tra xem lỗi có phải từ việc gọi method trên currentUser null không
+        if (stackTrace != null && stackTrace.length > 0) {
+            String methodName = stackTrace[0].getMethodName();
+            // Nếu lỗi xảy ra khi gọi getEmail(), getId(), etc. từ currentUser
+            if (methodName.equals("getEmail") || methodName.equals("getId") || 
+                methodName.equals("getUsername") || methodName.equals("getName")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error("Bạn cần đăng nhập để thực hiện chức năng này. Token không hợp lệ hoặc đã hết hạn."));
+            }
+        }
+        
+        // Fallback cho các NullPointerException khác
+        if (errorMessage != null && errorMessage.contains("currentUser")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại"));
+        }
+        
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error("Đã xảy ra lỗi không mong muốn"));
+    }
+    
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ApiResponse<Object>> handleIllegalStateException(IllegalStateException ex) {
+        // Xử lý các lỗi logic nghiệp vụ (store chưa duyệt, etc.)
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiResponse<Object>> handleException(Exception ex) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
 }
+

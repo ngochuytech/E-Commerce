@@ -38,7 +38,7 @@ public class SwaggerConfig {
                                 .url("http://localhost:8080")
                                 .description("Local Development server"),
                         new Server()
-                                .url("https://your-production-domain.com")
+                                .url("https://e-commerce-raq1.onrender.com")
                                 .description("Production server"),
                         new Server()
                                 .url("{protocol}://{host}:{port}")

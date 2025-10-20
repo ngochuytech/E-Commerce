@@ -1,6 +1,7 @@
 package com.example.e_commerce_techshop.services.store;
 
 import com.example.e_commerce_techshop.dtos.b2c.store.StoreDTO;
+import com.example.e_commerce_techshop.dtos.b2c.store.UpdateStoreDTO;
 import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
 import com.example.e_commerce_techshop.models.Address;
 import com.example.e_commerce_techshop.models.Store;
@@ -10,6 +11,9 @@ import com.example.e_commerce_techshop.repositories.UserRepository;
 import com.example.e_commerce_techshop.responses.StoreResponse;
 import com.example.e_commerce_techshop.services.FileUploadService;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -29,16 +33,12 @@ public class StoreService implements IStoreService {
         // Validate owner exists - if not provided, use a default owner for testing
         User owner;
         if (storeDTO.getOwnerId() != null && !storeDTO.getOwnerId().isEmpty()) {
-            System.out.println("StoreService - Looking for user with ID: " + storeDTO.getOwnerId());
             owner = userRepository.findByEmail(storeDTO.getOwnerId())
                     .orElseThrow(() -> new DataNotFoundException("Không tìm thấy chủ sở hữu với Email: " + storeDTO.getOwnerId()));
-            System.out.println("StoreService - Found owner: " + owner.getFullName() + " (" + owner.getEmail() + ")");
         } else {
             // For testing purposes, get the first user as default owner
-            System.out.println("StoreService - No ownerId provided, getting first user");
             owner = userRepository.findAll().stream().findFirst()
                     .orElseThrow(() -> new DataNotFoundException("Không có user nào trong hệ thống. Vui lòng tạo user trước!"));
-            System.out.println("StoreService - Using default owner: " + owner.getFullName() + " (" + owner.getEmail() + ")");
         }
 
      
@@ -54,7 +54,7 @@ public class StoreService implements IStoreService {
                 .description(storeDTO.getDescription())
                 .logoUrl(logoUrl)
                 .banner_url(null)
-                .status(storeDTO.getStatus() == null || storeDTO.getStatus().isBlank() ? "PENDING" : storeDTO.getStatus())
+                .status(Store.StoreStatus.PENDING.name())
                 .owner(owner)
                 .address(Address.builder()
                     .province(storeDTO.getAddress().getProvince())
@@ -69,28 +69,20 @@ public class StoreService implements IStoreService {
     }
 
     @Override
-    public StoreResponse updateStore(String storeId, StoreDTO storeDTO) throws Exception {
-        System.out.println("StoreService - Updating store: " + storeId);
-        System.out.println("StoreService - Logo URL: " + storeDTO.getLogoUrl());
-        System.out.println("StoreService - Banner URL: " + storeDTO.getBannerUrl());
+    public StoreResponse updateStore(String storeId, UpdateStoreDTO updateStoreDTO) throws Exception {
         
         Store existingStore = storeRepository.findById(storeId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy cửa hàng"));
 
         // Update fields
-        existingStore.setName(storeDTO.getName());
-        existingStore.setDescription(storeDTO.getDescription());
-        existingStore.setLogoUrl(storeDTO.getLogoUrl());
-        existingStore.setBanner_url(storeDTO.getBannerUrl());
-        if (storeDTO.getStatus() != null && !storeDTO.getStatus().isBlank()) {
-            existingStore.setStatus(storeDTO.getStatus());
-        }
+        existingStore.setName(updateStoreDTO.getName());
+        existingStore.setDescription(updateStoreDTO.getDescription());
 
         existingStore.setAddress(Address.builder()
-                .province(storeDTO.getAddress().getProvince())
-                .ward(storeDTO.getAddress().getWard())
-                .homeAddress(storeDTO.getAddress().getHomeAddress())
-                .suggestedName(storeDTO.getAddress().getSuggestedName())
+                .province(updateStoreDTO.getAddress().getProvince())
+                .ward(updateStoreDTO.getAddress().getWard())
+                .homeAddress(updateStoreDTO.getAddress().getHomeAddress())
+                .suggestedName(updateStoreDTO.getAddress().getSuggestedName())
                 .build());
         
         Store updatedStore = storeRepository.save(existingStore);
@@ -138,15 +130,15 @@ public class StoreService implements IStoreService {
     }
 
     @Override
-    public List<StoreResponse> getPendingStores() {
-        List<Store> stores = storeRepository.findByStatus("PENDING");
-        return stores.stream().map(StoreResponse::fromStore).toList();
+    public Page<StoreResponse> getPendingStores(Pageable pageable) {
+        Page<Store> stores = storeRepository.findByStatus(Store.StoreStatus.PENDING.name(), pageable);
+        return stores.map(StoreResponse::fromStore);
     }
 
     @Override
-    public List<StoreResponse> getApprovedStores() {
-        List<Store> stores = storeRepository.findByStatus("APPROVED");
-        return stores.stream().map(StoreResponse::fromStore).toList();
+    public Page<StoreResponse> getApprovedStores(Pageable pageable) {
+        Page<Store> stores = storeRepository.findByStatus(Store.StoreStatus.APPROVED.name(), pageable);
+        return stores.map(StoreResponse::fromStore);
     }
 
     @Override
@@ -154,7 +146,6 @@ public class StoreService implements IStoreService {
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy cửa hàng"));
         
-        // ✅ VALIDATE STATUS
         if (!Store.isValidStatus(status)) {
             String validStatuses = String.join(", ", Store.getValidStatuses());
             throw new IllegalArgumentException("Status không hợp lệ: '" + status + "'. Chỉ chấp nhận: " + validStatuses);
@@ -184,5 +175,47 @@ public class StoreService implements IStoreService {
         String bannerUrl = fileUploadService.uploadFile(banner, "stores");
         store.setBanner_url(bannerUrl);
         return storeRepository.save(store);
+    }
+
+    @Override
+    public Page<StoreResponse> getStoresByOwner(String ownerId, Pageable pageable) {
+        Page<Store> stores = storeRepository.findByOwnerId(ownerId, pageable);
+        return stores.map(StoreResponse::fromStore);
+    }
+
+    @Override
+    public void updateStoreLogo(String storeId, MultipartFile logo) throws Exception {
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy cửa hàng"));
+
+        if (!Store.StoreStatus.APPROVED.name().equals(store.getStatus())) {
+            throw new IllegalStateException("Chỉ có thể cập nhật logo cho cửa hàng đã được duyệt");
+        }
+
+        if (store.getLogoUrl() != null && !store.getLogoUrl().isEmpty()) {
+            fileUploadService.deleteFile(store.getLogoUrl());
+        }
+
+        String logoUrl = fileUploadService.uploadFile(logo, "stores");
+        store.setLogoUrl(logoUrl);
+        storeRepository.save(store);
+    }
+
+    @Override
+    public void updateStoreBanner(String storeId, MultipartFile banner) throws Exception {
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy cửa hàng"));
+
+        if (!Store.StoreStatus.APPROVED.name().equals(store.getStatus())) {
+            throw new IllegalStateException("Chỉ có thể cập nhật banner cho cửa hàng đã được duyệt");
+        }
+
+        if (store.getBanner_url() != null && !store.getBanner_url().isEmpty()) {
+            fileUploadService.deleteFile(store.getBanner_url());
+        }
+
+        String bannerUrl = fileUploadService.uploadFile(banner, "stores");
+        store.setBanner_url(bannerUrl);
+        storeRepository.save(store);
     }
 }

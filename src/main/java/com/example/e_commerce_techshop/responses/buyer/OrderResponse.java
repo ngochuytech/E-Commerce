@@ -94,6 +94,7 @@ public class OrderResponse {
                             .productImage(primaryImageUrl)
                             .quantity(orderItem.getQuantity())
                             .price(BigDecimal.valueOf(orderItem.getPrice()))
+                            .colorId(orderItem.getColorId())
                             .build();
                 })
                 .collect(java.util.stream.Collectors.toList());
@@ -223,4 +224,6 @@ class OrderItemResponse {
     private Integer quantity;
 
     private BigDecimal price;
+    
+    private String colorId;
 }

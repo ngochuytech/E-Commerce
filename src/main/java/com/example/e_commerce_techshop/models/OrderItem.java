@@ -24,6 +24,8 @@ public class OrderItem extends BaseEntity {
 
     @DBRef
     private ProductVariant productVariant;
+
+    private String colorId;
 }
 
 

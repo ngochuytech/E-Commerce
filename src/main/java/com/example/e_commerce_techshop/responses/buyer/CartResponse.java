@@ -30,12 +30,19 @@ public class CartResponse {
                 .build();
 
         List<CartItemResponse> cartItems = cart.getCartItems().stream()
-            .map(cartItem -> CartItemResponse.builder()
+            .<CartItemResponse>map(cartItem -> CartItemResponse.builder()
                     .productId(cartItem.getProductVariant() != null ? cartItem.getProductVariant().getId() : null)
                     .productName(cartItem.getProductVariant() != null ? cartItem.getProductVariant().getName() : null)
                     .imageUrl(cartItem.getProductVariant() != null ? cartItem.getProductVariant().getPrimaryImageUrl() : null)
                     .quantity(cartItem.getQuantity())
                     .price(cartItem.getProductVariant() != null ? BigDecimal.valueOf(cartItem.getProductVariant().getPrice()) : null)
+                    .colorId(cartItem.getColorId())
+                    .colorName(cartItem.getProductVariant().getColors().stream()
+                        .filter(color -> color.getId().equals(cartItem.getColorId()))
+                        .findFirst()
+                        .<String>map(color -> color.getColorName())
+                        .orElse(null)
+                    )
                     .build()
             ).collect(java.util.stream.Collectors.toList());
 
@@ -81,5 +88,9 @@ class CartItemResponse {
     private int quantity;
 
     private BigDecimal price;
+    
+    private String colorId;
+
+    private String colorName;
 }
 

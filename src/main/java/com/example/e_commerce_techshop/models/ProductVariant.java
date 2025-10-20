@@ -32,18 +32,24 @@ public class ProductVariant extends BaseEntity {
 
     private int stock;
 
+    private String status; // PENDING, APPROVED, REJECTED
+
+    private String rejectionReason;
+
     @DBRef
     private Product product;
 
-    // Store attributes as Map instead of separate entity
     private Map<String, String> attributes;
-
-    // Store image URLs directly instead of separate entity
+    
     private List<String> imageUrls;
     
     private String primaryImageUrl;
 
     private List<ColorOption> colors;
+
+    public enum VariantStatus {
+        PENDING, APPROVED, REJECTED
+    }
 
     @Getter
     @Setter
@@ -57,5 +63,14 @@ public class ProductVariant extends BaseEntity {
         private int stock;
         private String image;
     }
+
+    public static boolean isValidStatus(String status) {
+        try {
+            VariantStatus.valueOf(status.toUpperCase());
+            return true;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    } 
 
 }

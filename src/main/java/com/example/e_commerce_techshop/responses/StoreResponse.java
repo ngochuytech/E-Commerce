@@ -15,8 +15,7 @@ public class StoreResponse {
     private String logoUrl;
     private String bannerUrl;
     private String status;
-    private UserResponse owner;
-    private String ownerName;
+    private OwnerResponse owner;
     private AddressResponse address;
     private String createdAt;
     private String updatedAt;
@@ -34,7 +33,7 @@ public class StoreResponse {
         @Getter
     @Setter
     @Builder
-    static class UserResponse {
+    static class OwnerResponse {
         private String id;
         private String fullName;
         private String email;
@@ -49,7 +48,7 @@ public class StoreResponse {
                 .logoUrl(store.getLogoUrl())
                 .bannerUrl(store.getBanner_url())
                 .status(store.getStatus())
-                .owner(UserResponse.builder()
+                .owner(OwnerResponse.builder()
                         .id(store.getOwner() != null ? store.getOwner().getId() : null)
                         .fullName(store.getOwner() != null ? store.getOwner().getFullName() : null)
                         .email(store.getOwner() != null ? store.getOwner().getEmail() : null)

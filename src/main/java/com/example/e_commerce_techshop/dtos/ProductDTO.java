@@ -23,8 +23,6 @@ public class ProductDTO {
 
     private String description;
 
-    private Long price;
-
     @NotNull(message = "Brand is required")
     private String brand;
 
