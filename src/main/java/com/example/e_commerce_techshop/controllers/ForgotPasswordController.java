@@ -21,9 +21,6 @@ import java.util.UUID;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
@@ -35,68 +32,25 @@ public class ForgotPasswordController {
     private final IUserService userService;
 
     @PostMapping("/forgot-password")
-    @Operation(summary = "Request password reset", 
-               description = "Send password reset email with token to user's email address")
-    @ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "200",
-            description = "Reset email sent successfully",
-            content = @Content(
-                mediaType = "application/json",
-                schema = @Schema(implementation = ApiResponse.class)
-            )
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "400",
-            description = "Email not found or sending failed",
-            content = @Content(
-                mediaType = "application/json",
-                schema = @Schema(implementation = ApiResponse.class)
-            )
-        )
-    })
+    @Operation(summary = "Request password reset", description = "Send password reset email with token to user's email address")
     public ResponseEntity<?> processForgotPassword(
-            HttpServletRequest request, 
-            @Parameter(description = "User's email address", example = "user@example.com")
-            @RequestParam String email){
-        try {
-            String token = UUID.randomUUID().toString();
-            userService.updateResetPasswordToken(token, email);
-            String resetPasswordLink = getServletPath(request) + "/reset-password?token=" + token;
-            sendEmail(email, resetPasswordLink);
-            return ResponseEntity.ok(ApiResponse.ok("Đã gửi mã xác nhận tới email của bạn!"));
-        } catch (Exception e){
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
-        }
+            HttpServletRequest request,
+            @Parameter(description = "User's email address", example = "user@example.com") @RequestParam String email)
+            throws Exception {
+        String token = UUID.randomUUID().toString();
+        userService.updateResetPasswordToken(token, email);
+        String resetPasswordLink = getServletPath(request) + "/reset-password?token=" + token;
+        sendEmail(email, resetPasswordLink);
+        return ResponseEntity.ok(ApiResponse.ok("Đã gửi mã xác nhận tới email của bạn!"));
 
     }
 
     @PostMapping("/reset-password")
-    @Operation(summary = "Reset password with token", 
-               description = "Reset user password using the token received via email")
-    @ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "200",
-            description = "Password reset successfully",
-            content = @Content(
-                mediaType = "application/json",
-                schema = @Schema(implementation = ApiResponse.class)
-            )
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "400",
-            description = "Invalid token or reset failed",
-            content = @Content(
-                mediaType = "application/json",
-                schema = @Schema(implementation = ApiResponse.class)
-            )
-        )
-    })
+    @Operation(summary = "Reset password with token", description = "Reset user password using the token received via email")
     public ResponseEntity<?> resetPassword(
-            @Parameter(description = "Reset password data with token and new password")
-            @RequestBody ResetPasswordDTO resetPasswordDTO){
+            @Parameter(description = "Reset password data with token and new password") @RequestBody ResetPasswordDTO resetPasswordDTO) {
         User user = userService.getUserByResetPasswordToken(resetPasswordDTO.getToken());
-        if(user == null)
+        if (user == null)
             return ResponseEntity.badRequest().body(ApiResponse.error("Mã token không hợp lệ"));
         userService.updatePassword(user, resetPasswordDTO.getPassword());
         return ResponseEntity.ok(ApiResponse.ok("Đã đổi mật khẩu thành công"));
@@ -126,7 +80,7 @@ public class ForgotPasswordController {
         javaMailSender.send(message);
     }
 
-    public String getServletPath(HttpServletRequest request){
+    public String getServletPath(HttpServletRequest request) {
         String url = request.getRequestURL().toString();
         return url.replace(request.getServletPath(), "");
     }

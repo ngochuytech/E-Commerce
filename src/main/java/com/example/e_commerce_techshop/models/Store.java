@@ -34,7 +34,13 @@ public class Store extends BaseEntity{
 
     private Address address;
 
-    // Validation method for Store status
+    public enum StoreStatus {
+        PENDING,
+        APPROVED,
+        REJECTED,
+        DELETED
+    }
+
     public static boolean isValidStatus(String status) {
         try {
             StoreStatus.valueOf(status.toUpperCase());

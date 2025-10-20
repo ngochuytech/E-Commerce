@@ -20,7 +20,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -35,84 +34,35 @@ public class B2CProductController {
     private final IProductService productService;
 
     @PostMapping("/create")
-    @Operation(
-        summary = "Create new product",
-        description = "Create a new product for the store with comprehensive product information including name, description, price, category, and specifications"
-    )
-    @ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "200", 
-            description = "Product created successfully",
-            content = @Content(schema = @Schema(implementation = ApiResponse.class))
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "400", 
-            description = "Bad request - validation errors or invalid product data",
-            content = @Content(schema = @Schema(implementation = ApiResponse.class))
-        )
-    })
+    @Operation(summary = "Create new product", description = "Create a new product for the store with comprehensive product information including name, description, price, category, and specifications")
     public ResponseEntity<?> createProduct(
-        @Parameter(
-            description = "Product information including name, description, price, category, brand, images, and specifications",
-            required = true,
-            content = @Content(schema = @Schema(implementation = ProductDTO.class))
-        )
-        @RequestBody @Valid ProductDTO productDTO, 
-        @Parameter(hidden = true) BindingResult result){
-        try {
-            if(result.hasErrors()){
-                List<String> errorMessages = result.getFieldErrors()
-                        .stream()
-                        .map(FieldError::getDefaultMessage)
-                        .toList();
-                return ResponseEntity.badRequest().body(new ApiResponse<>(false, null, String.join(", ", errorMessages)));
-            }
-            productService.createProduct(productDTO);
-            return ResponseEntity.ok(ApiResponse.ok("Tạo sản phẩm mới thành công!"));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+            @Parameter(description = "Product information including name, description, price, category, brand, images, and specifications", required = true, content = @Content(schema = @Schema(implementation = ProductDTO.class))) @RequestBody @Valid ProductDTO productDTO,
+            @Parameter(hidden = true) BindingResult result) throws Exception {
+        if (result.hasErrors()) {
+            List<String> errorMessages = result.getFieldErrors()
+                    .stream()
+                    .map(FieldError::getDefaultMessage)
+                    .toList();
+            return ResponseEntity.badRequest().body(new ApiResponse<>(false, null, String.join(", ", errorMessages)));
         }
+        productService.createProduct(productDTO);
+        return ResponseEntity.ok(ApiResponse.ok("Tạo sản phẩm mới thành công!"));
     }
 
     @PutMapping("/update/{id}")
-    @Operation(
-        summary = "Update existing product",
-        description = "Update an existing product's information including name, description, price, category, brand, images, and specifications"
-    )
-    @ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "200", 
-            description = "Product updated successfully",
-            content = @Content(schema = @Schema(implementation = ApiResponse.class))
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "400", 
-            description = "Bad request - validation errors, product not found, or invalid product data",
-            content = @Content(schema = @Schema(implementation = ApiResponse.class))
-        )
-    })
+    @Operation(summary = "Update existing product", description = "Update an existing product's information including name, description, price, category, brand, images, and specifications")
     public ResponseEntity<?> updateProduct(
-        @Parameter(description = "ID of the product to update", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1")
-        @PathVariable("id") String productId, 
-        @Parameter(
-            description = "Updated product information including name, description, price, category, brand, images, and specifications",
-            required = true,
-            content = @Content(schema = @Schema(implementation = ProductDTO.class))
-        )
-        @RequestBody @Valid ProductDTO productDTO, 
-        @Parameter(hidden = true) BindingResult result){
-        try {
-            if(result.hasErrors()){
-                List<String> errorMessages = result.getFieldErrors()
-                        .stream()
-                        .map(FieldError::getDefaultMessage)
-                        .toList();
-                return ResponseEntity.badRequest().body(new ApiResponse<>(false, null, String.join(", ", errorMessages)));
-            }
-            productService.updateProduct(productId, productDTO);
-            return ResponseEntity.ok(ApiResponse.ok("Cập nhật sản phẩm thành công!"));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+            @Parameter(description = "ID of the product to update", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable("id") String productId,
+            @Parameter(description = "Updated product information including name, description, price, category, brand, images, and specifications", required = true, content = @Content(schema = @Schema(implementation = ProductDTO.class))) @RequestBody @Valid ProductDTO productDTO,
+            @Parameter(hidden = true) BindingResult result) throws Exception {
+        if (result.hasErrors()) {
+            List<String> errorMessages = result.getFieldErrors()
+                    .stream()
+                    .map(FieldError::getDefaultMessage)
+                    .toList();
+            return ResponseEntity.badRequest().body(new ApiResponse<>(false, null, String.join(", ", errorMessages)));
         }
+        productService.updateProduct(productId, productDTO);
+        return ResponseEntity.ok(ApiResponse.ok("Cập nhật sản phẩm thành công!"));
     }
 }

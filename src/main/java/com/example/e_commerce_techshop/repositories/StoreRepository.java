@@ -1,6 +1,9 @@
 package com.example.e_commerce_techshop.repositories;
 
 import com.example.e_commerce_techshop.models.Store;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
@@ -11,4 +14,8 @@ public interface StoreRepository extends MongoRepository<Store, String> {
     List<Store> findByOwnerId(String ownerId);
     List<Store> findByStatus(String status);
     List<Store> findByNameContainingIgnoreCase(String name);
+
+    Page<Store> findByStatus(String status, Pageable pageable);
+    Page<Store> findByOwnerId(String ownerId, Pageable pageable);
+
 }

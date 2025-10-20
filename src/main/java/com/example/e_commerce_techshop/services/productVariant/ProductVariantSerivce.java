@@ -38,6 +38,10 @@ public class ProductVariantSerivce implements IProductVariantService{
         Product product = productRepository.findById(productVariantDTO.getProductId())
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy product này"));
 
+        if (!Product.ProductStatus.APPROVED.name().equals(product.getStatus())) {
+            throw new IllegalStateException("Sản phẩm chưa được duyệt, không thể thêm biến thể");
+        }
+
         // Xử lý upload ảnh
         List<String> imageUrls = new ArrayList<>();
         String primaryImageUrl = null;
@@ -55,7 +59,8 @@ public class ProductVariantSerivce implements IProductVariantService{
                 .storeId(product.getStore().getId())
                 .price(productVariantDTO.getPrice())
                 .description(productVariantDTO.getDescription())
-                .stock(productVariantDTO.getStock())
+                .stock(0)
+                .status(ProductVariant.VariantStatus.PENDING.name())
                 .attributes(productVariantDTO.getAttributes())
                 .imageUrls(imageUrls)
                 .primaryImageUrl(primaryImageUrl)
@@ -66,8 +71,12 @@ public class ProductVariantSerivce implements IProductVariantService{
 
     @Override
     public void createProductVariant(ProductVariantDTO productVariantDTO) throws Exception {
-                Product product = productRepository.findById(productVariantDTO.getProductId())
+        Product product = productRepository.findById(productVariantDTO.getProductId())
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy product này"));
+
+        if (!"APPROVED".equals(product.getStatus())) {
+            throw new IllegalStateException("Sản phẩm chưa được duyệt, không thể thêm biến thể");
+        }
 
         ProductVariant productVariant = ProductVariant.builder()
                 .product(product)
@@ -77,7 +86,8 @@ public class ProductVariantSerivce implements IProductVariantService{
                 .storeId(product.getStore().getId())
                 .price(productVariantDTO.getPrice())
                 .description(productVariantDTO.getDescription())
-                .stock(productVariantDTO.getStock())
+                .stock(0)
+                .status(ProductVariant.VariantStatus.PENDING.name())
                 .attributes(productVariantDTO.getAttributes())
                 .build();
 
@@ -97,30 +107,34 @@ public class ProductVariantSerivce implements IProductVariantService{
     public ProductVariantResponse getById(String productVariantId) throws Exception {
         ProductVariant productVariant = productVariantRepository.findById(productVariantId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy mẫu sản phẩm này"));
+
+        if (!ProductVariant.VariantStatus.APPROVED.name().equals(productVariant.getStatus())) {
+            throw new DataNotFoundException("Biến thể không khả dụng");
+        }
         return ProductVariantResponse.fromProductVariant(productVariant);
     }
 
     @Override
-    public List<ProductVariantResponse> getByProduct(String productId) throws Exception {
+    public Page<ProductVariantResponse> getByProduct(String productId, Pageable pageable) throws Exception {
         if(!productRepository.existsById(productId))
             throw new DataNotFoundException("Không tìm thấy sản phẩm với id được cung cấp");
-        
-        List<ProductVariant> productVariants = productVariantRepository.findByProductId(productId);
-        
-        return productVariants.stream().map(ProductVariantResponse::fromProductVariant).toList();
+
+        Page<ProductVariant> productVariants = productVariantRepository.findByProductIdAndStatus(productId, ProductVariant.VariantStatus.APPROVED.name(), pageable);
+
+        return productVariants.map(ProductVariantResponse::fromProductVariant);
     }
 
     @Override
-    public List<ProductVariantResponse> getByCategory(String category) throws Exception {
-        List<ProductVariant> productVariants = productVariantRepository.findByCategoryName(category);
+    public Page<ProductVariantResponse> getByCategory(String category, Pageable pageable) throws Exception {
+        Page<ProductVariant> productVariants = productVariantRepository.findByCategoryNameAndStatus(category, ProductVariant.VariantStatus.APPROVED.name(), pageable);
 
-        return productVariants.stream().map(ProductVariantResponse::fromProductVariant).toList();
+        return productVariants.map(ProductVariantResponse::fromProductVariant);
     }
 
     @Override
-    public List<ProductVariantResponse> getByCategoryAndBrand(String category, String brand) {
-        List<ProductVariant> productVariant = productVariantRepository.findByCategoryNameAndBrandName(category, brand);
-        return productVariant.stream().map(ProductVariantResponse::fromProductVariant).toList();
+    public Page<ProductVariantResponse> getByCategoryAndBrand(String category, String brand, Pageable pageable) {
+        Page<ProductVariant> productVariants = productVariantRepository.findByCategoryNameAndBrandNameAndStatus(category, brand, ProductVariant.VariantStatus.APPROVED.name(), pageable);
+        return productVariants.map(ProductVariantResponse::fromProductVariant);
     }
 
     @Override
@@ -128,7 +142,7 @@ public class ProductVariantSerivce implements IProductVariantService{
         Pageable pageable = PageRequest.of(page, size, 
             sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending());
         
-        Page<ProductVariant> variantPage = productVariantRepository.findAll(pageable);
+        Page<ProductVariant> variantPage = productVariantRepository.findByStatus(ProductVariant.VariantStatus.APPROVED.name(), pageable);
         
         return variantPage.map(ProductVariantResponse::fromProductVariant);
     }
@@ -137,98 +151,10 @@ public class ProductVariantSerivce implements IProductVariantService{
     public Page<ProductVariantResponse> getByStore(String storeId, int page, int size, String sortBy, String sortDir) throws Exception {
         Pageable pageable = PageRequest.of(page, size, 
             sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending());
-        
-        Page<ProductVariant> variantPage = productVariantRepository.findByStoreId(storeId, pageable);
-        
+
+        Page<ProductVariant> variantPage = productVariantRepository.findByStoreIdAndStatus(storeId, ProductVariant.VariantStatus.APPROVED.name(), pageable);
+
         return variantPage.map(ProductVariantResponse::fromProductVariant);
-    }
-
-    @Override
-    @Transactional
-    public void updateProductVariant(String productVariantId, ProductVariantDTO productVariantDTO, MultipartFile imageFile) throws Exception {
-        ProductVariant productVariant = productVariantRepository.findById(productVariantId)
-                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy mẫu sản phẩm này"));
-
-        // Cập nhật thông tin cơ bản
-        if(productVariantDTO != null){
-            productVariant.setName(productVariantDTO.getName());
-            productVariant.setDescription(productVariantDTO.getDescription());
-            
-            // Chỉ cập nhật price và stock nếu không có màu sắc (nếu có màu sắc thì được tính tự động)
-            if (productVariant.getColors() == null || productVariant.getColors().isEmpty()) {
-                productVariant.setPrice(productVariantDTO.getPrice());
-                productVariant.setStock(productVariantDTO.getStock());
-            }
-
-            // Cập nhật attributes
-            if (productVariantDTO.getAttributes() != null) {
-                productVariant.setAttributes(productVariantDTO.getAttributes());
-            }
-        }
-
-        // Xử lý ảnh đơn
-        if (imageFile != null && !imageFile.isEmpty()) {
-            // Xóa ảnh cũ nếu có
-            if (productVariant.getImageUrls() != null && !productVariant.getImageUrls().isEmpty()) {
-                for (String oldImageUrl : productVariant.getImageUrls()) {
-                    fileUploadService.deleteFile(oldImageUrl);
-                }
-            }
-
-            // Upload ảnh mới
-            String newImageUrl = fileUploadService.uploadFile(imageFile, "product-variants");
-            if (newImageUrl != null) {
-                List<String> newImageUrls = new ArrayList<>();
-                newImageUrls.add(newImageUrl);
-                productVariant.setImageUrls(newImageUrls);
-                productVariant.setPrimaryImageUrl(newImageUrl);
-            }
-        }
-
-        productVariantRepository.save(productVariant);
-    }
-
-    @Override
-    @Transactional
-    public void updateProductVariantWithImages(String productVariantId, ProductVariantDTO productVariantDTO, List<MultipartFile> imageFiles) throws Exception {
-        ProductVariant productVariant = productVariantRepository.findById(productVariantId)
-                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy mẫu sản phẩm này"));
-        // Cập nhật thông tin cơ bản
-        if(productVariantDTO != null){
-            productVariant.setName(productVariantDTO.getName());
-            productVariant.setDescription(productVariantDTO.getDescription());
-            
-            // Chỉ cập nhật price và stock nếu không có màu sắc (nếu có màu sắc thì được tính tự động)
-            if (productVariant.getColors() == null || productVariant.getColors().isEmpty()) {
-                productVariant.setPrice(productVariantDTO.getPrice());
-                productVariant.setStock(productVariantDTO.getStock());
-            }
-
-            // Cập nhật attributes
-            if (productVariantDTO.getAttributes() != null) {
-                productVariant.setAttributes(productVariantDTO.getAttributes());
-            }
-
-        }
-
-        // Xử lý nhiều ảnh
-        if (imageFiles != null && !imageFiles.isEmpty()) {
-            // Xóa ảnh cũ nếu có
-            if (productVariant.getImageUrls() != null && !productVariant.getImageUrls().isEmpty()) {
-                for (String oldImageUrl : productVariant.getImageUrls()) {
-                    fileUploadService.deleteFile(oldImageUrl);
-                }
-            }
-
-            // Upload ảnh mới
-            List<String> newImageUrls = fileUploadService.uploadFiles(imageFiles, "product-variants");
-            productVariant.setImageUrls(newImageUrls);
-            if (!newImageUrls.isEmpty()) {
-                productVariant.setPrimaryImageUrl(newImageUrls.get(0)); // Ảnh đầu tiên là ảnh chính
-            }
-        }
-        
-        productVariantRepository.save(productVariant);
     }
 
     @Override
@@ -319,9 +245,24 @@ public class ProductVariantSerivce implements IProductVariantService{
         productVariantRepository.save(productVariant);
     }
 
-    /**
-     * Cập nhật price và stock cho ProductVariant không có màu sắc
-     */
+    @Override
+    public void updatePrice(String productVariantId, Long newPrice) throws Exception {
+        ProductVariant productVariant = productVariantRepository.findById(productVariantId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy mẫu sản phẩm này"));
+
+        // Chỉ cho phép cập nhật price trực tiếp nếu không có màu sắc
+        if (productVariant.getColors() != null && !productVariant.getColors().isEmpty()) {
+            throw new IllegalArgumentException("Không thể cập nhật price trực tiếp cho sản phẩm có màu sắc. Hãy cập nhật của từng màu.");
+        }
+
+        if (newPrice != null && newPrice < 0) {
+            throw new IllegalArgumentException("Price không thể âm");
+        }
+
+        productVariant.setPrice(newPrice);
+        productVariantRepository.save(productVariant);
+    }
+
     public void updatePriceAndStock(String productVariantId, Long newPrice, int newStock) throws Exception {
         ProductVariant productVariant = productVariantRepository.findById(productVariantId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy mẫu sản phẩm này"));
@@ -411,6 +352,34 @@ public class ProductVariantSerivce implements IProductVariantService{
         }
 
         productVariantRepository.save(productVariant);
+    }
+
+    @Override
+    public Page<ProductVariantResponse> getVariantsByStatus(String status, Pageable pageable) {
+        Page<ProductVariant> variantPage = productVariantRepository.findByStatus(status, pageable);
+        return variantPage.map(ProductVariantResponse::fromProductVariant);
+    }
+
+    @Override
+    public void updateVariantStatus(String variantId, String status) throws Exception {
+        if(!ProductVariant.isValidStatus(status)) {
+            throw new IllegalArgumentException("Trạng thái không hợp lệ");
+        }
+        ProductVariant productVariant = productVariantRepository.findById(variantId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy mẫu sản phẩm này"));
+
+        productVariant.setStatus(status);
+        productVariantRepository.save(productVariant);
+    }
+
+    @Override
+    public void rejectVariant(String variantId, String reason) throws Exception {
+        ProductVariant variant = productVariantRepository.findById(variantId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy biến thể"));
+        
+        variant.setStatus("REJECTED");
+        variant.setRejectionReason(reason);
+        productVariantRepository.save(variant);
     }
 
 

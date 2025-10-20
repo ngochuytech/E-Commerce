@@ -12,6 +12,9 @@ import com.example.e_commerce_techshop.repositories.ProductRepository;
 import com.example.e_commerce_techshop.repositories.StoreRepository;
 import com.example.e_commerce_techshop.responses.ProductResponse;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -36,40 +39,45 @@ public class ProductService implements IProductService{
     }
 
     @Override
-    public List<ProductResponse> findProductByName(String name) {
-        List<Product> productList = productRepository.findByNameContainingIgnoreCase(name);
-        return productList.stream().map(ProductResponse::fromProduct).toList();
+    public Page<ProductResponse> findProductByName(String name, Pageable pageable) {
+        Page<Product> productPage = productRepository.findByNameContainingIgnoreCase(name, pageable);
+        return productPage.map(ProductResponse::fromProduct);
     }
 
     @Override
-    public List<ProductResponse> findProductByCategory(String category) {
+    public Page<ProductResponse> findProductByCategory(String category, Pageable pageable) {
         Category cate = categoryRepository.findByName(category).orElse(null);
         if (cate == null) {
-            return List.of();
+            return Page.empty();
         }
-        List<Product> productList = productRepository.findByCategoryId(cate.getId());
-        return productList.stream().map(ProductResponse::fromProduct).toList();
+        return productRepository.findByCategoryId(cate.getId(), pageable)
+                .map(ProductResponse::fromProduct);
     }
 
     @Override
-    public List<ProductResponse> findProductByCategoryAndBrand(String category, String brand) {
+    public Page<ProductResponse> findProductByCategoryAndBrand(String category, String brand, Pageable pageable) {
         // Tìm category và brand theo tên trước
         Category cate = categoryRepository.findByName(category).orElse(null);
         Brand brandObj = brandRepository.findByName(brand).orElse(null);
         
         if (cate == null || brandObj == null) {
-            return List.of();
+            return Page.empty();
         }
         
         // Sử dụng ID của category và brand để tìm products
-        List<Product> productList = productRepository.findByCategoryIdAndBrandId(cate.getId(), brandObj.getId());
-        return productList.stream().map(ProductResponse::fromProduct).toList();
+        Page<Product> productPage = productRepository.findByCategoryIdAndBrandId(cate.getId(), brandObj.getId(), pageable);
+        return productPage.map(ProductResponse::fromProduct);
     }
 
     @Override
     public void createProduct(ProductDTO productDTO) throws Exception{
         Store store = storeRepository.findById(productDTO.getStoreId())
                 .orElseThrow(() -> new DataNotFoundException("Cửa hàng không tồn tại"));
+
+        if (!"APPROVED".equals(store.getStatus())) {
+            throw new IllegalStateException("Cửa hàng chưa được duyệt");
+        }
+
         Brand brand = brandRepository.findByName(productDTO.getBrand())
                 .orElseThrow(() -> new DataNotFoundException("Nhãn hiệu không tồn tại"));
         Category category = categoryRepository.findByName(productDTO.getCategory())
@@ -78,7 +86,8 @@ public class ProductService implements IProductService{
                 .name(productDTO.getName())
                 .category(category)
                 .brand(brand)
-                .store(store)   
+                .store(store)
+                .status("PENDING")
                 .build();
         productRepository.save(product);
     }
@@ -103,11 +112,14 @@ public class ProductService implements IProductService{
     public void updateStatus(String productId, String status) {
         Product existingProduct = productRepository.findById(productId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy product cần cập nhật"));
+        
+        if (!Product.isValidStatus(status)) {
+            throw new IllegalArgumentException("Status không hợp lệ: " + status);
+        }
         existingProduct.setStatus(status);
         productRepository.save(existingProduct);
     }
     
-    // Thêm các methods hữu ích khác
     public List<ProductResponse> findProductByBrand(String brandName) {
         Brand brand = brandRepository.findByName(brandName).orElse(null);
         if (brand == null) {
@@ -148,5 +160,21 @@ public class ProductService implements IProductService{
     public List<ProductResponse> findProductByStoreAndStatus(String storeId, String status) {
         List<Product> productList = productRepository.findByStoreIdAndStatus(storeId, status);
         return productList.stream().map(ProductResponse::fromProduct).toList();
+    }
+
+    @Override
+    public Page<ProductResponse> getPendingProducts(Pageable pageable) {
+        return productRepository.findByStatus(Product.ProductStatus.PENDING.name(), pageable)
+                .map(ProductResponse::fromProduct);
+    }
+
+    @Override
+    public void rejectProduct(String productId, String reason) throws Exception {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy sản phẩm"));
+
+        product.setStatus(Product.ProductStatus.REJECTED.name());
+        product.setRejectionReason(reason);
+        productRepository.save(product);
     }
 }

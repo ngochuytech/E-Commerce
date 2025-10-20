@@ -1,28 +1,32 @@
 package com.example.e_commerce_techshop.services.store;
 
 import com.example.e_commerce_techshop.dtos.b2c.store.StoreDTO;
+import com.example.e_commerce_techshop.dtos.b2c.store.UpdateStoreDTO;
 import com.example.e_commerce_techshop.models.Store;
 import com.example.e_commerce_techshop.responses.StoreResponse;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface IStoreService {
-    // Store Management APIs
+    // Shop (B2C)
     StoreResponse createStore(StoreDTO storeDTO, MultipartFile logo) throws Exception;
     Store uploadBanner(String storeId, MultipartFile banner) throws Exception;
-    StoreResponse updateStore(String storeId, StoreDTO storeDTO) throws Exception;
+    StoreResponse updateStore(String storeId, UpdateStoreDTO storeDTO) throws Exception;
+    void updateStoreLogo(String storeId, MultipartFile logo) throws Exception;
+    void updateStoreBanner(String storeId, MultipartFile banner) throws Exception;
     StoreResponse getStoreById(String storeId) throws Exception;
     List<StoreResponse> getAllStores();
     List<Store> getStoresByOwner(String ownerId);
+    Page<StoreResponse> getStoresByOwner(String ownerId, Pageable pageable);
 
-    // Store Approval APIs
+    // Admin
     StoreResponse approveStore(String storeId) throws Exception;
     StoreResponse rejectStore(String storeId, String reason) throws Exception;
-    List<StoreResponse> getPendingStores();
-    List<StoreResponse> getApprovedStores();
-    
-    // Store Status Management
+    Page<StoreResponse> getPendingStores(Pageable pageable);
+    Page<StoreResponse> getApprovedStores(Pageable pageable);
     void updateStoreStatus(String storeId, String status) throws Exception;
 }
