@@ -1,11 +1,10 @@
 package com.example.e_commerce_techshop.services.user;
 
 import com.example.e_commerce_techshop.components.JwtTokenProvider;
-import com.example.e_commerce_techshop.dtos.UserDTO;
 import com.example.e_commerce_techshop.dtos.UserLoginDTO;
+import com.example.e_commerce_techshop.dtos.user.UserRegisterDTO;
 import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
 import com.example.e_commerce_techshop.exceptions.ExpiredTokenException;
-import com.example.e_commerce_techshop.models.Role;
 import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.repositories.UserRepository;
 import com.example.e_commerce_techshop.responses.user.UserResponse;
@@ -56,14 +55,10 @@ public class UserService implements IUserService{
     }
 
     @Override
-    public void createUser(UserDTO userDTO, String siteURL) throws Exception {
+    public void createUser(UserRegisterDTO userDTO, String siteURL) throws Exception {
         String email = userDTO.getEmail();
         if(userRepository.existsByEmail(email)){
             throw new Exception("Email đã tồn tại");
-        }
-
-        if(userDTO.getRole().equals(Role.ADMIN)){
-            throw new Exception("You can't register an admin account");
         }
 
         String verificationCode = UUID.randomUUID().toString();
@@ -72,7 +67,7 @@ public class UserService implements IUserService{
                 .email(email)
                 .password(passwordEncoder.encode(userDTO.getPassword()))
                 .fullName(userDTO.getFullName())
-                .roles(List.of(userDTO.getRole()))
+                .roles(List.of("USER"))
                 .isActive(true)
                 .enable(false)
                 .verificationCode(verificationCode)

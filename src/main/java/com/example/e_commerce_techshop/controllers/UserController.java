@@ -4,6 +4,7 @@ import com.example.e_commerce_techshop.components.JwtTokenProvider;
 import com.example.e_commerce_techshop.dtos.GoogleCodeRequest;
 import com.example.e_commerce_techshop.dtos.UserDTO;
 import com.example.e_commerce_techshop.dtos.UserLoginDTO;
+import com.example.e_commerce_techshop.dtos.user.UserRegisterDTO;
 import com.example.e_commerce_techshop.models.Token;
 import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.responses.ApiResponse;
@@ -95,7 +96,7 @@ public class UserController {
     @Operation(summary = "User registration", description = "Register a new user account, sends email verification")
     public ResponseEntity<?> register(
             HttpServletRequest request,
-            @Parameter(description = "User registration information") @RequestBody @Valid UserDTO userDTO,
+            @Parameter(description = "User registration information") @RequestBody @Valid UserRegisterDTO userDTO,
             BindingResult result) throws Exception {
         if (result.hasErrors()) {
             List<String> errorMessages = result.getFieldErrors()
