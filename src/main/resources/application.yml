@@ -1,8 +1,8 @@
 spring:
   data:
     mongodb:
-      uri: mongodb+srv://${DB_MONGODB_USERNAME:ngochuytech23_db_user}:${DB_MONGODB_PASSWORD:rw2IMmplfo1ZHPCZ}@cluster0.7wqi5cz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
-      database: ${DB_MONGODB_NAME:e-commerce}
+      uri: mongodb+srv://${DB_MONGODB_USERNAME}:${DB_MONGODB_PASSWORD}@cluster0.7wqi5cz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+      database: ${DB_MONGODB_NAME}
       auto-index-creation: true
       max-connections-per-host: 100
       server-selection-timeout-ms: 30000
