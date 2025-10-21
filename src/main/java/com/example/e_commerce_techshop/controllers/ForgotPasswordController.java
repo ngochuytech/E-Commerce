@@ -8,6 +8,7 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -30,6 +31,12 @@ public class ForgotPasswordController {
     private final JavaMailSender javaMailSender;
 
     private final IUserService userService;
+    
+    @Value("${spring.mail.properties.from:ngochuymail25@gmail.com}")
+    private String fromAddress;
+    
+    @Value("${spring.mail.properties.from-name:TechShop E-commerce}")
+    private String senderName;
 
     @PostMapping("/forgot-password")
     @Operation(summary = "Request password reset", description = "Send password reset email with token to user's email address")
@@ -61,17 +68,18 @@ public class ForgotPasswordController {
         MimeMessage message = javaMailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message);
 
-        helper.setFrom("ngochuymail25@gmail.com", "E-Commerce Support");
+        helper.setFrom(fromAddress, senderName);
         helper.setTo(recipientEmail);
 
-        String subject = "Here's the link to reset your password";
+        String subject = "Yêu cầu đặt lại mật khẩu";
 
         String content = "<p>Xin chào,</p>"
-                + "<p>Bạn có gửi yêu cầu đổi mật khẩu.</p>"
+                + "<p>Bạn đã gửi yêu cầu đặt lại mật khẩu.</p>"
                 + "<p>Click vào link bên dưới để thực hiện thao tác:</p>"
-                + "<p><a href=\"" + link + "\">Change my password</a></p>"
+                + "<p><a href=\"" + link + "\">Đặt lại mật khẩu</a></p>"
                 + "<br>"
-                + "<p>Bỏ qua email này nếu bạn nhớ lại mật khẩu. </p>";
+                + "<p>Bỏ qua email này nếu bạn không yêu cầu đổi mật khẩu.</p>"
+                + "<p>Cảm ơn,<br>" + senderName + "</p>";
 
         helper.setSubject(subject);
 

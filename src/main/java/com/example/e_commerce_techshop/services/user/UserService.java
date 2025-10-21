@@ -12,6 +12,7 @@ import com.example.e_commerce_techshop.responses.user.UserResponse;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -39,6 +40,12 @@ public class UserService implements IUserService{
     private final PasswordEncoder passwordEncoder;
 
     private final JavaMailSender mailSender;
+    
+    @Value("${spring.mail.properties.from:ngochuymail25@gmail.com}")
+    private String fromAddress;
+    
+    @Value("${spring.mail.properties.from-name:TechShop E-commerce}")
+    private String senderName;
 
     @Override
     public String loginUser(UserLoginDTO userLoginDTO) throws Exception {
@@ -89,14 +96,12 @@ public class UserService implements IUserService{
 
     private void sendVerificationEmail(User user, String siteURL) throws MessagingException, UnsupportedEncodingException {
         String toAddress = user.getEmail();
-        String fromAddress = "ngochuymail25@gmail.com";
-        String senderName = "E-commerce";
         String subject = "Xác nhận đăng ký tài khoản";
         String content = "Chào [[name]],<br>"
                 + "Hãy click vào link bên dưới để tiến hành xác nhận đăng ký:<br>"
                 + "<h3><a href=\"[[URL]]\" target=\"_self\">VERIFY</a></h3>"
                 + "Cảm ơn,<br>"
-                + "E-commerce.";
+                + "[[senderName]].";
 
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message);
@@ -106,6 +111,7 @@ public class UserService implements IUserService{
         helper.setSubject(subject);
 
         content = content.replace("[[name]]", user.getFullName());
+        content = content.replace("[[senderName]]", senderName);
         String verifyURL = siteURL + "/api/v1/users/verify?code=" + user.getVerificationCode();
 
         content = content.replace("[[URL]]", verifyURL);

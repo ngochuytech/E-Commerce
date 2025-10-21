@@ -1,8 +1,8 @@
 spring:
   data:
     mongodb:
-      uri: mongodb+srv://${DB_MONGODB_USERNAME}:${DB_MONGODB_PASSWORD}@cluster0.7wqi5cz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
-      database: ${DB_MONGODB_NAME}
+      uri: mongodb+srv://${DB_MONGODB_USERNAME:ngochuytech23_db_user}:${DB_MONGODB_PASSWORD:rw2IMmplfo1ZHPCZ}@cluster0.7wqi5cz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+      database: ${DB_MONGODB_NAME:e-commerce}
       auto-index-creation: true
       max-connections-per-host: 100
       server-selection-timeout-ms: 30000
@@ -13,25 +13,23 @@ spring:
       max-file-size: 30MB
       max-request-size: 30MB
   mail:
-    host: smtp.gmail.com
-    port: 465
-    username: ngochuymail25@gmail.com
-    password: pqzy sybn nnim quji
+    host: smtp.sendgrid.net
+    port: 587
+    username: apikey
+    password: ${SENDGRID_API_KEY}
     properties:
       mail:
-        smtp:
+        smtp: 
           auth: true
-          ssl:
+          starttls:
             enable: true
-            trust: smtp.gmail.com
-          socketFactory:
-            port: 465
-            class: javax.net.ssl.SSLSocketFactory
-            fallback: false
+            required: true
           connectiontimeout: 10000
           timeout: 10000
           writetimeout: 10000
-        debug: true
+      from: ${MAIL_FROM_ADDRESS:ngochuymail25@gmail.com}
+      from-name: ${MAIL_FROM_NAME:TechShop E-commerce}
+    default-encoding: UTF-8
   security:
     oauth2:
       client:
