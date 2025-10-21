@@ -3,6 +3,7 @@ package com.example.e_commerce_techshop.controllers;
 import com.example.e_commerce_techshop.dtos.ResetPasswordDTO;
 import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.responses.ApiResponse;
+import com.example.e_commerce_techshop.services.SendGridEmailService;
 import com.example.e_commerce_techshop.services.user.IUserService;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.UUID;
 
@@ -31,6 +33,8 @@ public class ForgotPasswordController {
     private final JavaMailSender javaMailSender;
 
     private final IUserService userService;
+
+    private final SendGridEmailService sendGridEmailService; 
     
     @Value("${spring.mail.properties.from:ngochuymail25@gmail.com}")
     private String fromAddress;
@@ -44,11 +48,21 @@ public class ForgotPasswordController {
             HttpServletRequest request,
             @Parameter(description = "User's email address", example = "user@example.com") @RequestParam String email)
             throws Exception {
-        String token = UUID.randomUUID().toString();
-        userService.updateResetPasswordToken(token, email);
-        String resetPasswordLink = getServletPath(request) + "/reset-password?token=" + token;
-        sendEmail(email, resetPasswordLink);
-        return ResponseEntity.ok(ApiResponse.ok("Đã gửi mã xác nhận tới email của bạn!"));
+            User user = userService.findByEmail(email);
+            if (user == null) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Email không tồn tại"));
+            }
+
+            String token = UUID.randomUUID().toString();
+            user.setResetPasswordToken(token);
+            userService.updateResetPasswordToken(token, email);
+
+            String resetPasswordLink = getSiteURL(request) + "/reset-password?token=" + token;
+            
+            // ✅ Sử dụng SendGrid API
+            sendResetPasswordEmail(user.getEmail(), resetPasswordLink);
+
+            return ResponseEntity.ok(ApiResponse.ok("Email đặt lại mật khẩu đã được gửi"));
 
     }
 
@@ -88,8 +102,25 @@ public class ForgotPasswordController {
         javaMailSender.send(message);
     }
 
-    public String getServletPath(HttpServletRequest request) {
-        String url = request.getRequestURL().toString();
-        return url.replace(request.getServletPath(), "");
+    private void sendResetPasswordEmail(String email, String resetLink) throws IOException {
+        String subject = "Yêu cầu đặt lại mật khẩu";
+        
+        String htmlContent = "<html><body style=\"font-family: Arial, sans-serif;\">" +
+                "<div style=\"max-width: 600px; margin: 0 auto; padding: 20px;\">" +
+                "<h2>Đặt lại mật khẩu TechShop</h2>" +
+                "<p>Bạn đã yêu cầu đặt lại mật khẩu. Click vào link bên dưới để tiếp tục:</p>" +
+                "<a href=\"" + resetLink + "\" style=\"display: inline-block; padding: 12px 30px; " +
+                "background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px;\">" +
+                "Đặt lại mật khẩu</a>" +
+                "<p>Link có hiệu lực trong 30 phút.</p>" +
+                "<p>Nếu không phải bạn yêu cầu, vui lòng bỏ qua email này.</p>" +
+                "</div></body></html>";
+        
+        sendGridEmailService.sendEmail(email, subject, htmlContent);
+    }
+
+    private String getSiteURL(HttpServletRequest request) {
+        String siteURL = request.getRequestURL().toString();
+        return siteURL.replace(request.getServletPath(), "");
     }
 }

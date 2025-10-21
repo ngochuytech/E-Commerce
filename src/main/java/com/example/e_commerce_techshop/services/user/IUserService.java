@@ -21,4 +21,6 @@ public interface IUserService {
     void updatePassword(User user, String newPassword);
 
     UserResponse getCurrentUser(String email) throws Exception;
+
+    User findByEmail(String email) throws Exception;
 }

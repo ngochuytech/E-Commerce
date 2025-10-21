@@ -8,13 +8,10 @@ import com.example.e_commerce_techshop.exceptions.ExpiredTokenException;
 import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.repositories.UserRepository;
 import com.example.e_commerce_techshop.responses.user.UserResponse;
+import com.example.e_commerce_techshop.services.SendGridEmailService;
 
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -23,7 +20,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.UnsupportedEncodingException;
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -39,7 +36,7 @@ public class UserService implements IUserService{
 
     private final PasswordEncoder passwordEncoder;
 
-    private final JavaMailSender mailSender;
+    private final SendGridEmailService sendGridEmailService;
     
     @Value("${spring.mail.properties.from:ngochuymail25@gmail.com}")
     private String fromAddress;
@@ -94,31 +91,37 @@ public class UserService implements IUserService{
         return true;
     }
 
-    private void sendVerificationEmail(User user, String siteURL) throws MessagingException, UnsupportedEncodingException {
-        String toAddress = user.getEmail();
-        String subject = "Xác nhận đăng ký tài khoản";
-        String content = "Chào [[name]],<br>"
-                + "Hãy click vào link bên dưới để tiến hành xác nhận đăng ký:<br>"
-                + "<h3><a href=\"[[URL]]\" target=\"_self\">VERIFY</a></h3>"
-                + "Cảm ơn,<br>"
-                + "[[senderName]].";
-
-        MimeMessage message = mailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(message);
-
-        helper.setFrom(fromAddress, senderName);
-        helper.setTo(toAddress);
-        helper.setSubject(subject);
-
-        content = content.replace("[[name]]", user.getFullName());
-        content = content.replace("[[senderName]]", senderName);
+    private void sendVerificationEmail(User user, String siteURL) throws IOException {
+        String subject = "Xác nhận đăng ký tài khoản TechShop";
         String verifyURL = siteURL + "/api/v1/users/verify?code=" + user.getVerificationCode();
+        
+        String htmlContent = "<html><head><meta charset=\"UTF-8\"><style>" +
+                "body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }" +
+                ".container { max-width: 600px; margin: 0 auto; padding: 20px; }" +
+                ".header { background-color: #4CAF50; color: white; padding: 20px; text-align: center; }" +
+                ".content { background-color: #f9f9f9; padding: 30px; }" +
+                ".button { display: inline-block; padding: 12px 30px; background-color: #4CAF50; " +
+                "color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }" +
+                ".footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }" +
+                "</style></head><body><div class=\"container\">" +
+                "<div class=\"header\"><h1>Chào mừng đến với TechShop!</h1></div>" +
+                "<div class=\"content\">" +
+                "<p>Xin chào <strong>" + user.getFullName() + "</strong>,</p>" +
+                "<p>Cảm ơn bạn đã đăng ký tài khoản tại <strong>TechShop E-commerce</strong>.</p>" +
+                "<p>Để hoàn tất quá trình đăng ký, vui lòng xác nhận địa chỉ email của bạn bằng cách nhấn vào nút bên dưới:</p>" +
+                "<div style=\"text-align: center;\">" +
+                "<a href=\"" + verifyURL + "\" class=\"button\">Xác nhận Email</a>" +
+                "</div>" +
+                "<p>Hoặc copy link sau vào trình duyệt:</p>" +
+                "<p style=\"word-break: break-all; color: #0066cc;\">" + verifyURL + "</p>" +
+                "<p><strong>Lưu ý:</strong> Link xác nhận có hiệu lực trong 24 giờ.</p>" +
+                "</div>" +
+                "<div class=\"footer\">" +
+                "<p>Email này được gửi tự động, vui lòng không reply.</p>" +
+                "<p>&copy; 2024 TechShop E-commerce. All rights reserved.</p>" +
+                "</div></div></body></html>";
 
-        content = content.replace("[[URL]]", verifyURL);
-
-        helper.setText(content, true);
-
-        mailSender.send(message);
+        sendGridEmailService.sendEmail(user.getEmail(), subject, htmlContent);
     }
 
     @Override
@@ -157,5 +160,11 @@ public class UserService implements IUserService{
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy user với Email này"));
         return UserResponse.fromUser(user);
+    }
+
+    @Override
+    public User findByEmail(String email) throws Exception {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new Exception("Không tìm thấy user với Email này"));
     }
 }
