@@ -95,4 +95,25 @@ public class B2CProductVariantController {
         productVariantService.disableProduct(productVariantId);
         return ResponseEntity.ok(ApiResponse.ok("Xóa mẫu sản phẩm thành công!"));
     }
+
+    @PutMapping("/update-stock/{id}")
+    @Operation(summary = "Update product variant stock", description = "Update the stock quantity of a product variant. Only affects inventory quantity, price remains unchanged.")
+    public ResponseEntity<?> updateStock(
+            @Parameter(description = "ID of the product variant to update", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable("id") String productVariantId,
+            @Parameter(description = "New stock quantity", required = true, example = "100") @RequestBody int newStock)
+            throws Exception {
+        productVariantService.updateStock(productVariantId, newStock);
+        return ResponseEntity.ok(ApiResponse.ok("Cập nhật số lượng tồn kho thành công!"));
+    }
+
+    @PutMapping("/update-price/{id}")
+    @Operation(summary = "Update product variant price", description = "Update the selling price of a product variant. Only affects price, stock quantity remains unchanged.")
+    public ResponseEntity<?> updatePrice(
+            @Parameter(description = "ID of the product variant to update", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable("id") String productVariantId,
+            @Parameter(description = "New selling price in VND", required = true, example = "15000000") @RequestBody Long newPrice)
+            throws Exception {
+        productVariantService.updatePrice(productVariantId, newPrice);
+        return ResponseEntity.ok(ApiResponse.ok("Cập nhật giá bán thành công!"));
+    }
+
 }
