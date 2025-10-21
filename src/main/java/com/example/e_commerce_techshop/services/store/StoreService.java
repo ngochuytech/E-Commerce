@@ -7,7 +7,6 @@ import com.example.e_commerce_techshop.models.Address;
 import com.example.e_commerce_techshop.models.Store;
 import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.repositories.StoreRepository;
-import com.example.e_commerce_techshop.repositories.UserRepository;
 import com.example.e_commerce_techshop.responses.StoreResponse;
 import com.example.e_commerce_techshop.services.FileUploadService;
 import lombok.RequiredArgsConstructor;
@@ -24,23 +23,10 @@ import java.util.List;
 public class StoreService implements IStoreService {
     
     private final StoreRepository storeRepository;
-    private final UserRepository userRepository;
     private final FileUploadService fileUploadService;
 
     @Override
-    public StoreResponse createStore(StoreDTO storeDTO, MultipartFile logo) throws Exception {
-        
-        // Validate owner exists - if not provided, use a default owner for testing
-        User owner;
-        if (storeDTO.getOwnerId() != null && !storeDTO.getOwnerId().isEmpty()) {
-            owner = userRepository.findByEmail(storeDTO.getOwnerId())
-                    .orElseThrow(() -> new DataNotFoundException("Không tìm thấy chủ sở hữu với Email: " + storeDTO.getOwnerId()));
-        } else {
-            // For testing purposes, get the first user as default owner
-            owner = userRepository.findAll().stream().findFirst()
-                    .orElseThrow(() -> new DataNotFoundException("Không có user nào trong hệ thống. Vui lòng tạo user trước!"));
-        }
-
+    public StoreResponse createStore(StoreDTO storeDTO, User owner, MultipartFile logo) throws Exception {
      
         // Upload logo if provided
         String logoUrl = null;
