@@ -74,7 +74,7 @@ public class GlobalExceptionHandler {
         }
         
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error("Đã xảy ra lỗi không mong muốn"));
+                .body(ApiResponse.error(errorMessage));
     }
     
     @ExceptionHandler(IllegalStateException.class)
