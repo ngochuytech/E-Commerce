@@ -80,13 +80,20 @@ public class UserController {
         String userAgent = request.getHeader("User-Agent");
         User user = userService.getUserByToken(token);
         Token jwtToken = tokenService.addToken(user, token, isMobileDevice(userAgent));
+        
+        List<String> roles = user.getAuthorities() != null 
+            ? user.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .toList()
+            : List.of();
+        
         LoginResponse loginResponse = LoginResponse.builder()
                 .message("Đăng nhập thành công")
                 .token(jwtToken.getToken())
                 .refreshToken(jwtToken.getRefreshToken())
                 .username(user.getFullName())
                 .id(user.getId())
-                .roles(user.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList())
+                .roles(roles)
                 .build();
         return ResponseEntity.ok(ApiResponse.ok(loginResponse));
     }
@@ -147,13 +154,19 @@ public class UserController {
         String token = jwtTokenProvider.generateToken(user);
         Token jwtToken = tokenService.addToken(user, token, isMobileDevice(userAgent));
 
+        List<String> roles = user.getAuthorities() != null 
+            ? user.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .toList()
+            : List.of();
+
         LoginResponse loginResponse = LoginResponse.builder()
                 .message("Đăng nhập thành công!")
                 .token(jwtToken.getToken())
                 .tokenType(jwtToken.getTokenType())
                 .refreshToken(jwtToken.getRefreshToken())
                 .username(user.getFullName())
-                .roles(user.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList())
+                .roles(roles)
                 .id(user.getId())
                 .build();
 

@@ -74,7 +74,7 @@ public class ProductVariantSerivce implements IProductVariantService{
         Product product = productRepository.findById(productVariantDTO.getProductId())
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy product này"));
 
-        if (!"APPROVED".equals(product.getStatus())) {
+        if (!Product.ProductStatus.APPROVED.name().equals(product.getStatus())) {
             throw new IllegalStateException("Sản phẩm chưa được duyệt, không thể thêm biến thể");
         }
 
@@ -153,6 +153,16 @@ public class ProductVariantSerivce implements IProductVariantService{
             sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending());
 
         Page<ProductVariant> variantPage = productVariantRepository.findByStoreIdAndStatus(storeId, ProductVariant.VariantStatus.APPROVED.name(), pageable);
+
+        return variantPage.map(ProductVariantResponse::fromProductVariant);
+    }
+
+    @Override
+    public Page<ProductVariantResponse> searchByName(String name, int page, int size, String sortBy, String sortDir) throws Exception {
+        Pageable pageable = PageRequest.of(page, size, 
+            sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending());
+
+        Page<ProductVariant> variantPage = productVariantRepository.searchByNameAndStatus(name, ProductVariant.VariantStatus.APPROVED.name(), pageable);
 
         return variantPage.map(ProductVariantResponse::fromProductVariant);
     }

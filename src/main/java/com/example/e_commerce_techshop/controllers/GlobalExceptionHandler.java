@@ -1,5 +1,6 @@
 package com.example.e_commerce_techshop.controllers;
 
+import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
 import com.example.e_commerce_techshop.exceptions.JwtAuthenticationException;
 import com.example.e_commerce_techshop.responses.ApiResponse;
 import org.springframework.http.HttpStatus;
@@ -81,6 +82,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Object>> handleIllegalStateException(IllegalStateException ex) {
         // Xử lý các lỗi logic nghiệp vụ (store chưa duyệt, etc.)
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(DataNotFoundException.class)
+    public ResponseEntity<ApiResponse<Object>> handleDataNotFoundException(DataNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(ex.getMessage()));
     }
 

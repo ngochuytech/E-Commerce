@@ -109,4 +109,17 @@ public class ProductVariantController {
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
+    @GetMapping("/search")
+    @Operation(summary = "Search product variants by name", description = "Search for product variants by name with case-insensitive matching")
+    public ResponseEntity<?> searchProductVariants(
+            @Parameter(description = "Product name to search", example = "iPhone") @RequestParam("name") String name,
+            @Parameter(description = "Page number (0-based)", example = "0") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Number of items per page", example = "10") @RequestParam(defaultValue = "10") int size,
+            @Parameter(description = "Sort field", example = "createdAt") @RequestParam(defaultValue = "createdAt") String sortBy,
+            @Parameter(description = "Sort direction (asc, desc)", example = "desc") @RequestParam(defaultValue = "desc") String sortDir)
+            throws Exception {
+        Page<ProductVariantResponse> response = productVariantService.searchByName(name, page, size, sortBy, sortDir);
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
 }

@@ -1,6 +1,8 @@
 package com.example.e_commerce_techshop.repositories;
 
 import com.example.e_commerce_techshop.models.Review;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -20,6 +22,8 @@ public interface ReviewRepository extends MongoRepository<Review, String> {
     List<Review> findByProductId(String productId);
 
     List<Review> findByProductVariantId(String productVariantId);
+    
+    Page<Review> findByProductVariantId(String productVariantId, Pageable pageable);
 
     List<Review> findByUserId(String userId);
 

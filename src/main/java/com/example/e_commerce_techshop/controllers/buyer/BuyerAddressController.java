@@ -1,6 +1,8 @@
 package com.example.e_commerce_techshop.controllers.buyer;
 
 import com.example.e_commerce_techshop.dtos.buyer.address.AddressDTO;
+import com.example.e_commerce_techshop.dtos.buyer.address.CreateAddressDTO;
+import com.example.e_commerce_techshop.dtos.buyer.address.UpdateAddressDTO;
 import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.responses.ApiResponse;
 import com.example.e_commerce_techshop.responses.buyer.AddressResponse;
@@ -33,28 +35,25 @@ public class BuyerAddressController {
      * GET /api/v1/buyer/address
      */
     @GetMapping
-    @Operation(summary = "Get user address", description = "Retrieve the current user's delivery address information")
+    @Operation(summary = "Get user addresses", description = "Retrieve all delivery addresses of the current user")
     public ResponseEntity<?> getUserAddress(@AuthenticationPrincipal User currentUser) throws Exception {
-        AddressDTO address = addressService.getUserAddress(currentUser.getEmail());
+        var addresses = addressService.getUserAddress(currentUser.getEmail());
 
-        if (address == null) {
-            return ResponseEntity.ok(ApiResponse.ok(
-                    AddressResponse.message("Bạn chưa có địa chỉ nào")));
+        if (addresses == null || addresses.isEmpty()) {
+            return ResponseEntity.ok(ApiResponse.ok("Bạn chưa có địa chỉ nào"));
         }
 
-        return ResponseEntity.ok(ApiResponse.ok(
-                AddressResponse.single("Lấy địa chỉ thành công", address)));
-
+        return ResponseEntity.ok(ApiResponse.ok(addresses));
     }
 
     /**
-     * Tạo hoặc cập nhật địa chỉ
+     * Tạo địa chỉ mới
      * POST /api/v1/buyer/address
      */
     @PostMapping
-    @Operation(summary = "Create or update address", description = "Create a new address or update existing address for the current user. Each user can only have one address")
-    public ResponseEntity<?> createOrUpdateAddress(
-            @Parameter(description = "Address information including street, city, province, postal code, and contact details", required = true, content = @Content(schema = @Schema(implementation = AddressDTO.class))) @Valid @RequestBody AddressDTO addressDTO,
+    @Operation(summary = "Create new address", description = "Create a new delivery address for the current user")
+    public ResponseEntity<?> createAddress(
+            @Parameter(description = "Address information including street, city, province, postal code, and contact details", required = true, content = @Content(schema = @Schema(implementation = CreateAddressDTO.class))) @Valid @RequestBody CreateAddressDTO createAddressDTO,
             @AuthenticationPrincipal User currentUser,
             @Parameter(hidden = true) BindingResult result) throws Exception {
 
@@ -64,24 +63,46 @@ public class BuyerAddressController {
                             result.getFieldError().getDefaultMessage()));
         }
 
-        AddressDTO savedAddress = addressService.createOrUpdateAddress(currentUser.getEmail(), addressDTO);
+        addressService.createAddress(currentUser, createAddressDTO);
 
-        return ResponseEntity.ok(ApiResponse.ok(
-                AddressResponse.single("Lưu địa chỉ thành công", savedAddress)));
+        return ResponseEntity.ok(ApiResponse.ok("Tạo địa chỉ thành công"));
+    }
 
+    /**
+     * Cập nhật địa chỉ
+     * PUT /api/v1/buyer/address/{addressId}
+     */
+    @PutMapping("/{addressId}")
+    @Operation(summary = "Update address", description = "Update an existing address by ID (index)")
+    public ResponseEntity<?> updateAddress(
+            @Parameter(description = "Address ID (index in the list, starting from 0)", example = "0") @PathVariable String addressId,
+            @Parameter(description = "Updated address information", required = true, content = @Content(schema = @Schema(implementation = UpdateAddressDTO.class))) @Valid @RequestBody UpdateAddressDTO updateAddressDTO,
+            @AuthenticationPrincipal User currentUser,
+            @Parameter(hidden = true) BindingResult result) throws Exception {
+
+        if (result.hasErrors()) {
+            return ResponseEntity.badRequest().body(
+                    ApiResponse.error("Dữ liệu không hợp lệ: " +
+                            result.getFieldError().getDefaultMessage()));
+        }
+
+        addressService.updateAddress(currentUser, addressId, updateAddressDTO);
+
+        return ResponseEntity.ok(ApiResponse.ok("Cập nhật địa chỉ thành công"));
     }
 
     /**
      * Xóa địa chỉ
-     * DELETE /api/v1/buyer/address
+     * DELETE /api/v1/buyer/address/{addressId}
      */
-    @DeleteMapping
-    @Operation(summary = "Delete address", description = "Delete the current user's address. User will need to create a new address for future orders")
-    public ResponseEntity<?> deleteAddress(@AuthenticationPrincipal User currentUser) throws Exception {
-        addressService.deleteAddress(currentUser.getEmail());
+    @DeleteMapping("/{addressId}")
+    @Operation(summary = "Delete address", description = "Delete a specific address by ID (index). User can have multiple addresses and delete them individually")
+    public ResponseEntity<?> deleteAddress(
+            @Parameter(description = "Address ID (index in the list, starting from 0)", example = "0") @PathVariable String addressId,
+            @AuthenticationPrincipal User currentUser) throws Exception {
+        addressService.deleteAddress(currentUser, addressId);
 
         return ResponseEntity.ok(ApiResponse.ok("Xóa địa chỉ thành công"));
-
     }
 
     /**

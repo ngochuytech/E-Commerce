@@ -5,6 +5,7 @@ import com.example.e_commerce_techshop.dtos.UserLoginDTO;
 import com.example.e_commerce_techshop.dtos.user.UserRegisterDTO;
 import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
 import com.example.e_commerce_techshop.exceptions.ExpiredTokenException;
+import com.example.e_commerce_techshop.exceptions.JwtAuthenticationException;
 import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.repositories.UserRepository;
 import com.example.e_commerce_techshop.responses.user.UserResponse;
@@ -48,6 +49,9 @@ public class UserService implements IUserService{
     public String loginUser(UserLoginDTO userLoginDTO) throws Exception {
         User user = userRepository.findByEmail(userLoginDTO.getEmail())
                 .orElseThrow(() -> new Exception("Email hoặc mật khẩu không đúng!"));
+        if(!user.isEnabled()){
+            throw new JwtAuthenticationException("Tài khoản chưa được kích hoạt. Vui lòng kiểm tra email để xác nhận.");
+        }
         Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(
                 userLoginDTO.getEmail(),
                 userLoginDTO.getPassword(),

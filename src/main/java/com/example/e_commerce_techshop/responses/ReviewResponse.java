@@ -32,17 +32,24 @@ public class ReviewResponse {
     }
 
     public static ReviewResponse fromReview(Review review) {
-        UserResponse userResponse = UserResponse.builder()
-                .id(review.getUser().getId())
-                .name(review.getUser().getFullName())
-                .email(review.getUser().getEmail())
-                .avatar(review.getUser().getAvatarUrl())
-                .build();
+        if (review == null) {
+            return null;
+        }
+        
+        UserResponse userResponse = null;
+        if (review.getUser() != null) {
+            userResponse = UserResponse.builder()
+                    .id(review.getUser().getId())
+                    .name(review.getUser().getFullName())
+                    .email(review.getUser().getEmail())
+                    .avatar(review.getUser().getAvatarUrl())
+                    .build();
+        }
 
         return ReviewResponse.builder()
                 .id(review.getId())
-                .orderId(review.getOrder().getId())
-                .productVariantId(review.getProductVariant().getId())
+                .orderId(review.getOrder() != null ? review.getOrder().getId() : null)
+                .productVariantId(review.getProductVariant() != null ? review.getProductVariant().getId() : null)
                 .user(userResponse)
                 .rating(review.getRating())
                 .comment(review.getComment())

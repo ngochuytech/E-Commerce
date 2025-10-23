@@ -26,7 +26,10 @@ public interface IReviewService {
     // Get reviews by product (simple version for B2C)
     List<ReviewResponse> getReviewsByProduct(String productId);
     
-    // Get reviews by product variant
+    // Get reviews by product variant with pagination
+    Page<Review> getReviewsByProductVariant(String productVariantId, Pageable pageable);
+    
+    // Get reviews by product variant (simple version)
     List<ReviewResponse> getReviewsByProductVariant(String productVariantId);
     
     // Get reviews by user

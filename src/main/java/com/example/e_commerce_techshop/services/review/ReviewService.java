@@ -184,6 +184,11 @@ public class ReviewService implements IReviewService {
     }
     
     @Override
+    public Page<Review> getReviewsByProductVariant(String productVariantId, Pageable pageable) {
+        return reviewRepository.findByProductVariantId(productVariantId, pageable);
+    }
+    
+    @Override
     public List<ReviewResponse> getReviewsByProductVariant(String productVariantId) {
         List<Review> reviews = reviewRepository.findByProductVariantId(productVariantId);
         return reviews.stream()

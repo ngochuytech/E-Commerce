@@ -45,12 +45,15 @@ public class User extends BaseEntity implements UserDetails {
 
     private String resetPasswordToken;
 
-    private Address address;
+    private List<Address> address;
 
     private List<String> roles;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
+        if (roles == null || roles.isEmpty()) {
+            return List.of();
+        }
         return roles.stream()
                 .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
                 .toList();

@@ -23,6 +23,8 @@ public interface IProductVariantService {
 
     Page<ProductVariantResponse> getByStore(String storeId, int page, int size, String sortBy, String sortDir) throws Exception;
 
+    Page<ProductVariantResponse> searchByName(String name, int page, int size, String sortBy, String sortDir) throws Exception;
+
     // Shop (B2C) methods
     void createProductVariant(ProductVariantDTO productVariantDTO, List<MultipartFile> imageFiles) throws Exception;
 
