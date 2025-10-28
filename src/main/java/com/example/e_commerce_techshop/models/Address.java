@@ -8,6 +8,8 @@ import lombok.*;
 @NoArgsConstructor
 @Builder
 public class Address {
+    private String id;
+    
     private String province;
 
     private String ward;
@@ -15,4 +17,8 @@ public class Address {
     private String homeAddress;
 
     private String suggestedName;
+
+    private String phone;
+
+    private boolean isDefault;
 }

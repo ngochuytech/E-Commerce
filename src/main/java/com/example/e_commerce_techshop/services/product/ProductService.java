@@ -74,7 +74,7 @@ public class ProductService implements IProductService{
         Store store = storeRepository.findById(productDTO.getStoreId())
                 .orElseThrow(() -> new DataNotFoundException("Cửa hàng không tồn tại"));
 
-        if (!"APPROVED".equals(store.getStatus())) {
+        if (!Store.StoreStatus.APPROVED.equals(store.getStatus())) {
             throw new IllegalStateException("Cửa hàng chưa được duyệt");
         }
 
@@ -87,7 +87,7 @@ public class ProductService implements IProductService{
                 .category(category)
                 .brand(brand)
                 .store(store)
-                .status("PENDING")
+                .status(Product.ProductStatus.PENDING.name())
                 .build();
         productRepository.save(product);
     }

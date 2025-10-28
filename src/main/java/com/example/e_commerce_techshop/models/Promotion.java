@@ -24,9 +24,16 @@ public class Promotion extends BaseEntity {
     @DBRef
     private Store store;
 
-    private String type; // PERCENTAGE, FIXED_AMOUNT
+    // LOẠI GIẢM GIÁ: Phần trăm hay số tiền cố định
+    private String type;
 
-    private String discountType; // PRODUCT, ORDER, CATEGORY
+    // NGƯỜI TẠO: PLATFORM (hệ thống) hay STORE (cửa hàng)
+    private String issuer; 
+
+    // ÁP DỤNG CHO: Đơn hàng hay vận chuyển
+    private String applicableFor;
+
+    private String discountType;
 
     private Long discountValue;
 
@@ -38,10 +45,45 @@ public class Promotion extends BaseEntity {
 
     private Long maxDiscountValue;
 
+    private Integer usageLimit; // Số lần sử dụng tối đa (NULL = không giới hạn)
+    
+    private Integer usedCount; // Số lần đã sử dụng
+
     private String status;
+
+    // Áp dụng cho category cụ thể (optional)
+    private String categoryId; // NULL = áp dụng cho tất cả
 
     @Indexed(unique = true)
     private String code; // Mã giảm giá để người dùng nhập
+
+    public enum ApplicableFor {
+        ORDER,
+        SHIPPING
+    }
+
+    public enum Issuer {
+        STORE,
+        PLATFORM 
+    }
+
+
+    public enum PromotionType {
+        PERCENTAGE,
+        FIXED_AMOUNT
+    }
+
+    public enum DiscountType {
+        ORDER,
+        CATEGORY
+    }
+
+    public enum PromotionStatus {
+        ACTIVE,
+        INACTIVE,
+        EXPIRED,
+        DELETED
+    }   
 }
 
 

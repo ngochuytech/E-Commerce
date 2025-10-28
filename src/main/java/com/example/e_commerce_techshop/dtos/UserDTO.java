@@ -48,8 +48,5 @@ public class UserDTO {
     @JsonProperty("is_active")
     private Boolean isActive;
 
-    @JsonProperty("address_id")
-    private String addressId;
-
     private String role = "USER"; // Default role is USER
 }

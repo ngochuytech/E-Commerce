@@ -30,4 +30,7 @@ public interface ProductVariantRepository extends MongoRepository<ProductVariant
     Page<ProductVariant> findByStatus(String status, Pageable pageable);
 
     Page<ProductVariant> findByProductIdAndStatus(String productId, String status, Pageable pageable);
+
+    @Query("{'name': {$regex: ?0, $options: 'i'}, 'status': ?1}")
+    Page<ProductVariant> searchByNameAndStatus(String name, String status, Pageable pageable);
 }

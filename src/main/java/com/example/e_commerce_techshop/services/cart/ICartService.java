@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.example.e_commerce_techshop.dtos.buyer.cart.CartDTO;
 import com.example.e_commerce_techshop.models.Cart;
+import com.example.e_commerce_techshop.models.User;
 
 public interface ICartService {
     
@@ -31,6 +32,11 @@ public interface ICartService {
      * Xóa toàn bộ giỏ hàng
      */
     void clearCart(String userEmail) throws Exception;
+    
+    /**
+     * Xóa các sản phẩm đã chọn khỏi giỏ hàng
+     */
+    void removeSelectedItems(User user, List<String> productVariantIds, List<String> colorIds) throws Exception;
     
     /**
      * Kiểm tra giỏ hàng có trống không

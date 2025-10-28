@@ -55,10 +55,8 @@ public class B2CStoreController {
             @Parameter(description = "Store information including name, description, address, contact details", required = true, content = @Content(schema = @Schema(implementation = StoreDTO.class))) @Valid @RequestPart("storeDTO") StoreDTO storeDTO,
             @Parameter(description = "Optional store logo image file", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE)) @RequestPart(value = "logo", required = false) MultipartFile logo,
             @AuthenticationPrincipal User currentUser) throws Exception {
-        // Set owner_id từ JWT, bỏ qua owner_id trong JSON
-        storeDTO.setOwnerId(currentUser.getId());
 
-        storeService.createStore(storeDTO, logo);
+        storeService.createStore(storeDTO, currentUser, logo);
         return ResponseEntity.ok(ApiResponse.ok("Tạo cửa hàng thành công!"));
     }
 

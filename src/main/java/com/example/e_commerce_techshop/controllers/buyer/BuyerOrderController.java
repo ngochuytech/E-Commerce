@@ -1,6 +1,6 @@
 package com.example.e_commerce_techshop.controllers.buyer;
 
-import com.example.e_commerce_techshop.dtos.OrderDTO;
+import com.example.e_commerce_techshop.dtos.buyer.OrderDTO;
 import com.example.e_commerce_techshop.models.Order;
 import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.responses.ApiResponse;
@@ -15,6 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -32,18 +33,21 @@ public class BuyerOrderController {
     private final IOrderService orderService;
 
     @PostMapping("/checkout")
-    @Operation(summary = "Checkout and create order", description = "Process cart items and create orders grouped by store")
+    @Operation(summary = "Checkout and create order", description = "Process selected cart items and create orders grouped by store")
     public ResponseEntity<?> checkout(
-            @Parameter(description = "Order information including delivery address and payment method") @Valid @RequestBody OrderDTO orderDTO,
+            @Parameter(description = "Order information including selected items, delivery address and payment method") @Valid @RequestBody OrderDTO orderDTO,
             BindingResult result,
             @AuthenticationPrincipal User currentUser) throws Exception {
 
         if (result.hasErrors()) {
-            return ResponseEntity.badRequest().body(
-                    ApiResponse.error("Dữ liệu không hợp lệ"));
+            List<String> errorMessages = result.getFieldErrors()
+                    .stream()
+                    .map(FieldError::getDefaultMessage)
+                    .toList();
+            return ResponseEntity.badRequest().body(new ApiResponse<>(false, null, String.join(", ", errorMessages)));
         }
 
-        List<Order> orderResponses = orderService.checkout(currentUser.getEmail(), orderDTO);
+        List<Order> orderResponses = orderService.checkout(currentUser, orderDTO);
         List<OrderResponse> orderResponseList = orderResponses.stream()
                 .map(OrderResponse::fromOrder)
                 .toList();

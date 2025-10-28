@@ -2,7 +2,7 @@ spring:
   data:
     mongodb:
       uri: mongodb+srv://${DB_MONGODB_USERNAME}:${DB_MONGODB_PASSWORD}@cluster0.7wqi5cz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
-      database: ${DB_MONGODB_NAME:e-commerce}
+      database: ${DB_MONGODB_NAME}
       auto-index-creation: true
       max-connections-per-host: 100
       server-selection-timeout-ms: 30000
@@ -13,19 +13,23 @@ spring:
       max-file-size: 30MB
       max-request-size: 30MB
   mail:
-    host: smtp.gmail.com
+    host: smtp.sendgrid.net
     port: 587
-    username: ngochuymail25@gmail.com
-    password: pqzy sybn nnim quji
+    username: apikey
+    password: ${SENDGRID_API_KEY}
     properties:
       mail:
-        smtp:
+        smtp: 
           auth: true
           starttls:
             enable: true
-          ssl:
-            trust: "*"
-        debug: false
+            required: true
+          connectiontimeout: 10000
+          timeout: 10000
+          writetimeout: 10000
+      from: ${MAIL_FROM_ADDRESS:ngochuymail25@gmail.com}
+      from-name: ${MAIL_FROM_NAME:TechShop E-commerce}
+    default-encoding: UTF-8
   security:
     oauth2:
       client:

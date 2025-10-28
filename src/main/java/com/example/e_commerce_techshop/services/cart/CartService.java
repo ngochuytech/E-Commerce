@@ -257,6 +257,27 @@ public class CartService implements ICartService {
     }
     
     @Override
+    @Transactional
+    public void removeSelectedItems(User user, List<String> productVariantIds, List<String> colorIds) throws Exception {
+        Cart cart = cartRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy giỏ hàng"));
+        
+        // Xóa các items được chọn
+        for (int i = 0; i < productVariantIds.size(); i++) {
+            String productVariantId = productVariantIds.get(i);
+            String colorId = (colorIds != null && i < colorIds.size()) ? colorIds.get(i) : null;
+            
+            cart.getCartItems().removeIf(item -> 
+                item.getProductVariant().getId().equals(productVariantId) &&
+                ((colorId == null && item.getColorId() == null) || 
+                 (colorId != null && colorId.equals(item.getColorId())))
+            );
+        }
+        
+        cartRepository.save(cart);
+    }
+    
+    @Override
     public boolean isCartEmpty(String userEmail) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy người dùng với Email: " + userEmail));

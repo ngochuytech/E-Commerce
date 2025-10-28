@@ -2,8 +2,8 @@ package com.example.e_commerce_techshop.controllers;
 
 import com.example.e_commerce_techshop.components.JwtTokenProvider;
 import com.example.e_commerce_techshop.dtos.GoogleCodeRequest;
-import com.example.e_commerce_techshop.dtos.UserDTO;
 import com.example.e_commerce_techshop.dtos.UserLoginDTO;
+import com.example.e_commerce_techshop.dtos.user.UserRegisterDTO;
 import com.example.e_commerce_techshop.models.Token;
 import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.responses.ApiResponse;
@@ -23,12 +23,12 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
@@ -46,20 +46,12 @@ public class UserController {
 
     private final JwtTokenProvider jwtTokenProvider;
 
-    private String getCurrentUserEmail() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || authentication.getName() == null) {
-            throw new RuntimeException("Không tìm thấy thông tin người dùng");
-        }
-        return authentication.getName(); // Returns email
-    }
 
     @GetMapping("/current")
     @Operation(summary = "Get current user profile", description = "Retrieve profile information of the currently authenticated user")
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<?> getCurrentUser() throws Exception {
-        String email = getCurrentUserEmail();
-        UserResponse userResponse = userService.getCurrentUser(email);
+    public ResponseEntity<?> getCurrentUser(@AuthenticationPrincipal User user) throws Exception {
+        UserResponse userResponse = UserResponse.fromUser(user);
         return ResponseEntity.ok(ApiResponse.ok(userResponse));
     }
 
@@ -80,13 +72,20 @@ public class UserController {
         String userAgent = request.getHeader("User-Agent");
         User user = userService.getUserByToken(token);
         Token jwtToken = tokenService.addToken(user, token, isMobileDevice(userAgent));
+        
+        List<String> roles = user.getAuthorities() != null 
+            ? user.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .toList()
+            : List.of();
+        
         LoginResponse loginResponse = LoginResponse.builder()
                 .message("Đăng nhập thành công")
                 .token(jwtToken.getToken())
                 .refreshToken(jwtToken.getRefreshToken())
                 .username(user.getFullName())
                 .id(user.getId())
-                .roles(user.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList())
+                .roles(roles)
                 .build();
         return ResponseEntity.ok(ApiResponse.ok(loginResponse));
     }
@@ -95,7 +94,7 @@ public class UserController {
     @Operation(summary = "User registration", description = "Register a new user account, sends email verification")
     public ResponseEntity<?> register(
             HttpServletRequest request,
-            @Parameter(description = "User registration information") @RequestBody @Valid UserDTO userDTO,
+            @Parameter(description = "User registration information") @RequestBody @Valid UserRegisterDTO userDTO,
             BindingResult result) throws Exception {
         if (result.hasErrors()) {
             List<String> errorMessages = result.getFieldErrors()
@@ -109,6 +108,16 @@ public class UserController {
         // CẦN KIỂM TRA USER ĐÃ XÁC MINH EMAIL CHƯA !!
         userService.createUser(userDTO, getSiteURL(request));
         return ResponseEntity.ok(ApiResponse.ok("Đã đăng ký thành công! Cần xác minh email"));
+    }
+
+    @PutMapping("/avatar")
+    @Operation(summary = "Update user avatar", description = "Update the avatar image of the currently authenticated user")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<?> updateAvatar(
+            @Parameter(description = "New avatar image file", required = true) @RequestParam("avatarFile") MultipartFile avatarFile,
+            @AuthenticationPrincipal User currentUser) throws Exception {
+        userService.updateUserAvatar(currentUser, avatarFile);
+        return ResponseEntity.ok(ApiResponse.ok("Cập nhật ảnh đại diện thành công"));
     }
 
     @GetMapping("/verify")
@@ -147,13 +156,19 @@ public class UserController {
         String token = jwtTokenProvider.generateToken(user);
         Token jwtToken = tokenService.addToken(user, token, isMobileDevice(userAgent));
 
+        List<String> roles = user.getAuthorities() != null 
+            ? user.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .toList()
+            : List.of();
+
         LoginResponse loginResponse = LoginResponse.builder()
                 .message("Đăng nhập thành công!")
                 .token(jwtToken.getToken())
                 .tokenType(jwtToken.getTokenType())
                 .refreshToken(jwtToken.getRefreshToken())
                 .username(user.getFullName())
-                .roles(user.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList())
+                .roles(roles)
                 .id(user.getId())
                 .build();
 

@@ -20,9 +20,11 @@ public class Order extends BaseEntity {
 
     private BigDecimal totalPrice;
 
+    private BigDecimal shippingFee;
+
     private String paymentMethod;
 
-    private String status; // PENDING, CONFIRMED, SHIPPING, DELIVERED, CANCELLED
+    private String status;
     
     private String note;
 
@@ -35,12 +37,15 @@ public class Order extends BaseEntity {
     @DBRef
     private Store store;
 
+    private String phone; 
+
     @DBRef
     private Promotion promotion;
 
     private Address address;
+
+    public enum OrderStatus {
+        PENDING, CONFIRMED, SHIPPING, DELIVERED, CANCELLED
+    }
 }
 
-enum OrderStatus {
-    PENDING, CONFIRMED, SHIPPING, DELIVERED, CANCELLED
-}

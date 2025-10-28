@@ -3,6 +3,7 @@ package com.example.e_commerce_techshop.services.store;
 import com.example.e_commerce_techshop.dtos.b2c.store.StoreDTO;
 import com.example.e_commerce_techshop.dtos.b2c.store.UpdateStoreDTO;
 import com.example.e_commerce_techshop.models.Store;
+import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.responses.StoreResponse;
 
 import java.util.List;
@@ -12,8 +13,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface IStoreService {
+    Store getStoreByIdAndOwnerId(String storeId, String ownerId) throws Exception;
     // Shop (B2C)
-    StoreResponse createStore(StoreDTO storeDTO, MultipartFile logo) throws Exception;
+    StoreResponse createStore(StoreDTO storeDTO, User owner, MultipartFile logo) throws Exception;
     Store uploadBanner(String storeId, MultipartFile banner) throws Exception;
     StoreResponse updateStore(String storeId, UpdateStoreDTO storeDTO) throws Exception;
     void updateStoreLogo(String storeId, MultipartFile logo) throws Exception;

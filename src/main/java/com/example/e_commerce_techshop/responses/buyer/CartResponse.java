@@ -37,11 +37,13 @@ public class CartResponse {
                     .quantity(cartItem.getQuantity())
                     .price(cartItem.getProductVariant() != null ? BigDecimal.valueOf(cartItem.getProductVariant().getPrice()) : null)
                     .colorId(cartItem.getColorId())
-                    .colorName(cartItem.getProductVariant().getColors().stream()
-                        .filter(color -> color.getId().equals(cartItem.getColorId()))
-                        .findFirst()
-                        .<String>map(color -> color.getColorName())
-                        .orElse(null)
+                    .colorName(cartItem.getProductVariant() != null && cartItem.getProductVariant().getColors() != null 
+                        ? cartItem.getProductVariant().getColors().stream()
+                            .filter(color -> color.getId().equals(cartItem.getColorId()))
+                            .findFirst()
+                            .<String>map(color -> color.getColorName())
+                            .orElse(null)
+                        : null
                     )
                     .build()
             ).collect(java.util.stream.Collectors.toList());
