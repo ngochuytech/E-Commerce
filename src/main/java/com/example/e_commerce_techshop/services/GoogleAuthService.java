@@ -82,7 +82,7 @@ public class GoogleAuthService {
                         .googleId(googleId)
                         .email(email)
                         .fullName(name)
-                        .avatarUrl(picture)
+                        .avatar(picture)
                         .isActive(true)
                         .enable(true)
                         .roles(List.of(Role.USER)) // User
@@ -91,8 +91,8 @@ public class GoogleAuthService {
 
         // Nếu user đã tồn tại thì update info
         user.setGoogleId(googleId);
-        if (user.getAvatarUrl() == null)
-            user.setAvatarUrl(picture);
+        if (user.getAvatar() == null)
+            user.setAvatar(picture);
         return userRepository.save(user);
     }
 }

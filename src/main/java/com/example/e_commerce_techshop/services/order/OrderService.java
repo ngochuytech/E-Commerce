@@ -1,6 +1,6 @@
 package com.example.e_commerce_techshop.services.order;
 
-import com.example.e_commerce_techshop.dtos.OrderDTO;
+import com.example.e_commerce_techshop.dtos.buyer.OrderDTO;
 import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
 import com.example.e_commerce_techshop.models.*;
 import com.example.e_commerce_techshop.repositories.*;
@@ -19,7 +19,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -36,27 +35,43 @@ public class OrderService implements IOrderService {
     
     @Override
     @Transactional
-    public List<Order> checkout(String userEmail, OrderDTO orderDTO) throws Exception {
-        // 1. Convert email to User object
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy người dùng với Email: " + userEmail));
-
+    public List<Order> checkout(User user, OrderDTO orderDTO) throws Exception {
         // 2. Validate payment method
         if (!isValidPaymentMethod(orderDTO.getPaymentMethod())) {
             throw new IllegalArgumentException("Phương thức thanh toán không hợp lệ: " + orderDTO.getPaymentMethod());
         }
         
-        // 3. Lấy cart hiện tại
+        // 3. Validate danh sách sản phẩm được chọn
+        if (orderDTO.getSelectedItems() == null || orderDTO.getSelectedItems().isEmpty()) {
+            throw new IllegalArgumentException("Vui lòng chọn ít nhất một sản phẩm để thanh toán");
+        }
+        
+        // 4. Lấy cart hiện tại
         Cart cart = cartRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy giỏ hàng"));
 
-        // 4. Validate cart không rỗng
+        // 5. Validate cart không rỗng
         if (cart.getCartItems().isEmpty()) {
             throw new IllegalArgumentException("Giỏ hàng trống, không thể đặt hàng");
         }
         
-        // 5. Validate từng sản phẩm trong cart
-        for (var cartItem : cart.getCartItems()) {
+        // 6. Lọc ra các cart items được chọn
+        List<Cart.CartItemEmbedded> selectedCartItems = new ArrayList<>();
+        for (OrderDTO.SelectedCartItem selectedItem : orderDTO.getSelectedItems()) {
+            Cart.CartItemEmbedded cartItem = cart.getCartItems().stream()
+                    .filter(item -> item.getProductVariant().getId().equals(selectedItem.getProductVariantId()) &&
+                            ((selectedItem.getColorId() == null && item.getColorId() == null) ||
+                             (selectedItem.getColorId() != null && selectedItem.getColorId().equals(item.getColorId()))))
+                    .findFirst()
+                    .orElseThrow(() -> new DataNotFoundException("Không tìm thấy sản phẩm trong giỏ hàng: " + 
+                            selectedItem.getProductVariantId() + 
+                            (selectedItem.getColorId() != null ? " (màu: " + selectedItem.getColorId() + ")" : "")));
+            
+            selectedCartItems.add(cartItem);
+        }
+        
+        // 7. Validate từng sản phẩm được chọn
+        for (var cartItem : selectedCartItems) {
             ProductVariant productVariant = productVariantRepository.findById(cartItem.getProductVariant().getId())
                     .orElseThrow(() -> new DataNotFoundException("Không tìm thấy sản phẩm: " + cartItem.getProductVariant().getId()));
 
@@ -69,15 +84,15 @@ public class OrderService implements IOrderService {
             }
             
             // Kiểm tra trạng thái store
-            if (!"APPROVED".equals(productVariant.getProduct().getStore().getStatus())) {
+            if (!Store.StoreStatus.APPROVED.name().equals(productVariant.getProduct().getStore().getStatus())) {
                 throw new IllegalArgumentException("Cửa hàng tạm thời đóng cửa: " + productVariant.getProduct().getStore().getName());
             }
         }
         
-        // 6. Group cart items theo store
+        // 8. Group selected cart items theo store
         Map<String, List<Cart.CartItemEmbedded>> itemsByStore = new HashMap<>();
         
-        for (var cartItem : cart.getCartItems()) {
+        for (var cartItem : selectedCartItems) {
             ProductVariant productVariant = productVariantRepository.findById(cartItem.getProductVariant().getId())
                     .orElseThrow(() -> new DataNotFoundException("Không tìm thấy sản phẩm: " + cartItem.getProductVariant().getId()));
 
@@ -85,18 +100,105 @@ public class OrderService implements IOrderService {
             itemsByStore.computeIfAbsent(storeId, k -> new ArrayList<>()).add(cartItem);
         }
         
+        // 9. Validate và xử lý Platform Promotions (áp dụng cho TẤT CẢ orders)
+        Promotion platformOrderPromotion = null;
+        Promotion platformShippingPromotion = null;
+        
+        // 9.0. Tính số orders sẽ được tạo ra
+        int numberOfOrders = itemsByStore.size();
+        
+        if (orderDTO.getPlatformPromotions() != null) {
+            // 9.1. Platform ORDER Promotion
+            if (orderDTO.getPlatformPromotions().getOrderPromotionCode() != null && 
+                !orderDTO.getPlatformPromotions().getOrderPromotionCode().trim().isEmpty()) {
+                
+                String code = orderDTO.getPlatformPromotions().getOrderPromotionCode();
+                platformOrderPromotion = promotionRepository.findByCode(code)
+                        .orElseThrow(() -> new IllegalArgumentException("Mã giảm giá sàn không tồn tại: " + code));
+                
+                // Validate: Phải là PLATFORM và ORDER
+                if (!Promotion.Issuer.PLATFORM.name().equals(platformOrderPromotion.getIssuer())) {
+                    throw new IllegalArgumentException("Mã " + code + " không phải là mã của sàn");
+                }
+                if (!Promotion.ApplicableFor.ORDER.name().equals(platformOrderPromotion.getApplicableFor())) {
+                    throw new IllegalArgumentException("Mã " + code + " không phải là mã giảm giá đơn hàng");
+                }
+                
+                // Validate status, time
+                if (!Promotion.PromotionStatus.ACTIVE.name().equals(platformOrderPromotion.getStatus())) {
+                    throw new IllegalArgumentException("Mã giảm giá sàn không còn hiệu lực");
+                }
+                
+                LocalDateTime now = LocalDateTime.now();
+                if (now.isBefore(platformOrderPromotion.getStartDate()) || now.isAfter(platformOrderPromotion.getEndDate())) {
+                    throw new IllegalArgumentException("Mã giảm giá sàn đã hết hạn hoặc chưa bắt đầu");
+                }
+                
+                // Validate usage limit với số orders sẽ được tạo
+                if (platformOrderPromotion.getUsageLimit() != null) {
+                    int remainingUsage = platformOrderPromotion.getUsageLimit() - platformOrderPromotion.getUsedCount();
+                    if (remainingUsage < numberOfOrders) {
+                        throw new IllegalArgumentException(
+                            String.format("Mã giảm giá sàn chỉ còn %d lượt sử dụng nhưng bạn đang đặt hàng từ %d cửa hàng. " +
+                                         "Vui lòng giảm số lượng cửa hàng hoặc bỏ mã giảm giá này.", 
+                                         remainingUsage, numberOfOrders)
+                        );
+                    }
+                }
+            }
+            
+            // 9.2. Platform SHIPPING Promotion
+            if (orderDTO.getPlatformPromotions().getShippingPromotionCode() != null && 
+                !orderDTO.getPlatformPromotions().getShippingPromotionCode().trim().isEmpty()) {
+                
+                String code = orderDTO.getPlatformPromotions().getShippingPromotionCode();
+                platformShippingPromotion = promotionRepository.findByCode(code)
+                        .orElseThrow(() -> new IllegalArgumentException("Mã giảm phí ship sàn không tồn tại: " + code));
+                
+                // Validate: Phải là PLATFORM và SHIPPING
+                if (!Promotion.Issuer.PLATFORM.name().equals(platformShippingPromotion.getIssuer())) {
+                    throw new IllegalArgumentException("Mã " + code + " không phải là mã của sàn");
+                }
+                if (!Promotion.ApplicableFor.SHIPPING.name().equals(platformShippingPromotion.getApplicableFor())) {
+                    throw new IllegalArgumentException("Mã " + code + " không phải là mã giảm phí vận chuyển");
+                }
+                
+                // Validate status, time
+                if (!Promotion.PromotionStatus.ACTIVE.name().equals(platformShippingPromotion.getStatus())) {
+                    throw new IllegalArgumentException("Mã giảm phí ship sàn không còn hiệu lực");
+                }
+                
+                LocalDateTime now = LocalDateTime.now();
+                if (now.isBefore(platformShippingPromotion.getStartDate()) || now.isAfter(platformShippingPromotion.getEndDate())) {
+                    throw new IllegalArgumentException("Mã giảm phí ship sàn đã hết hạn hoặc chưa bắt đầu");
+                }
+                
+                // Validate usage limit với số orders sẽ được tạo
+                if (platformShippingPromotion.getUsageLimit() != null) {
+                    int remainingUsage = platformShippingPromotion.getUsageLimit() - platformShippingPromotion.getUsedCount();
+                    if (remainingUsage < numberOfOrders) {
+                        throw new IllegalArgumentException(
+                            String.format("Mã giảm phí ship sàn chỉ còn %d lượt sử dụng nhưng bạn đang đặt hàng từ %d cửa hàng. " +
+                                         "Vui lòng giảm số lượng cửa hàng hoặc bỏ mã giảm phí ship này.", 
+                                         remainingUsage, numberOfOrders)
+                        );
+                    }
+                }
+            }
+        }
+        
         List<Order> orders = new ArrayList<>();
         
-        // 7. Tạo 1 đơn hàng cho mỗi store
+        // 10. Tạo 1 đơn hàng cho mỗi store
         for (Map.Entry<String, List<Cart.CartItemEmbedded>> storeEntry : itemsByStore.entrySet()) {
             String storeId = storeEntry.getKey();
             List<Cart.CartItemEmbedded> storeItems = storeEntry.getValue();
             
-            // 7.1. Lấy thông tin store
+            // 10.1. Lấy thông tin store
             Store store = storeRepository.findById(storeId)
                     .orElseThrow(() -> new DataNotFoundException("Không tìm thấy cửa hàng với ID: " + storeId));
             
-            // 7.2. Tính tổng tiền cho store này
+            // 10.2. Tính tổng tiền cho store này
             BigDecimal storeTotal = BigDecimal.ZERO;
             for (Cart.CartItemEmbedded item : storeItems) {
                 ProductVariant productVariant = productVariantRepository.findById(item.getProductVariant().getId()).get();
@@ -106,40 +208,119 @@ public class OrderService implements IOrderService {
                 storeTotal = storeTotal.add(itemTotal);
             }
             
-            // 7.3. Xử lý promotion (nếu có)
-            Promotion promotion = null;
-            BigDecimal finalTotal = storeTotal;
+            // 10.3. Xử lý promotion - Thứ tự: Platform ORDER → Store ORDER → Platform SHIPPING → Store SHIPPING
+            List<Promotion> appliedPromotions = new ArrayList<>();
+            BigDecimal orderDiscount = BigDecimal.ZERO;
+            BigDecimal shippingDiscount = BigDecimal.ZERO;
             
-            if (orderDTO.getPromotionCode() != null && !orderDTO.getPromotionCode().trim().isEmpty()) {
-                Optional<Promotion> promotionOpt = promotionRepository.findByCode(orderDTO.getPromotionCode());
-                if (promotionOpt.isPresent()) {
-                    promotion = promotionOpt.get();
+            BigDecimal currentTotal = storeTotal; // Track giá trị sau mỗi lần discount
+            
+            // 10.3.1. Platform ORDER Promotion (áp dụng trước)
+            if (platformOrderPromotion != null) {
+                // Check minOrderValue
+                if (platformOrderPromotion.getMinOrderValue() == null || 
+                    currentTotal.compareTo(BigDecimal.valueOf(platformOrderPromotion.getMinOrderValue())) >= 0) {
                     
-                    // Validate promotion conditions
-                    if (isPromotionValid(promotion, storeTotal, store)) {
-                        finalTotal = applyPromotion(storeTotal, promotion);
-                    } else {
-                        throw new IllegalArgumentException("Mã giảm giá không hợp lệ hoặc không đủ điều kiện áp dụng");
-                    }
-                } else {
-                    throw new IllegalArgumentException("Mã giảm giá không tồn tại: " + orderDTO.getPromotionCode());
+                    BigDecimal platformDiscount = calculateDiscount(currentTotal, platformOrderPromotion);
+                    orderDiscount = orderDiscount.add(platformDiscount);
+                    currentTotal = currentTotal.subtract(platformDiscount);
+                    appliedPromotions.add(platformOrderPromotion);
                 }
             }
+            
+            // 10.3.2. Store ORDER Promotion (áp dụng sau platform)
+            if (orderDTO.getStorePromotions() != null && orderDTO.getStorePromotions().containsKey(storeId)) {
+                OrderDTO.StorePromotions storePromo = orderDTO.getStorePromotions().get(storeId);
+                
+                if (storePromo.getOrderPromotionCode() != null && !storePromo.getOrderPromotionCode().trim().isEmpty()) {
+                    Promotion storeOrderPromotion = promotionRepository.findByCode(storePromo.getOrderPromotionCode())
+                            .orElseThrow(() -> new IllegalArgumentException("Mã giảm giá đơn hàng không tồn tại: " + storePromo.getOrderPromotionCode()));
+                    
+                    // Validate: Phải là mã ORDER
+                    if (!Promotion.ApplicableFor.ORDER.name().equals(storeOrderPromotion.getApplicableFor())) {
+                        throw new IllegalArgumentException("Mã " + storePromo.getOrderPromotionCode() + " không phải là mã giảm giá đơn hàng");
+                    }
+                    
+                    // Validate điều kiện áp dụng (dùng currentTotal - giá sau platform discount)
+                    if (isPromotionValid(storeOrderPromotion, currentTotal, store)) {
+                        BigDecimal storeDiscount = calculateDiscount(currentTotal, storeOrderPromotion);
+                        orderDiscount = orderDiscount.add(storeDiscount);
+                        currentTotal = currentTotal.subtract(storeDiscount);
+                        appliedPromotions.add(storeOrderPromotion);
+                        
+                        // Tăng usedCount
+                        storeOrderPromotion.setUsedCount(storeOrderPromotion.getUsedCount() != null ? storeOrderPromotion.getUsedCount() + 1 : 1);
+                        promotionRepository.save(storeOrderPromotion);
+                    } else {
+                        throw new IllegalArgumentException("Mã giảm giá đơn hàng không hợp lệ hoặc không đủ điều kiện cho cửa hàng: " + store.getName());
+                    }
+                }
+            }
+            
+            // 10.3.3. Xử lý SHIPPING promotions
+            BigDecimal shippingFee = BigDecimal.valueOf(30000); // Default shipping fee
+            
+            // Platform SHIPPING Promotion (áp dụng trước)
+            if (platformShippingPromotion != null) {
+                // Check minOrderValue với storeTotal gốc (không phải currentTotal)
+                if (platformShippingPromotion.getMinOrderValue() == null || 
+                    storeTotal.compareTo(BigDecimal.valueOf(platformShippingPromotion.getMinOrderValue())) >= 0) {
+                    
+                    BigDecimal platformShippingDiscount = calculateDiscount(shippingFee, platformShippingPromotion);
+                    shippingDiscount = shippingDiscount.add(platformShippingDiscount);
+                    appliedPromotions.add(platformShippingPromotion);
+                }
+            }
+            
+            // Store SHIPPING Promotion (áp dụng sau platform)
+            if (orderDTO.getStorePromotions() != null && orderDTO.getStorePromotions().containsKey(storeId)) {
+                OrderDTO.StorePromotions storePromo = orderDTO.getStorePromotions().get(storeId);
+                
+                if (storePromo.getShippingPromotionCode() != null && !storePromo.getShippingPromotionCode().trim().isEmpty()) {
+                    Promotion storeShippingPromotion = promotionRepository.findByCode(storePromo.getShippingPromotionCode())
+                            .orElseThrow(() -> new IllegalArgumentException("Mã giảm phí vận chuyển không tồn tại: " + storePromo.getShippingPromotionCode()));
+                    
+                    // Validate: Phải là mã SHIPPING
+                    if (!Promotion.ApplicableFor.SHIPPING.name().equals(storeShippingPromotion.getApplicableFor())) {
+                        throw new IllegalArgumentException("Mã " + storePromo.getShippingPromotionCode() + " không phải là mã giảm phí vận chuyển");
+                    }
+                    
+                    // Validate điều kiện áp dụng (dùng storeTotal gốc để check min order)
+                    if (isPromotionValid(storeShippingPromotion, storeTotal, store)) {
+                        BigDecimal remainingShippingFee = shippingFee.subtract(shippingDiscount);
+                        BigDecimal storeShippingDiscount = calculateDiscount(remainingShippingFee, storeShippingPromotion);
+                        shippingDiscount = shippingDiscount.add(storeShippingDiscount);
+                        appliedPromotions.add(storeShippingPromotion);
+                        
+                        // Tăng usedCount
+                        storeShippingPromotion.setUsedCount(storeShippingPromotion.getUsedCount() != null ? storeShippingPromotion.getUsedCount() + 1 : 1);
+                        promotionRepository.save(storeShippingPromotion);
+                    } else {
+                        throw new IllegalArgumentException("Mã giảm phí vận chuyển không hợp lệ hoặc không đủ điều kiện cho cửa hàng: " + store.getName());
+                    }
+                }
+            }
+            
+            // 10.3.4. Tính tổng tiền cuối cùng
+            BigDecimal finalShippingFee = shippingFee.subtract(shippingDiscount).max(BigDecimal.ZERO);
+            BigDecimal finalTotal = storeTotal.subtract(orderDiscount).add(finalShippingFee).max(BigDecimal.ZERO);
     
-            // 7.4. Tạo Order cho store này
+            // 10.4. Tạo Order cho store này
             Order order = Order.builder()
                     .buyer(user)
                     .store(store)
-                    .promotion(promotion)
+                    .promotion(appliedPromotions.isEmpty() ? null : appliedPromotions.get(0)) // Lưu promotion đầu tiên (tạm thời)
                     .totalPrice(finalTotal)
+                    .shippingFee(finalShippingFee)
                     .address(Address.builder()
                             .province(orderDTO.getAddress().getProvince())
                             .ward(orderDTO.getAddress().getWard())
                             .homeAddress(orderDTO.getAddress().getHomeAddress())
+                            .phone(orderDTO.getAddress().getPhone())
                             .build()
                     )
                     .paymentMethod(orderDTO.getPaymentMethod())
-                    .status("PENDING")
+                    .status(Order.OrderStatus.PENDING.name())
                     .note(orderDTO.getNote())
                     .build();
             
@@ -195,14 +376,37 @@ public class OrderService implements IOrderService {
             
             orderItemRepository.saveAll(orderItems);
             order.setOrderItems(orderItems);
-            // 7.6.  Add order into order list
+            // 10.6. Add order into order list
             orders.add(order);
         }
         
-        // 8. Clear cart
-        cartService.clearCart(userEmail);
+        // 11. Tăng usedCount cho platform promotions (sau khi tạo tất cả orders thành công)
+        if (platformOrderPromotion != null) {
+            platformOrderPromotion.setUsedCount(
+                platformOrderPromotion.getUsedCount() != null ? 
+                platformOrderPromotion.getUsedCount() + orders.size() : orders.size()
+            );
+            promotionRepository.save(platformOrderPromotion);
+        }
         
-        // 9. Return danh sách orders
+        if (platformShippingPromotion != null) {
+            platformShippingPromotion.setUsedCount(
+                platformShippingPromotion.getUsedCount() != null ? 
+                platformShippingPromotion.getUsedCount() + orders.size() : orders.size()
+            );
+            promotionRepository.save(platformShippingPromotion);
+        }
+        
+        // 12. Xóa các sản phẩm đã thanh toán khỏi giỏ hàng
+        List<String> productVariantIds = new ArrayList<>();
+        List<String> colorIds = new ArrayList<>();
+        for (var item : selectedCartItems) {
+            productVariantIds.add(item.getProductVariant().getId());
+            colorIds.add(item.getColorId());
+        }
+        cartService.removeSelectedItems(user, productVariantIds, colorIds);
+        
+        // 13. Return danh sách orders
         return orders;
     }
     
@@ -330,30 +534,38 @@ public class OrderService implements IOrderService {
      * Validate promotion conditions
      */
     private boolean isPromotionValid(Promotion promotion, BigDecimal orderTotal, Store store) {
-        LocalDateTime now = LocalDateTime.now();
+        // 1. Kiểm tra status
+        if (!Promotion.PromotionStatus.ACTIVE.name().equals(promotion.getStatus())) {
+            return false;
+        }
         
-        // Kiểm tra thời gian hiệu lực
+        // 2. Kiểm tra thời gian
+        LocalDateTime now = LocalDateTime.now();
         if (now.isBefore(promotion.getStartDate()) || now.isAfter(promotion.getEndDate())) {
             return false;
         }
         
-        // Kiểm tra trạng thái
-        if (!"ACTIVE".equals(promotion.getStatus())) {
+        // 3. Kiểm tra giá trị đơn hàng tối thiểu
+        if (promotion.getMinOrderValue() != null && 
+            orderTotal.compareTo(BigDecimal.valueOf(promotion.getMinOrderValue())) < 0) {
             return false;
         }
         
-        // Kiểm tra giá trị đơn hàng tối thiểu
-        if (promotion.getMinOrderValue() != null) {
-            BigDecimal minOrderValue = BigDecimal.valueOf(promotion.getMinOrderValue());
-            if (orderTotal.compareTo(minOrderValue) < 0) {
+        // 4. Kiểm tra usage limit
+        if (promotion.getUsageLimit() != null && 
+            promotion.getUsedCount() >= promotion.getUsageLimit()) {
+            return false;
+        }
+        
+        // 5. Kiểm tra issuer (Shop hay Platform)
+        if (Promotion.Issuer.STORE.name().equals(promotion.getIssuer())) {
+            // Nếu là mã của Shop -> phải cùng store
+            if (promotion.getStore() == null || 
+                !promotion.getStore().getId().equals(store.getId())) {
                 return false;
             }
         }
-        
-        // Kiểm tra phạm vi áp dụng (store-specific hoặc platform-wide)
-        if (promotion.getStore() != null && !promotion.getStore().getId().equals(store.getId())) {
-            return false;
-        }
+        // Nếu là PLATFORM -> áp dụng cho tất cả shop
         
         return true;
     }
@@ -361,32 +573,25 @@ public class OrderService implements IOrderService {
     /**
      * Apply promotion discount to order total
      */
-    private BigDecimal applyPromotion(BigDecimal orderTotal, Promotion promotion) {
-        BigDecimal discount = BigDecimal.ZERO;
-        
-        if ("PERCENTAGE".equals(promotion.getType())) {
-            // Giảm giá theo phần trăm
-            BigDecimal discountValue = BigDecimal.valueOf(promotion.getDiscountValue());
-            discount = orderTotal.multiply(discountValue.divide(BigDecimal.valueOf(100)));
+    private BigDecimal calculateDiscount(BigDecimal amount, Promotion promotion) {
+        if (Promotion.PromotionType.PERCENTAGE.name().equals(promotion.getType())) {
+            // Giảm theo phần trăm
+            BigDecimal discount = amount
+                .multiply(BigDecimal.valueOf(promotion.getDiscountValue()))
+                .divide(BigDecimal.valueOf(100));
             
-            // Áp dụng giới hạn giảm giá tối đa (nếu có)
+            // Áp dụng maxDiscountValue nếu có
             if (promotion.getMaxDiscountValue() != null) {
                 BigDecimal maxDiscount = BigDecimal.valueOf(promotion.getMaxDiscountValue());
-                if (discount.compareTo(maxDiscount) > 0) {
-                    discount = maxDiscount;
-                }
+                discount = discount.min(maxDiscount);
             }
-        } else if ("FIXED_AMOUNT".equals(promotion.getType())) {
-            // Giảm giá cố định
-            discount = BigDecimal.valueOf(promotion.getDiscountValue());
             
-            // Không được giảm nhiều hơn giá trị đơn hàng
-            if (discount.compareTo(orderTotal) > 0) {
-                discount = orderTotal;
-            }
+            return discount;
+        } else {
+            // Giảm số tiền cố định
+            BigDecimal discount = BigDecimal.valueOf(promotion.getDiscountValue());
+            return discount.min(amount); // Không giảm quá số tiền gốc
         }
-        
-        return orderTotal.subtract(discount);
     }
     
     // ===== SELLER METHODS =====

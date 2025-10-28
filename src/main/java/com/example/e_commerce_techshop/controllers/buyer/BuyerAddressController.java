@@ -1,6 +1,5 @@
 package com.example.e_commerce_techshop.controllers.buyer;
 
-import com.example.e_commerce_techshop.dtos.buyer.address.AddressDTO;
 import com.example.e_commerce_techshop.dtos.buyer.address.CreateAddressDTO;
 import com.example.e_commerce_techshop.dtos.buyer.address.UpdateAddressDTO;
 import com.example.e_commerce_techshop.models.User;

@@ -37,7 +37,7 @@ public class ReviewService implements IReviewService {
         }
 
         // Kiểm tra order đã hoàn thành chưa
-        if (!"DELIVERED".equals(order.getStatus()) && !"COMPLETED".equals(order.getStatus())) {
+        if (!Order.OrderStatus.DELIVERED.name().equals(order.getStatus())) {
             throw new IllegalArgumentException("You can only review completed orders");
         }
 

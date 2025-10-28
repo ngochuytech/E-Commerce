@@ -66,7 +66,7 @@ public class UserResponse {
                 .phone(user.getPhone())
                 .fullName(user.getFullName())
                 .dateOfBirth(user.getDateOfBirth())
-                .avatar(user.getAvatarUrl())
+                .avatar(user.getAvatar())
                 .address(addressResponses)
                 .build();
     }

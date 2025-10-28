@@ -100,7 +100,7 @@ public class StoreService implements IStoreService {
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy cửa hàng"));
         
-        store.setStatus("APPROVED");
+        store.setStatus(Store.StoreStatus.APPROVED.name());
         Store updatedStore = storeRepository.save(store);
         return StoreResponse.fromStore(updatedStore);
     }
@@ -110,7 +110,7 @@ public class StoreService implements IStoreService {
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy cửa hàng"));
         
-        store.setStatus("REJECTED");
+        store.setStatus(Store.StoreStatus.REJECTED.name());
         Store updatedStore = storeRepository.save(store);
         return StoreResponse.fromStore(updatedStore);
     }
@@ -153,7 +153,6 @@ public class StoreService implements IStoreService {
 
         // Delete old banner if exists
         if (store.getBanner_url() != null && !store.getBanner_url().isEmpty()) {
-            System.out.println("Deleting old banner: " + store.getBanner_url());
             fileUploadService.deleteFile(store.getBanner_url());
         }
 
@@ -203,5 +202,11 @@ public class StoreService implements IStoreService {
         String bannerUrl = fileUploadService.uploadFile(banner, "stores");
         store.setBanner_url(bannerUrl);
         storeRepository.save(store);
+    }
+
+    @Override
+    public Store getStoreByIdAndOwnerId(String storeId, String ownerId) throws Exception {
+        return storeRepository.findByIdAndOwnerId(storeId, ownerId)
+                .orElse(null);
     }
 }

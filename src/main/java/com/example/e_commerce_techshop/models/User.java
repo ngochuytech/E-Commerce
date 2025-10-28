@@ -35,7 +35,7 @@ public class User extends BaseEntity implements UserDetails {
 
     private LocalDateTime dateOfBirth;
 
-    private String avatarUrl;
+    private String avatar;
 
     private Boolean isActive;
 

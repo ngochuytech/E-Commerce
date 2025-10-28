@@ -1,7 +1,5 @@
-package com.example.e_commerce_techshop.controllers;
+package com.example.e_commerce_techshop.exceptions;
 
-import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
-import com.example.e_commerce_techshop.exceptions.JwtAuthenticationException;
 import com.example.e_commerce_techshop.responses.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

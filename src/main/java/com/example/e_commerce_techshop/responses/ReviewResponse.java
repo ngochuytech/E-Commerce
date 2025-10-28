@@ -42,7 +42,7 @@ public class ReviewResponse {
                     .id(review.getUser().getId())
                     .name(review.getUser().getFullName())
                     .email(review.getUser().getEmail())
-                    .avatar(review.getUser().getAvatarUrl())
+                    .avatar(review.getUser().getAvatar())
                     .build();
         }
 

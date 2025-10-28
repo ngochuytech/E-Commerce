@@ -1,8 +1,9 @@
 package com.example.e_commerce_techshop.services.order;
 
 
-import com.example.e_commerce_techshop.dtos.OrderDTO;
+import com.example.e_commerce_techshop.dtos.buyer.OrderDTO;
 import com.example.e_commerce_techshop.models.Order;
+import com.example.e_commerce_techshop.models.User;
 
 import org.springframework.data.domain.Page;
 
@@ -13,11 +14,8 @@ public interface IOrderService {
     
     /**
      * Tạo đơn hàng từ cart
-     * @param userEmail Email của user
-     * @param orderDTO Thông tin checkout
-     * @return OrderDTO
      */
-    List<Order> checkout(String userEmail, OrderDTO orderDTO) throws Exception;
+    List<Order> checkout(User user, OrderDTO orderDTO) throws Exception;
     
     /**
      * Lấy lịch sử đơn hàng

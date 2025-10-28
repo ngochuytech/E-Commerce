@@ -4,6 +4,7 @@ import com.example.e_commerce_techshop.dtos.UserLoginDTO;
 import com.example.e_commerce_techshop.dtos.user.UserRegisterDTO;
 import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.responses.user.UserResponse;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface IUserService {
     String loginUser(UserLoginDTO userLoginDTO) throws Exception;
@@ -23,4 +24,6 @@ public interface IUserService {
     UserResponse getCurrentUser(String email) throws Exception;
 
     User findByEmail(String email) throws Exception;
+    
+    void updateUserAvatar(User user, MultipartFile avatarFile) throws Exception;
 }

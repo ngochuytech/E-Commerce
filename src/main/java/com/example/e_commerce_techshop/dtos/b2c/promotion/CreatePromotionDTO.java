@@ -1,19 +1,21 @@
 package com.example.e_commerce_techshop.dtos.b2c.promotion;
 
+import java.time.LocalDateTime;
+
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
-import lombok.*;
-
-import java.time.LocalDateTime;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class PromotionDTO {
-    
+public class CreatePromotionDTO {
     @NotBlank(message = "Tiêu đề khuyến mãi không được để trống")
     private String title;
     
@@ -30,8 +32,8 @@ public class PromotionDTO {
     private String applicableFor; // ORDER, SHIPPING
 
     @NotBlank(message = "Loại discount không được để trống")
-    @Pattern(regexp = "PRODUCT|ORDER|CATEGORY", message = "Loại discount phải là PRODUCT, ORDER hoặc CATEGORY")
-    private String discountType; // PRODUCT, ORDER, CATEGORY
+    @Pattern(regexp = "ORDER|CATEGORY", message = "Loại discount phải là ORDER hoặc CATEGORY")
+    private String discountType; // ORDER, CATEGORY
 
     @NotNull(message = "Giá trị giảm giá không được để trống")
     @Min(value = 1, message = "Giá trị giảm giá phải lớn hơn 0")
@@ -54,6 +56,3 @@ public class PromotionDTO {
 
     private String categoryId;
 }
-
-
-
