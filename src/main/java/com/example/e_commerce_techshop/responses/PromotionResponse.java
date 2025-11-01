@@ -11,6 +11,7 @@ import lombok.Setter;
 public class PromotionResponse {
     private String id;
     private String title;
+    private String code;
     private String storeId;
     private String storeName;
     private String type;
@@ -28,6 +29,7 @@ public class PromotionResponse {
         return PromotionResponse.builder()
                 .id(promotion.getId())
                 .title(promotion.getTitle())
+                .code(promotion.getCode())
                 .storeId(promotion.getStore() != null ? promotion.getStore().getId() : null)
                 .storeName(promotion.getStore() != null ? promotion.getStore().getName() : null)
                 .type(promotion.getType())
