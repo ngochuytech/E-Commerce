@@ -12,6 +12,9 @@ import lombok.RequiredArgsConstructor;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.BindingResult;
@@ -58,16 +61,20 @@ public class BuyerOrderController {
     @GetMapping("")
     @Operation(summary = "Get order history", description = "Retrieve paginated list of user's orders with optional status filtering")
     public ResponseEntity<?> getOrderHistory(
-            @Parameter(description = "Page number (1-based)", example = "1") @RequestParam(defaultValue = "1") int page,
-            @Parameter(description = "Number of items per page", example = "10") @RequestParam(defaultValue = "10") int size,
             @Parameter(description = "Filter by order status (PENDING, CONFIRMED, SHIPPING, DELIVERED, CANCELLED)", example = "PENDING") @RequestParam(required = false) String status,
+            @Parameter(description = "Page number (0-based)", example = "0") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Number of items per page", example = "10") @RequestParam(defaultValue = "10") int size,
             @Parameter(description = "Sort field", example = "createdAt") @RequestParam(defaultValue = "createdAt") String sortBy,
             @Parameter(description = "Sort direction (asc, desc)", example = "desc") @RequestParam(defaultValue = "desc") String sortDir,
             @AuthenticationPrincipal User currentUser) throws Exception {
-        Page<Order> orderPage = orderService.getOrderHistory(currentUser.getEmail(), page, size, status);
+        Sort sort = sortDir.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+        Page<Order> orderPage = orderService.getOrderHistory(currentUser, status, pageable);
         Page<OrderResponse> orderResponsePage = orderPage.map(OrderResponse::fromOrder);
 
-        return ResponseEntity.ok(orderResponsePage);
+        return ResponseEntity.ok(ApiResponse.ok(orderResponsePage));
     }
 
     @GetMapping("/{orderId}")
@@ -75,8 +82,9 @@ public class BuyerOrderController {
     public ResponseEntity<?> getOrderDetail(
             @Parameter(description = "Order ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String orderId,
             @AuthenticationPrincipal User currentUser) throws Exception {
-        Order order = orderService.getOrderDetail(currentUser.getEmail(), orderId);
-        return ResponseEntity.ok(ApiResponse.ok(OrderResponse.fromOrder(order)));
+        Order order = orderService.getOrderDetail(currentUser, orderId);
+        OrderResponse orderResponse = OrderResponse.fromOrder(order);
+        return ResponseEntity.ok(ApiResponse.ok(orderResponse));
     }
 
     @PutMapping("/{orderId}/cancel")

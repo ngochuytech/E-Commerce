@@ -21,6 +21,9 @@ public class PromotionDTO {
     @Pattern(regexp = "^[A-Z0-9]{4,20}$", message = "Mã khuyến mãi phải từ 4-20 ký tự, chỉ chứa chữ in hoa và số")
     private String code; // Mã để người dùng nhập (unique)
 
+    @NotBlank(message = "Mô tả khuyến mãi không được để trống")
+    private String description;
+
     @NotBlank(message = "Loại giảm giá không được để trống")
     @Pattern(regexp = "PERCENTAGE|FIXED_AMOUNT", message = "Loại giảm giá phải là PERCENTAGE hoặc FIXED_AMOUNT")
     private String type; // PERCENTAGE, FIXED_AMOUNT
@@ -52,8 +55,16 @@ public class PromotionDTO {
     @Min(value = 1, message = "Giới hạn sử dụng phải lớn hơn 0")
     private Integer usageLimit; // NULL = không giới hạn
 
+    @Min(value = 1, message = "Giới hạn sử dụng mỗi người phải lớn hơn 0")
+    private Integer usageLimitPerUser; // Số lần mỗi user có thể sử dụng (NULL = không giới hạn)
+
+    private Boolean isNewUserOnly; // Chỉ áp dụng cho user mới (chưa có đơn hàng nào)
+
     private String categoryId;
 }
+
+
+
 
 
 

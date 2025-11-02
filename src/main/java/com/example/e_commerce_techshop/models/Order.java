@@ -40,7 +40,7 @@ public class Order extends BaseEntity {
     private String phone; 
 
     @DBRef
-    private Promotion promotion;
+    private List<Promotion> promotions;
 
     private Address address;
 

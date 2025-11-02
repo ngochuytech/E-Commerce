@@ -73,4 +73,11 @@ public class ProductVariant extends BaseEntity {
         }
     } 
 
+    public static ColorOption getColor(ProductVariant productVariant, String colorId) {
+        return productVariant.getColors().stream()
+                .filter(colorOption -> colorOption.getId().equals(colorId))
+                .findFirst()
+                .orElse(null);
+    }
+
 }

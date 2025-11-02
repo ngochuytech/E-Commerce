@@ -5,6 +5,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.e_commerce_techshop.models.Promotion;
+import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.responses.ApiResponse;
 import com.example.e_commerce_techshop.responses.PromotionResponse;
 import com.example.e_commerce_techshop.services.promotion.IPromotionService;
@@ -29,8 +31,8 @@ public class PromotionController {
     
     private final IPromotionService promotionService;
 
-    @GetMapping("/active")
-    @Operation(summary = "Get all active promotions", description = "Retrieve all currently active promotions across all stores and platform")
+    @GetMapping("")
+    @Operation(summary = "Get all active promotions for customer", description = "Retrieve all currently active promotions across all stores and platform")
     public ResponseEntity<?> getActivePromotions(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -41,12 +43,13 @@ public class PromotionController {
                 : Sort.by(sortBy).ascending();
 
         Pageable pageable = PageRequest.of(page, size, sort);
-        Page<PromotionResponse> promotions = promotionService.getActivePromotions(pageable);
-        return ResponseEntity.ok(ApiResponse.ok(promotions));
+        Page<Promotion> promotions = promotionService.getAllPromotionForCustomer(pageable);
+        Page<PromotionResponse> promotionResponses = promotions.map(PromotionResponse::fromPromotion);
+        return ResponseEntity.ok(ApiResponse.ok(promotionResponses));
     }
 
-    @GetMapping("/active/store/{storeId}")
-    @Operation(summary = "Get active promotions by store", description = "Retrieve all currently active promotions for a specific store")
+    @GetMapping("/store/{storeId}/active")
+    @Operation(summary = "Get active promotions by store for customer", description = "Retrieve all currently active promotions for a specific store")
     public ResponseEntity<?> getActivePromotionsByStore(
             @Parameter(description = "ID of the store", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
             @RequestParam(defaultValue = "0") int page,
@@ -58,12 +61,13 @@ public class PromotionController {
                 : Sort.by(sortBy).ascending();
 
         Pageable pageable = PageRequest.of(page, size, sort);
-        Page<PromotionResponse> promotions = promotionService.getActivePromotionsByStore(storeId, pageable);
-        return ResponseEntity.ok(ApiResponse.ok(promotions));
+        Page<Promotion> promotions = promotionService.getStorePromotionsForCustomer(storeId, pageable);
+        Page<PromotionResponse> promotionResponses = promotions.map(PromotionResponse::fromPromotion);
+        return ResponseEntity.ok(ApiResponse.ok(promotionResponses));
     }
 
     @GetMapping("/platform")
-    @Operation(summary = "Get all platform promotions", description = "Retrieve all active platform-wide promotions")
+    @Operation(summary = "Get all platform promotions with status ACTIVE", description = "Retrieve all active platform-wide promotions")
     public ResponseEntity<?> getPlatformPromotions(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -74,7 +78,7 @@ public class PromotionController {
                 : Sort.by(sortBy).ascending();
 
         Pageable pageable = PageRequest.of(page, size, sort);
-        Page<Promotion> promotions = promotionService.getPlatformPromotions(pageable);
+        Page<Promotion> promotions = promotionService.getPlatformPromotionsForCustomer(pageable);
         Page<PromotionResponse> promotionResponses = promotions.map(PromotionResponse::fromPromotion);
         return ResponseEntity.ok(ApiResponse.ok(promotionResponses));
     }
@@ -87,21 +91,12 @@ public class PromotionController {
         return ResponseEntity.ok(ApiResponse.ok(PromotionResponse.fromPromotion(promotion)));
     }
 
-    @GetMapping("/store/{storeId}")
-    @Operation(summary = "Get promotions by store", description = "Retrieve all promotions for a specific store (both active and inactive)")
-    public ResponseEntity<?> getPromotionsByStore(
-            @Parameter(description = "ID of the store", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDir) {
-        Sort sort = sortDir.equalsIgnoreCase("desc")
-                ? Sort.by(sortBy).descending()
-                : Sort.by(sortBy).ascending();
-
-        Pageable pageable = PageRequest.of(page, size, sort);
-        Page<PromotionResponse> promotions = promotionService.getPromotionsByStore(storeId, pageable);
-        return ResponseEntity.ok(ApiResponse.ok(promotions));
+    @GetMapping("/code/{promotionCode}")
+    @Operation(summary = "Get promotion by code", description = "Retrieve detailed information of a specific promotion by its code")
+    public ResponseEntity<?> getPromotionByCode(
+            @Parameter(description = "Code of the promotion to retrieve", required = true, example = "BLACKFRIDAY") @PathVariable String promotionCode) throws Exception {
+        Promotion promotion = promotionService.getPromotionByCode(promotionCode);
+        return ResponseEntity.ok(ApiResponse.ok(PromotionResponse.fromPromotion(promotion)));
     }
 
     @GetMapping("/type/{type}")
@@ -125,9 +120,10 @@ public class PromotionController {
     @Operation(summary = "Validate promotion", description = "Check if a promotion can be applied to an order with specified value")
     public ResponseEntity<?> validatePromotion(
             @Parameter(description = "ID of the promotion to validate", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String promotionId,
-            @Parameter(description = "Order value to validate against promotion conditions", required = true, example = "500000") @RequestParam Long orderValue) throws Exception {
-        PromotionResponse promotionResponse = promotionService.validatePromotion(promotionId, orderValue);
-        return ResponseEntity.ok(ApiResponse.ok(promotionResponse));
+            @Parameter(description = "Order value to validate against promotion conditions", required = true, example = "500000") @RequestParam Long orderValue,
+            @AuthenticationPrincipal User currentUser) throws Exception {
+        promotionService.validatePromotionForUser(promotionId, orderValue, currentUser);
+        return ResponseEntity.ok(ApiResponse.ok("Khuyến mãi hợp lệ và có thể áp dụng cho đơn hàng."));
     }
 
     @GetMapping("/calculate-discount/{promotionId}")

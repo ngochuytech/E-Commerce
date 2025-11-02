@@ -1,5 +1,25 @@
 package com.example.e_commerce_techshop.controllers.b2c;
 
+import java.util.List;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.example.e_commerce_techshop.dtos.b2c.promotion.CreatePromotionDTO;
 import com.example.e_commerce_techshop.dtos.b2c.promotion.PromotionDTO;
 import com.example.e_commerce_techshop.models.Promotion;
@@ -9,13 +29,6 @@ import com.example.e_commerce_techshop.responses.ApiResponse;
 import com.example.e_commerce_techshop.responses.PromotionResponse;
 import com.example.e_commerce_techshop.services.promotion.IPromotionService;
 import com.example.e_commerce_techshop.services.store.IStoreService;
-import lombok.RequiredArgsConstructor;
-
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.validation.BindingResult;
-import org.springframework.validation.FieldError;
-import org.springframework.web.bind.annotation.*;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -24,8 +37,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-
-import java.util.List;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("${api.prefix}/b2c/promotions")
@@ -45,6 +57,91 @@ public class B2CPromotionController {
         }
     }
 
+    @GetMapping("/store/{storeId}")
+    @Operation(summary = "Get promotions by store", description = "Retrieve all promotions for a specific store (both active and inactive)")
+    public ResponseEntity<?> getPromotionsByStore(
+            @Parameter(description = "ID of the store", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
+        Sort sort = sortDir.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+        Page<PromotionResponse> promotions = promotionService.getPromotionsByStore(storeId, pageable);
+        return ResponseEntity.ok(ApiResponse.ok(promotions));
+    }
+
+    @GetMapping("/store/{storeId}/active")
+    @Operation(summary = "Get active promotions by store", description = "Retrieve all active promotions for a specific store")
+    public ResponseEntity<?> getActivePromotionsByStore(
+            @Parameter(description = "ID of the store", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
+        Sort sort = sortDir.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+        Page<PromotionResponse> promotions = promotionService.getPromotionsByStoreAndStatus(storeId, Promotion.PromotionStatus.ACTIVE.name(), pageable);
+        return ResponseEntity.ok(ApiResponse.ok(promotions));
+    }
+
+    @GetMapping("/store/{storeId}/inactive")
+    @Operation(summary = "Get inactive promotions by store", description = "Retrieve all inactive promotions for a specific store")
+    public ResponseEntity<?> getInactivePromotionsByStore(
+            @Parameter(description = "ID of the store", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
+        Sort sort = sortDir.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+        Page<PromotionResponse> promotions = promotionService.getPromotionsByStoreAndStatus(storeId, Promotion.PromotionStatus.INACTIVE.name(), pageable);
+        return ResponseEntity.ok(ApiResponse.ok(promotions));
+    }
+
+    @GetMapping("/store/{storeId}/expired")
+    @Operation(summary = "Get expired promotions by store", description = "Retrieve all expired promotions for a specific store")
+    public ResponseEntity<?> getExpiredPromotionsByStore(
+            @Parameter(description = "ID of the store", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
+        Sort sort = sortDir.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+        Page<PromotionResponse> promotions = promotionService.getExpiredPromotionsByStore(storeId, pageable);
+        return ResponseEntity.ok(ApiResponse.ok(promotions));
+    }
+
+    @GetMapping("/store/{storeId}/deleted")
+    @Operation(summary = "Get deleted promotions by store", description = "Retrieve all deleted promotions for a specific store")
+    public ResponseEntity<?> getDeletedPromotionsByStore(
+            @Parameter(description = "ID of the store", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
+        Sort sort = sortDir.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+        Page<PromotionResponse> promotions = promotionService.getPromotionsByStoreAndStatus(storeId, Promotion.PromotionStatus.DELETED.name(), pageable);
+        return ResponseEntity.ok(ApiResponse.ok(promotions));
+    }
+
     // Promotion Management APIs - Store specific (Auto-assign issuer=STORE)
     @PostMapping("/store/{storeId}")
     @Operation(summary = "Create store promotion", description = "Create promotion for a specific store. Issuer and storeId will be auto-assigned. Only store owner can use this.")
@@ -62,19 +159,9 @@ public class B2CPromotionController {
         }
 
         validateUserStore(currentUser.getId(), storeId);
-        
+
         promotionService.createStorePromotion(createPromotionDTO, storeId);
         return ResponseEntity.ok(ApiResponse.ok("Tạo khuyến mãi thành công"));
-    }
-
-    @PostMapping("/{promotionId}/calculate-discount")
-    @Operation(summary = "Calculate discount amount", description = "Calculate the exact discount amount that will be applied for a specific order value")
-    public ResponseEntity<?> calculateDiscount(
-            @Parameter(description = "ID of the promotion", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String promotionId,
-            @Parameter(description = "Order value to calculate discount for", required = true, example = "500000") @RequestParam Long orderValue)
-            throws Exception {
-        Long discount = promotionService.calculateDiscount(promotionId, orderValue);
-        return ResponseEntity.ok(ApiResponse.ok(discount));
     }
 
     @PutMapping("/{promotionId}")
@@ -115,15 +202,6 @@ public class B2CPromotionController {
             throws Exception {
         promotionService.deactivateStorePromotion(promotionId, currentUser.getId());
         return ResponseEntity.ok(ApiResponse.ok("Vô hiệu hóa khuyến mãi thành công!"));
-    }
-
-    @GetMapping("/{promotionId}")
-    @Operation(summary = "Get promotion by ID", description = "Retrieve detailed information of a specific promotion")
-    public ResponseEntity<?> getPromotionById(
-            @Parameter(description = "ID of the promotion to retrieve", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String promotionId)
-            throws Exception {
-        Promotion promotionResponse = promotionService.getPromotionById(promotionId);
-        return ResponseEntity.ok(ApiResponse.ok(PromotionResponse.fromPromotion(promotionResponse)));
     }
 
     @DeleteMapping("/{promotionId}")

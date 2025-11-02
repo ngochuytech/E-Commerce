@@ -100,23 +100,6 @@ public class AdminPromotionController {
         return ResponseEntity.ok(ApiResponse.ok(PromotionResponse.fromPromotion(promotion)));
     }
 
-    @GetMapping("/store/{storeId}")
-    @Operation(summary = "Get promotions by store (Admin)", description = "Retrieve all promotions for a specific store - Admin oversight")
-    public ResponseEntity<?> getPromotionsByStore(
-            @Parameter(description = "ID of the store", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDir) {
-        Sort sort = sortDir.equalsIgnoreCase("desc")
-                ? Sort.by(sortBy).descending()
-                : Sort.by(sortBy).ascending();
-
-        Pageable pageable = PageRequest.of(page, size, sort);
-        Page<PromotionResponse> promotions = promotionService.getPromotionsByStore(storeId, pageable);
-        return ResponseEntity.ok(ApiResponse.ok(promotions));
-    }
-
     // Promotion Management
     @DeleteMapping("/{promotionId}")
     @Operation(summary = "Delete promotion (Admin)", description = "Permanently delete any promotion - platform or store")

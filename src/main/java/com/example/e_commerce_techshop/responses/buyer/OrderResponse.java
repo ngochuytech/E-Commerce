@@ -18,6 +18,8 @@ public class OrderResponse {
 
     private BigDecimal totalPrice;
 
+    private BigDecimal shippingFee;
+
     private String paymentMethod;
 
     private String status; // PENDING, CONFIRMED, SHIPPING, DELIVERED, CANCELLED
@@ -39,7 +41,7 @@ public class OrderResponse {
     @AllArgsConstructor
     @NoArgsConstructor
     @Builder
-    static class UserResponse {
+    public static class UserResponse {
         private String id;
         private String username;
         private String email;
@@ -51,7 +53,7 @@ public class OrderResponse {
     @AllArgsConstructor
     @NoArgsConstructor
     @Builder
-    static class StoreResponse {
+    public static class StoreResponse {
         private String id;
         private String name;
         private String logo;
@@ -62,7 +64,7 @@ public class OrderResponse {
     @AllArgsConstructor
     @NoArgsConstructor
     @Builder
-    static class AddressResponse {
+    public static class AddressResponse {
         private String province;
         private String district;
         private String ward;
@@ -110,6 +112,7 @@ public class OrderResponse {
         return OrderResponse.builder()
                 .id(order.getId())
                 .totalPrice(order.getTotalPrice())
+                .shippingFee(order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO)
                 .paymentMethod(order.getPaymentMethod())
                 .status(order.getStatus())
                 .orderItems(orderItems)
@@ -120,25 +123,25 @@ public class OrderResponse {
                 .updatedAt(order.getUpdatedAt())
                 .build();
     }
-}
 
-@Getter
-@Setter
-@AllArgsConstructor
-@NoArgsConstructor
-@Builder
-class OrderItemResponse {
-    private String id;
+    @Getter
+    @Setter
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class OrderItemResponse {
+        private String id;
 
-    private String productVariantId;
+        private String productVariantId;
 
-    private String productName;
+        private String productName;
 
-    private String productImage;
+        private String productImage;
 
-    private Integer quantity;
+        private Integer quantity;
 
-    private BigDecimal price;
-    
-    private String colorId;
+        private BigDecimal price;
+        
+        private String colorId;
+    }
 }
