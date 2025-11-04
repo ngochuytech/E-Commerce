@@ -440,10 +440,7 @@ public class OrderService implements IOrderService {
 
     @Override
     @Transactional
-    public void cancelOrder(String userEmail, String orderId) throws Exception {
-        // 1. Convert email to User object
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy người dùng với Email: " + userEmail));
+    public void cancelOrder(User user, String orderId) throws Exception {
         String buyerId = user.getId();
 
         // 2. Tìm order
@@ -455,13 +452,13 @@ public class OrderService implements IOrderService {
             throw new IllegalArgumentException("Chỉ có thể hủy đơn hàng ở trạng thái PENDING");
         }
 
-        // 4. Cập nhật status
         order.setStatus("CANCELLED");
-        orderRepository.save(order);
 
-        // 5. Hoàn trả stock
-        for (OrderItem item : order.getOrderItems()) {
-            ProductVariant productVariant = productVariantRepository.findById(item.getProductVariant().getId()).get();
+        // 4. Hoàn trả stock
+        List<OrderItem> orderItem = orderItemRepository.findByOrderId(order.getId());
+        for (OrderItem item : orderItem) {
+            ProductVariant productVariant = productVariantRepository.findById(item.getProductVariant().getId())
+                    .orElseThrow(() -> new DataNotFoundException("Không tìm thấy sản phẩm"));
 
             // Hoàn trả stock đúng cách (tổng stock hoặc stock theo màu)
             if (item.getColorId() != null && productVariant.getColors() != null
@@ -487,6 +484,8 @@ public class OrderService implements IOrderService {
 
             productVariantRepository.save(productVariant);
         }
+        // 5. Cập nhật trạng thái đơn hàng
+        orderRepository.save(order);
     }
 
     @Override

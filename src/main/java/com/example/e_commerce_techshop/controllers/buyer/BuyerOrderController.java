@@ -93,7 +93,7 @@ public class BuyerOrderController {
             @Parameter(description = "Order ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String orderId,
             @Parameter(description = "Cancellation reason (optional)") @RequestBody(required = false) String reason,
             @AuthenticationPrincipal User currentUser) throws Exception {
-        orderService.cancelOrder(currentUser.getEmail(), orderId);
+        orderService.cancelOrder(currentUser, orderId);
         return ResponseEntity.ok(ApiResponse.ok("Đơn hàng đã được hủy"));
     }
 }

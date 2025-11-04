@@ -31,12 +31,7 @@ public interface IOrderService {
      */
     Order getOrderDetail(User user, String orderId) throws Exception;
     
-    /**
-     * Hủy đơn hàng
-     * @param userEmail Email của user
-     * @param orderId ID đơn hàng
-     */
-    void cancelOrder(String userEmail, String orderId) throws Exception;
+    void cancelOrder(User user, String orderId) throws Exception;
     
     /**
      * Đếm số đơn hàng theo trạng thái
