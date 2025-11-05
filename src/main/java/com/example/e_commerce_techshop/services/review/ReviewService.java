@@ -4,12 +4,14 @@ import com.example.e_commerce_techshop.dtos.ReviewDTO;
 import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
 import com.example.e_commerce_techshop.models.*;
 import com.example.e_commerce_techshop.repositories.*;
+import com.example.e_commerce_techshop.repositories.user.UserRepository;
 import com.example.e_commerce_techshop.responses.ReviewResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
 import java.util.List;
@@ -27,6 +29,7 @@ public class ReviewService implements IReviewService {
     private final UserRepository userRepository;
 
     @Override
+    @Transactional
     public void createReview(ReviewDTO reviewDTO, User currentUser) {
         // Kiểm tra order tồn tại và thuộc về user
         Order order = orderRepository.findById(reviewDTO.getOrderId())
@@ -63,7 +66,9 @@ public class ReviewService implements IReviewService {
                 .productVariant(productVariant)
                 .user(currentUser)
                 .build();
-
+        order.setRated(true);
+        
+        orderRepository.save(order);
         reviewRepository.save(review);
     }
 

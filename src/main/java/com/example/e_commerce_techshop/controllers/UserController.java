@@ -148,11 +148,21 @@ public class UserController {
     }
 
     @PostMapping("/change-password")
+    @Operation(summary = "Change user password", description = "Change the password of the currently authenticated user")
     public ResponseEntity<?> changePassword(
             @AuthenticationPrincipal User currentUser,
             @RequestBody @Valid ChangePasswordDTO changePasswordDTO) throws Exception {
         userService.changePassword(currentUser, changePasswordDTO.getCurrentPassword(), changePasswordDTO.getNewPassword());
         return ResponseEntity.ok(ApiResponse.ok("Đổi mật khẩu thành công"));
+    }
+
+    @PostMapping("/send-verification-email")
+    @Operation(summary = "Send verification email", description = "Send a verification email to the user")
+    public ResponseEntity<?> sendVerificationEmail(
+            HttpServletRequest request,
+            @RequestParam("email") String email) throws Exception {
+        userService.sendVerificationEmailAgain(email, getSiteURL(request));
+        return ResponseEntity.ok(ApiResponse.ok("Đã gửi email xác minh"));
     }
 
     @GetMapping("/auth/social-login")

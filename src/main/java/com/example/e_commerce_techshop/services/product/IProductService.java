@@ -1,6 +1,7 @@
 package com.example.e_commerce_techshop.services.product;
 
 import com.example.e_commerce_techshop.dtos.ProductDTO;
+import com.example.e_commerce_techshop.models.Product;
 import com.example.e_commerce_techshop.responses.ProductResponse;
 
 import org.springframework.data.domain.Page;
@@ -20,6 +21,9 @@ public interface IProductService {
     void updateProduct(String productId, ProductDTO productDTO);
 
     void updateStatus(String productId, String status);
+
+    // B2C methods
+    Page<Product> getAllProductsB2C(String storeId,String status, Pageable pageable) throws Exception;
 
     // Admin methods
     Page<ProductResponse> getPendingProducts(Pageable pageable);

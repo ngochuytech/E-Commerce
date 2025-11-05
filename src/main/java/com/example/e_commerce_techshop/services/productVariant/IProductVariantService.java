@@ -2,6 +2,7 @@ package com.example.e_commerce_techshop.services.productVariant;
 
 import com.example.e_commerce_techshop.dtos.b2c.ProductVariant.ColorOption;
 import com.example.e_commerce_techshop.dtos.b2c.ProductVariant.ProductVariantDTO;
+import com.example.e_commerce_techshop.models.ProductVariant;
 import com.example.e_commerce_techshop.responses.ProductVariantResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -43,6 +44,10 @@ public interface IProductVariantService {
     void updatePriceAndStock(String productVariantId, Long newPrice, int newStock) throws Exception;
 
     void disableProduct(String productVariantId) throws Exception;
+
+    // B2C methods
+
+    Page<ProductVariant> getAllProductVariantsB2C(String storeId, String status, Pageable pageable) throws Exception;
 
     // Admin methods
     Page<ProductVariantResponse> getVariantsByStatus(String status, Pageable pageable);

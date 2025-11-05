@@ -2,23 +2,31 @@ package com.example.e_commerce_techshop.controllers.b2c;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.e_commerce_techshop.dtos.b2c.ProductVariant.ColorOption;
 import com.example.e_commerce_techshop.dtos.b2c.ProductVariant.ProductVariantDTO;
+import com.example.e_commerce_techshop.models.ProductVariant;
 import com.example.e_commerce_techshop.responses.ApiResponse;
+import com.example.e_commerce_techshop.responses.ProductVariantResponse;
 import com.example.e_commerce_techshop.services.productVariant.IProductVariantService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -37,6 +45,26 @@ import lombok.RequiredArgsConstructor;
 @SecurityRequirement(name = "bearerAuth")
 public class B2CProductVariantController {
     private final IProductVariantService productVariantService;
+
+    @GetMapping("/{storeId}")
+    @Operation(summary = "Get all product variants", description = "Retrieve a list of all product variants for a specific store")
+    public ResponseEntity<?> getAllProductVariant(
+            @PathVariable String storeId,
+            @Parameter(description = "Filter by status") @RequestParam(required = false) String status,
+            @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size,
+            @Parameter(description = "Sort by field") @RequestParam(defaultValue = "createdAt") String sortBy,
+            @Parameter(description = "Sort direction: asc or desc") @RequestParam(defaultValue = "desc") String sortDir)
+            throws Exception {
+        Sort sort = sortDir.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+        Page<ProductVariant> productVariants = productVariantService.getAllProductVariantsB2C(storeId, status, pageable);
+        Page<ProductVariantResponse> productVariantResponses = productVariants.map(ProductVariantResponse::fromProductVariant);
+        return ResponseEntity.ok(ApiResponse.ok(productVariantResponses));
+    }
 
     @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Create product variant", description = "Create a new product variant with specifications like size, color, price, and multiple product images")

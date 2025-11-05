@@ -37,8 +37,6 @@ public class User extends BaseEntity implements UserDetails {
 
     private String avatar;
 
-    private Boolean isActive;
-
     private Boolean enable;
 
     private String verificationCode;
@@ -48,6 +46,17 @@ public class User extends BaseEntity implements UserDetails {
     private List<Address> address;
 
     private List<String> roles;
+
+    // Ban
+    private Boolean isActive;
+
+    private String banReason;
+
+    private LocalDateTime bannedAt;
+
+    private LocalDateTime bannedUntil; // (null = vĩnh viễn)
+
+    private String bannedBy;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -65,7 +74,23 @@ public class User extends BaseEntity implements UserDetails {
     }
 
     @Override
-    public boolean isEnabled(){
+    public boolean isEnabled() {
         return this.enable;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        // Kiểm tra có bị chặn không
+        if (isActive == null || !isActive) {
+            return false;
+        }
+
+        // Kiểm tra chặn tạm thời đã hết hạn chưa
+        if (bannedUntil != null && LocalDateTime.now().isAfter(bannedUntil)) {
+            return true; // Đã hết hạn chặn
+        }
+
+        // Nếu bannedUntil == null và isActive = false → chặn vĩnh viễn
+        return bannedUntil == null || LocalDateTime.now().isBefore(bannedUntil);
     }
 }

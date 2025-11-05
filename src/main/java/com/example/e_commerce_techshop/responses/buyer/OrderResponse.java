@@ -24,6 +24,8 @@ public class OrderResponse {
 
     private String status; // PENDING, CONFIRMED, SHIPPING, DELIVERED, CANCELLED
 
+    private boolean isRated;
+
     private List<OrderItemResponse> orderItems;
 
     private UserResponse buyer;
@@ -115,6 +117,7 @@ public class OrderResponse {
                 .shippingFee(order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO)
                 .paymentMethod(order.getPaymentMethod())
                 .status(order.getStatus())
+                .isRated(order.isRated())
                 .orderItems(orderItems)
                 .buyer(buyer)
                 .store(store)

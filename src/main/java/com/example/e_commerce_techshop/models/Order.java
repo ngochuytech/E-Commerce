@@ -28,6 +28,8 @@ public class Order extends BaseEntity {
     
     private String note;
 
+    private boolean isRated;
+
     @DBRef
     private List<OrderItem> orderItems;
 

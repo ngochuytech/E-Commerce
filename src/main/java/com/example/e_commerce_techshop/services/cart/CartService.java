@@ -6,7 +6,7 @@ import com.example.e_commerce_techshop.models.Cart;
 import com.example.e_commerce_techshop.models.ProductVariant;
 import com.example.e_commerce_techshop.repositories.CartRepository;
 import com.example.e_commerce_techshop.repositories.ProductVariantRepository;
-import com.example.e_commerce_techshop.repositories.UserRepository;
+import com.example.e_commerce_techshop.repositories.user.UserRepository;
 import com.example.e_commerce_techshop.models.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

@@ -45,8 +45,5 @@ public class UserDTO {
     @JsonProperty("avatar_url")
     private String avatarUrl;
 
-    @JsonProperty("is_active")
-    private Boolean isActive;
-
     private String role = "USER"; // Default role is USER
 }

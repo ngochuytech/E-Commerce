@@ -392,5 +392,19 @@ public class ProductVariantSerivce implements IProductVariantService{
         productVariantRepository.save(variant);
     }
 
+    @Override
+    public Page<ProductVariant> getAllProductVariantsB2C(String storeId, String status, Pageable pageable) throws Exception {
+        Page<ProductVariant> productVariants;
+        if (status != null && !status.isEmpty()) {
+            if (!ProductVariant.isValidStatus(status)) {
+                throw new IllegalArgumentException("Trạng thái không hợp lệ");
+            }
+            productVariants = productVariantRepository.findByStoreIdAndStatus(storeId, status, pageable);
+        } else {
+            productVariants = productVariantRepository.findByStoreId(storeId, pageable);
+        }
+        return productVariants;
+    }
+
 
 }

@@ -6,7 +6,8 @@ import com.example.e_commerce_techshop.dtos.buyer.address.UpdateAddressDTO;
 import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
 import com.example.e_commerce_techshop.models.Address;
 import com.example.e_commerce_techshop.models.User;
-import com.example.e_commerce_techshop.repositories.UserRepository;
+import com.example.e_commerce_techshop.repositories.user.UserRepository;
+
 import lombok.RequiredArgsConstructor;
 
 import java.util.ArrayList;

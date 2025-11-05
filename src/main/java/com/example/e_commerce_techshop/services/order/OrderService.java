@@ -6,6 +6,7 @@ import com.example.e_commerce_techshop.exceptions.InvalidPromotionException;
 import com.example.e_commerce_techshop.models.*;
 import com.example.e_commerce_techshop.models.ProductVariant.ColorOption;
 import com.example.e_commerce_techshop.repositories.*;
+import com.example.e_commerce_techshop.repositories.user.UserRepository;
 import com.example.e_commerce_techshop.services.cart.ICartService;
 import com.example.e_commerce_techshop.services.promotion.IPromotionService;
 
@@ -24,6 +25,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -159,7 +161,8 @@ public class OrderService implements IOrderService {
                                 user);
 
                     } catch (InvalidPromotionException e) {
-                        throw new InvalidPromotionException("Không thể áp dụng mã giảm phí ship sàn. " + e.getMessage());
+                        throw new InvalidPromotionException(
+                                "Không thể áp dụng mã giảm phí ship sàn. " + e.getMessage());
                     }
                 }
             }
@@ -313,10 +316,10 @@ public class OrderService implements IOrderService {
             Order order = Order.builder()
                     .buyer(user)
                     .store(store)
-                    .promotions(appliedPromotions.isEmpty() ? null : appliedPromotions) // Lưu tất cả các promotion đã
-                                                                                        // áp dụng
+                    .promotions(appliedPromotions.isEmpty() ? null : appliedPromotions)
                     .totalPrice(finalTotal)
                     .shippingFee(finalShippingFee)
+                    .isRated(false)
                     .address(Address.builder()
                             .province(orderDTO.getAddress().getProvince())
                             .ward(orderDTO.getAddress().getWard())
@@ -416,15 +419,28 @@ public class OrderService implements IOrderService {
     @Override
     public Page<Order> getOrderHistory(User user, String status, Pageable pageable) throws Exception {
         Page<Order> orderPage;
-        if(status == null || status.isEmpty()){
+        if (status == null || status.isEmpty()) {
             orderPage = orderRepository.findByBuyerId(user.getId(), pageable);
         } else {
             orderPage = orderRepository.findByBuyerIdAndStatus(user.getId(), status, pageable);
         }
-        orderPage.getContent().forEach(order -> {
-            List<OrderItem> orderItems = orderItemRepository.findByOrderId(order.getId());
-            order.setOrderItems(orderItems);
-        });
+        if (!orderPage.getContent().isEmpty()) {
+            List<String> orderIds = orderPage.getContent().stream()
+                    .map(Order::getId)
+                    .toList();
+
+            List<OrderItem> allOrderItems = orderItemRepository.findByOrderIdIn(orderIds);
+
+            // Group orderItems by orderId
+            Map<String, List<OrderItem>> itemsByOrderId = allOrderItems.stream()
+                    .collect(Collectors.groupingBy(item -> item.getOrder().getId()));
+
+            // Assign orderItems to each order
+            orderPage.getContent().forEach(order -> {
+                List<OrderItem> items = itemsByOrderId.getOrDefault(order.getId(), new ArrayList<>());
+                order.setOrderItems(items);
+            });
+        }
         return orderPage;
     }
 
