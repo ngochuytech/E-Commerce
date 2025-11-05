@@ -415,7 +415,12 @@ public class OrderService implements IOrderService {
 
     @Override
     public Page<Order> getOrderHistory(User user, String status, Pageable pageable) throws Exception {
-        Page<Order> orderPage = orderRepository.findByBuyerIdAndStatus(user.getId(), status, pageable);
+        Page<Order> orderPage;
+        if(status == null || status.isEmpty()){
+            orderPage = orderRepository.findByBuyerId(user.getId(), pageable);
+        } else {
+            orderPage = orderRepository.findByBuyerIdAndStatus(user.getId(), status, pageable);
+        }
         orderPage.getContent().forEach(order -> {
             List<OrderItem> orderItems = orderItemRepository.findByOrderId(order.getId());
             order.setOrderItems(orderItems);

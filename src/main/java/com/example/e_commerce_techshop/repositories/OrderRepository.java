@@ -16,6 +16,8 @@ public interface OrderRepository extends MongoRepository<Order, String> {
 
     Page<Order> findByBuyerIdAndStatus(String buyerId, String status, Pageable pageable);
 
+    Page<Order> findByBuyerId(String buyerId, Pageable pageable);
+
     Optional<Order> findByIdAndBuyerId(String orderId, String buyerId);
     
     long countByBuyerIdAndStatus(String buyerId, String status);
