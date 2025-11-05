@@ -452,7 +452,7 @@ public class OrderService implements IOrderService {
             throw new IllegalArgumentException("Chỉ có thể hủy đơn hàng ở trạng thái PENDING");
         }
 
-        order.setStatus("CANCELLED");
+        order.setStatus(Order.OrderStatus.CANCELLED.name());
 
         // 4. Hoàn trả stock
         List<OrderItem> orderItem = orderItemRepository.findByOrderId(order.getId());

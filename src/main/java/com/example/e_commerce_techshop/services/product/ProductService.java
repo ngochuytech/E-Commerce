@@ -74,7 +74,7 @@ public class ProductService implements IProductService{
         Store store = storeRepository.findById(productDTO.getStoreId())
                 .orElseThrow(() -> new DataNotFoundException("Cửa hàng không tồn tại"));
 
-        if (!Store.StoreStatus.APPROVED.equals(store.getStatus())) {
+        if (!Store.StoreStatus.APPROVED.name().equals(store.getStatus())) {
             throw new IllegalStateException("Cửa hàng chưa được duyệt");
         }
 
