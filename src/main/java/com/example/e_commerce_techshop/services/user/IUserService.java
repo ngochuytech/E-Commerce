@@ -19,6 +19,8 @@ public interface IUserService {
 
     User getUserByResetPasswordToken(String token);
 
+    void changePassword(User currentUser, String currentPassword, String newPassword) throws Exception;
+
     void updatePassword(User user, String newPassword);
 
     UserResponse getCurrentUser(String email) throws Exception;

@@ -196,4 +196,13 @@ public class UserService implements IUserService{
         user.setAvatar(avatarUrl);
         userRepository.save(user);
     }
+
+    @Override
+    public void changePassword(User currentUser, String currentPassword, String newPassword) throws Exception {
+        if(!passwordEncoder.matches(currentPassword, currentUser.getPassword())) {
+            throw new IllegalArgumentException("Mật khẩu hiện tại không đúng");
+        }
+        currentUser.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(currentUser);
+    }
 }
