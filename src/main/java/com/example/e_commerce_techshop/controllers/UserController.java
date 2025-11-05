@@ -140,6 +140,7 @@ public class UserController {
         return siteURL.replace(request.getServletPath(), "");
     }
 
+    @GetMapping("/auth/social-login")
     public void socialAuth(HttpServletResponse response) throws IOException {
         String url = googleAuthService.generateAuthUrl();
         response.sendRedirect(url);
