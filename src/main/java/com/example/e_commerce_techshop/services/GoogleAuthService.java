@@ -3,7 +3,7 @@ package com.example.e_commerce_techshop.services;
 import com.example.e_commerce_techshop.dtos.GoogleCodeRequest;
 import com.example.e_commerce_techshop.models.Role;
 import com.example.e_commerce_techshop.models.User;
-import com.example.e_commerce_techshop.repositories.UserRepository;
+import com.example.e_commerce_techshop.repositories.user.UserRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;

@@ -4,7 +4,8 @@ import com.example.e_commerce_techshop.dtos.NotificationDTO;
 import com.example.e_commerce_techshop.models.Notification;
 import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.repositories.NotificationRepository;
-import com.example.e_commerce_techshop.repositories.UserRepository;
+import com.example.e_commerce_techshop.repositories.user.UserRepository;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

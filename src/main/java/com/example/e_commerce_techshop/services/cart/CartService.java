@@ -6,7 +6,7 @@ import com.example.e_commerce_techshop.models.Cart;
 import com.example.e_commerce_techshop.models.ProductVariant;
 import com.example.e_commerce_techshop.repositories.CartRepository;
 import com.example.e_commerce_techshop.repositories.ProductVariantRepository;
-import com.example.e_commerce_techshop.repositories.UserRepository;
+import com.example.e_commerce_techshop.repositories.user.UserRepository;
 import com.example.e_commerce_techshop.models.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -24,18 +25,15 @@ public class CartService implements ICartService {
     private final UserRepository userRepository;
     
     // Giới hạn giỏ hàng
-    private static final int MAX_CART_ITEMS = 50;
+    private static final int MAX_CART_ITEMS = 20;
     private static final int MAX_QUANTITY_PER_ITEM = 999;
     
     @Override
     @Transactional
-    public void addToCart(String userEmail, List<CartDTO> cartDTO) throws Exception {
+    public void addToCart(User user, List<CartDTO> cartDTO) throws Exception {
         // 1. Validate input
         validateCartInput(cartDTO);
         
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy người dùng với email: " + userEmail));
-
         // 2. Kiểm tra sản phẩm tồn tại
         for (CartDTO item : cartDTO) {
             ProductVariant productVariant = productVariantRepository.findById(item.getProductVariantId())
@@ -111,6 +109,7 @@ public class CartService implements ICartService {
                 }
                 
                 Cart.CartItemEmbedded newItem = Cart.CartItemEmbedded.builder()
+                        .id(UUID.randomUUID().toString())
                         .productVariant(productVariant)
                         .quantity(itemDTO.getQuantity())
                         .unitPrice(getProductPrice(productVariant, itemDTO.getColorId()))
@@ -126,11 +125,7 @@ public class CartService implements ICartService {
     }
     
     @Override
-    public Cart getCart(String userEmail) throws Exception {
-        // Convert email to User object
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy người dùng với Email: " + userEmail));
-        
+    public Cart getCart(User user) throws Exception {
         // Tìm giỏ hàng của user
         Cart cart = cartRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy giỏ hàng"));
@@ -169,7 +164,7 @@ public class CartService implements ICartService {
                     ((item.getColorId() == null && colorId == null) ||
                      (item.getColorId() != null && item.getColorId().equals(colorId))));
             cartRepository.save(cart);
-            return getCart(userEmail);
+            return getCart(user);
         }
         
         // 5. Kiểm tra sản phẩm còn hàng
@@ -208,49 +203,32 @@ public class CartService implements ICartService {
         
         cartRepository.save(cart);
         
-        return getCart(userEmail);
+        return getCart(user);
     }
     
     @Override
     @Transactional
-    public void removeCartItem(String userEmail, String productVariantId, String colorId) throws Exception {
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy người dùng với Email: " + userEmail));
-        
+    public void removeCartItem(User user, String cartItemId) throws Exception {
         Cart cart = cartRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy giỏ hàng"));
 
-        // Kiểm tra item tồn tại trong embedded list (so sánh cả productVariantId và colorId)
-        boolean itemExists = cart.getCartItems().stream()
-                .anyMatch(item -> item.getProductVariant().getId().equals(productVariantId) &&
-                        ((item.getColorId() == null && colorId == null) ||
-                         (item.getColorId() != null && item.getColorId().equals(colorId))));
-        
-        if (!itemExists) {
-            throw new DataNotFoundException("Sản phẩm không tồn tại trong giỏ hàng");
+        if(!cart.getUser().getId().equals(user.getId())) {
+            throw new IllegalArgumentException("Không thể xóa sản phẩm khỏi giỏ hàng của người dùng khác");
         }
-        
-        // Xóa từ embedded list
-        cart.getCartItems().removeIf(item -> item.getProductVariant().getId().equals(productVariantId) &&
-                ((item.getColorId() == null && colorId == null) ||
-                 (item.getColorId() != null && item.getColorId().equals(colorId))));
-        
+
+        cart.getCartItems().removeIf(item -> item.getId().equals(cartItemId));
+
         // Save cart
         cartRepository.save(cart);
     }
     
     @Override
     @Transactional
-    public void clearCart(String userEmail) throws Exception {
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy người dùng với Email: " + userEmail));
-        String userId = user.getId();
-        
-        Cart cart = cartRepository.findByUserId(userId)
+    public void clearCart(User user) throws Exception {
+        Cart cart = cartRepository.findByUserId(user.getId())
                 .orElse(null);
         
         if (cart != null) {
-            // Xóa tất cả embedded items
             cart.getCartItems().clear();
             cartRepository.save(cart);
         }
@@ -258,25 +236,22 @@ public class CartService implements ICartService {
     
     @Override
     @Transactional
-    public void removeSelectedItems(User user, List<String> productVariantIds, List<String> colorIds) throws Exception {
+    public void removeSelectedItemsByIds(User user, List<String> cartItemsIds) throws Exception {
         Cart cart = cartRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy giỏ hàng"));
-        
-        // Xóa các items được chọn
-        for (int i = 0; i < productVariantIds.size(); i++) {
-            String productVariantId = productVariantIds.get(i);
-            String colorId = (colorIds != null && i < colorIds.size()) ? colorIds.get(i) : null;
-            
-            cart.getCartItems().removeIf(item -> 
-                item.getProductVariant().getId().equals(productVariantId) &&
-                ((colorId == null && item.getColorId() == null) || 
-                 (colorId != null && colorId.equals(item.getColorId())))
-            );
+
+        if(!cart.getUser().getId().equals(user.getId())) {
+            throw new IllegalArgumentException("Không thể xóa sản phẩm khỏi giỏ hàng của người dùng khác");
         }
         
+        // Xóa các items được chọn
+        for (String cartItemId : cartItemsIds) {
+            cart.getCartItems().removeIf(item -> item.getId().equals(cartItemId));
+        }
+
         cartRepository.save(cart);
     }
-    
+
     @Override
     public boolean isCartEmpty(String userEmail) {
         User user = userRepository.findByEmail(userEmail)

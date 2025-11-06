@@ -19,11 +19,11 @@ public class OrderDTO {
     @NotBlank(message = "Phương thức thanh toán không được để trống")
     private String paymentMethod; // COD, VNPAY, MOMO, etc.
     
-    // Mã giảm giá của sàn (áp dụng cho tất cả đơn hàng)
+    // Mã giảm giá của sàn
     private PlatformPromotions platformPromotions;
     
-    // Map: storeId -> StorePromotions (có thể có cả mã Order và Shipping)
-    private Map<String, StorePromotions> storePromotions;
+    // Map: storeId -> promotionCode (mã giảm giá của cửa hàng áp dụng cho đơn hàng của cửa hàng đó)
+    private Map<String, String> storePromotions;
     
     private String note;
 
@@ -38,15 +38,7 @@ public class OrderDTO {
     public static class PlatformPromotions {
         private String orderPromotionCode;    // Mã giảm giá đơn hàng của sàn (có thể null)
         private String shippingPromotionCode; // Mã giảm giá vận chuyển của sàn (có thể null)
-    }
-
-    @Data
-    @Builder
-    @AllArgsConstructor
-    @NoArgsConstructor
-    public static class StorePromotions {
-        private String orderPromotionCode;    // Mã giảm giá đơn hàng của cửa hàng (có thể null)
-        private String shippingPromotionCode; // Mã giảm giá vận chuyển của cửa hàng (có thể null)
+        private List<String> applyShippingToStores; // Danh sách storeId muốn áp dụng voucher ship (có thể null)
     }
 
     @Data
@@ -72,9 +64,13 @@ public class OrderDTO {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class SelectedCartItem {
+        private String id;
+        
         @NotBlank(message = "Product variant ID không được để trống")
         private String productVariantId;
         
         private String colorId; // Có thể null nếu sản phẩm không có màu
+
+        private int quantity;
     }
 }

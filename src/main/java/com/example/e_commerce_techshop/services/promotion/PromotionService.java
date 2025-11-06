@@ -3,10 +3,15 @@ package com.example.e_commerce_techshop.services.promotion;
 import com.example.e_commerce_techshop.dtos.b2c.promotion.CreatePromotionDTO;
 import com.example.e_commerce_techshop.dtos.b2c.promotion.PromotionDTO;
 import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
+import com.example.e_commerce_techshop.exceptions.InvalidPromotionException;
 import com.example.e_commerce_techshop.models.Promotion;
+import com.example.e_commerce_techshop.models.PromotionUsage;
 import com.example.e_commerce_techshop.models.Store;
+import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.repositories.PromotionRepository;
 import com.example.e_commerce_techshop.repositories.StoreRepository;
+import com.example.e_commerce_techshop.repositories.PromotionUsageRepository;
+import com.example.e_commerce_techshop.repositories.OrderRepository;
 import com.example.e_commerce_techshop.responses.PromotionResponse;
 import lombok.RequiredArgsConstructor;
 
@@ -19,9 +24,11 @@ import java.time.LocalDateTime;
 @Service
 @RequiredArgsConstructor
 public class PromotionService implements IPromotionService {
-    
+
     private final PromotionRepository promotionRepository;
     private final StoreRepository storeRepository;
+    private final PromotionUsageRepository promotionUsageRepository;
+    private final OrderRepository orderRepository;
 
     /**
      * Tạo promotion cho Store - tự động gán issuer = STORE và storeId
@@ -39,15 +46,16 @@ public class PromotionService implements IPromotionService {
             throw new Exception("Mã khuyến mãi đã tồn tại: " + createPromotionDTO.getCode());
         }
 
-        if ("FIXED_AMOUNT".equals(createPromotionDTO.getType()) && 
-            createPromotionDTO.getMaxDiscountValue() != null && 
-            createPromotionDTO.getMaxDiscountValue() > 0) {
+        if (Promotion.PromotionType.FIXED_AMOUNT.name().equals(createPromotionDTO.getType()) &&
+                createPromotionDTO.getMaxDiscountValue() != null &&
+                createPromotionDTO.getMaxDiscountValue() > 0) {
             throw new Exception("Khuyến mãi FIXED_AMOUNT không được có maxDiscountValue");
         }
 
         Promotion promotion = Promotion.builder()
                 .title(createPromotionDTO.getTitle())
                 .code(createPromotionDTO.getCode())
+                .description(createPromotionDTO.getDescription())
                 .store(store)
                 .issuer(Promotion.Issuer.STORE.name())
                 .applicableFor(createPromotionDTO.getApplicableFor())
@@ -56,9 +64,12 @@ public class PromotionService implements IPromotionService {
                 .discountValue(createPromotionDTO.getDiscountValue())
                 .startDate(createPromotionDTO.getStartDate())
                 .endDate(createPromotionDTO.getEndDate())
-                .minOrderValue(createPromotionDTO.getMinOrderValue()) 
+                .minOrderValue(createPromotionDTO.getMinOrderValue())
                 .maxDiscountValue(createPromotionDTO.getMaxDiscountValue())
                 .usageLimit(createPromotionDTO.getUsageLimit())
+                .usageLimitPerUser(createPromotionDTO.getUsageLimitPerUser())
+                .isNewUserOnly(
+                        createPromotionDTO.getIsNewUserOnly() != null ? createPromotionDTO.getIsNewUserOnly() : false)
                 .usedCount(0)
                 .categoryId(createPromotionDTO.getCategoryId())
                 .status(Promotion.PromotionStatus.INACTIVE.name())
@@ -80,15 +91,16 @@ public class PromotionService implements IPromotionService {
             throw new Exception("Mã khuyến mãi đã tồn tại: " + createPromotionDTO.getCode());
         }
 
-        if ("FIXED_AMOUNT".equals(createPromotionDTO.getType()) && 
-            createPromotionDTO.getMaxDiscountValue() != null && 
-            createPromotionDTO.getMaxDiscountValue() > 0) {
+        if ("FIXED_AMOUNT".equals(createPromotionDTO.getType()) &&
+                createPromotionDTO.getMaxDiscountValue() != null &&
+                createPromotionDTO.getMaxDiscountValue() > 0) {
             throw new Exception("Khuyến mãi FIXED_AMOUNT không được có maxDiscountValue");
         }
 
         Promotion promotion = Promotion.builder()
                 .title(createPromotionDTO.getTitle())
                 .code(createPromotionDTO.getCode())
+                .description(createPromotionDTO.getDescription())
                 .store(null)
                 .issuer(Promotion.Issuer.PLATFORM.name())
                 .applicableFor(createPromotionDTO.getApplicableFor())
@@ -97,9 +109,11 @@ public class PromotionService implements IPromotionService {
                 .discountValue(createPromotionDTO.getDiscountValue())
                 .startDate(createPromotionDTO.getStartDate())
                 .endDate(createPromotionDTO.getEndDate())
-                .minOrderValue(createPromotionDTO.getMinOrderValue())
                 .maxDiscountValue(createPromotionDTO.getMaxDiscountValue())
                 .usageLimit(createPromotionDTO.getUsageLimit())
+                .usageLimitPerUser(createPromotionDTO.getUsageLimitPerUser())
+                .isNewUserOnly(
+                        createPromotionDTO.getIsNewUserOnly() != null ? createPromotionDTO.getIsNewUserOnly() : false)
                 .usedCount(0)
                 .categoryId(createPromotionDTO.getCategoryId())
                 .status(Promotion.PromotionStatus.INACTIVE.name())
@@ -113,16 +127,16 @@ public class PromotionService implements IPromotionService {
         Promotion existingPromotion = promotionRepository.findById(promotionId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy khuyến mãi"));
 
-        // Validate maxDiscountValue based on type
-        if ("FIXED_AMOUNT".equals(promotionDTO.getType()) && 
-            promotionDTO.getMaxDiscountValue() != null && 
-            promotionDTO.getMaxDiscountValue() > 0) {
+        if ("FIXED_AMOUNT".equals(promotionDTO.getType()) &&
+                promotionDTO.getMaxDiscountValue() != null &&
+                promotionDTO.getMaxDiscountValue() > 0) {
             throw new Exception("Khuyến mãi FIXED_AMOUNT không được có maxDiscountValue");
         }
 
         // Update fields
         existingPromotion.setTitle(promotionDTO.getTitle());
         existingPromotion.setCode(promotionDTO.getCode());
+        existingPromotion.setDescription(promotionDTO.getDescription());
         existingPromotion.setType(promotionDTO.getType());
         existingPromotion.setApplicableFor(promotionDTO.getApplicableFor());
         existingPromotion.setDiscountType(promotionDTO.getDiscountType());
@@ -148,22 +162,23 @@ public class PromotionService implements IPromotionService {
         }
 
         // Check if user is the owner of the store
-        if (existingPromotion.getStore() == null || 
-            existingPromotion.getStore().getOwner() == null ||
-            !existingPromotion.getStore().getOwner().getId().equals(ownerId)) {
+        if (existingPromotion.getStore() == null ||
+                existingPromotion.getStore().getOwner() == null ||
+                !existingPromotion.getStore().getOwner().getId().equals(ownerId)) {
             throw new Exception("Bạn không có quyền cập nhật khuyến mãi của cửa hàng này.");
         }
 
         // Validate maxDiscountValue based on type
-        if ("FIXED_AMOUNT".equals(promotionDTO.getType()) && 
-            promotionDTO.getMaxDiscountValue() != null && 
-            promotionDTO.getMaxDiscountValue() > 0) {
+        if ("FIXED_AMOUNT".equals(promotionDTO.getType()) &&
+                promotionDTO.getMaxDiscountValue() != null &&
+                promotionDTO.getMaxDiscountValue() > 0) {
             throw new Exception("Khuyến mãi FIXED_AMOUNT không được có maxDiscountValue");
         }
 
         // Update fields
         existingPromotion.setTitle(promotionDTO.getTitle());
         existingPromotion.setCode(promotionDTO.getCode());
+        existingPromotion.setDescription(promotionDTO.getDescription());
         existingPromotion.setType(promotionDTO.getType());
         existingPromotion.setApplicableFor(promotionDTO.getApplicableFor());
         existingPromotion.setDiscountType(promotionDTO.getDiscountType());
@@ -173,6 +188,9 @@ public class PromotionService implements IPromotionService {
         existingPromotion.setMinOrderValue(promotionDTO.getMinOrderValue());
         existingPromotion.setMaxDiscountValue(promotionDTO.getMaxDiscountValue());
         existingPromotion.setUsageLimit(promotionDTO.getUsageLimit());
+        existingPromotion.setUsageLimitPerUser(promotionDTO.getUsageLimitPerUser());
+        existingPromotion
+                .setIsNewUserOnly(promotionDTO.getIsNewUserOnly() != null ? promotionDTO.getIsNewUserOnly() : false);
         existingPromotion.setCategoryId(promotionDTO.getCategoryId());
 
         promotionRepository.save(existingPromotion);
@@ -195,13 +213,15 @@ public class PromotionService implements IPromotionService {
                 .map(PromotionResponse::fromPromotion);
     }
 
-
     @Override
     public void deletePromotion(String promotionId) throws Exception {
         Promotion promotion = promotionRepository.findById(promotionId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy khuyến mãi"));
-        
-        // Soft delete - set status to DELETED
+
+        if (promotion.getIssuer().equals(Promotion.Issuer.STORE.name())) {
+            throw new Exception("Không có quyền xóa khuyến mãi của cửa hàng. Chỉ có chủ cửa hàng mới có quyền này.");
+        }
+
         promotion.setStatus(Promotion.PromotionStatus.DELETED.name());
         promotionRepository.save(promotion);
     }
@@ -212,14 +232,14 @@ public class PromotionService implements IPromotionService {
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy khuyến mãi"));
 
         // Check if promotion is PLATFORM - only admin can delete
-        if ("PLATFORM".equals(promotion.getIssuer())) {
+        if (Promotion.Issuer.PLATFORM.name().equals(promotion.getIssuer())) {
             throw new Exception("Không có quyền xóa khuyến mãi của platform. Chỉ admin mới có quyền này.");
         }
 
         // Check if user is the owner of the store
-        if (promotion.getStore() == null || 
-            promotion.getStore().getOwner() == null ||
-            !promotion.getStore().getOwner().getId().equals(ownerId)) {
+        if (promotion.getStore() == null ||
+                promotion.getStore().getOwner() == null ||
+                !promotion.getStore().getOwner().getId().equals(ownerId)) {
             throw new Exception("Bạn không có quyền xóa khuyến mãi của cửa hàng này.");
         }
 
@@ -232,8 +252,8 @@ public class PromotionService implements IPromotionService {
     public void activatePromotion(String promotionId) throws Exception {
         Promotion promotion = promotionRepository.findById(promotionId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy khuyến mãi"));
-        
-        promotion.setStatus("ACTIVE");
+
+        promotion.setStatus(Promotion.PromotionStatus.ACTIVE.name());
         promotionRepository.save(promotion);
     }
 
@@ -241,8 +261,8 @@ public class PromotionService implements IPromotionService {
     public void deactivatePromotion(String promotionId) throws Exception {
         Promotion promotion = promotionRepository.findById(promotionId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy khuyến mãi"));
-        
-        promotion.setStatus("INACTIVE");
+
+        promotion.setStatus(Promotion.PromotionStatus.INACTIVE.name());
         promotionRepository.save(promotion);
     }
 
@@ -251,19 +271,17 @@ public class PromotionService implements IPromotionService {
         Promotion promotion = promotionRepository.findById(promotionId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy khuyến mãi"));
 
-        // Check if promotion is PLATFORM - only admin can activate
-        if ("PLATFORM".equals(promotion.getIssuer())) {
+        if (Promotion.Issuer.PLATFORM.name().equals(promotion.getIssuer())) {
             throw new Exception("Không có quyền kích hoạt khuyến mãi của platform. Chỉ admin mới có quyền này.");
         }
 
-        // Check if user is the owner of the store
-        if (promotion.getStore() == null || 
-            promotion.getStore().getOwner() == null ||
-            !promotion.getStore().getOwner().getId().equals(ownerId)) {
+        if (promotion.getStore() == null ||
+                promotion.getStore().getOwner() == null ||
+                !promotion.getStore().getOwner().getId().equals(ownerId)) {
             throw new Exception("Bạn không có quyền kích hoạt khuyến mãi của cửa hàng này.");
         }
-        
-        promotion.setStatus("ACTIVE");
+
+        promotion.setStatus(Promotion.PromotionStatus.ACTIVE.name());
         promotionRepository.save(promotion);
     }
 
@@ -272,45 +290,31 @@ public class PromotionService implements IPromotionService {
         Promotion promotion = promotionRepository.findById(promotionId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy khuyến mãi"));
 
-        // Check if promotion is PLATFORM - only admin can deactivate
-        if ("PLATFORM".equals(promotion.getIssuer())) {
+        if (Promotion.Issuer.PLATFORM.name().equals(promotion.getIssuer())) {
             throw new Exception("Không có quyền vô hiệu hóa khuyến mãi của platform. Chỉ admin mới có quyền này.");
         }
 
-        // Check if user is the owner of the store
-        if (promotion.getStore() == null || 
-            promotion.getStore().getOwner() == null ||
-            !promotion.getStore().getOwner().getId().equals(ownerId)) {
+        if (promotion.getStore() == null ||
+                promotion.getStore().getOwner() == null ||
+                !promotion.getStore().getOwner().getId().equals(ownerId)) {
             throw new Exception("Bạn không có quyền vô hiệu hóa khuyến mãi của cửa hàng này.");
         }
-        
-        promotion.setStatus("INACTIVE");
+
+        promotion.setStatus(Promotion.PromotionStatus.INACTIVE.name());
         promotionRepository.save(promotion);
     }
 
     @Override
-    public Page<PromotionResponse> getActivePromotions(Pageable pageable) {
-        Page<Promotion> promotions = promotionRepository.findActivePromotions(LocalDateTime.now(), pageable);
-        return promotions.map(PromotionResponse::fromPromotion);
-    }
-
-    @Override
-    public Page<PromotionResponse> getActivePromotionsByStore(String storeId, Pageable pageable) {
-        Page<Promotion> promotions = promotionRepository.findActivePromotionsByStore(storeId, LocalDateTime.now(), pageable);
-        return promotions.map(PromotionResponse::fromPromotion);
-    }
-
-    @Override
-    public PromotionResponse validatePromotion(String promotionId, Long orderValue) throws Exception {
+    public boolean validatePromotion(String promotionId, Long orderValue) throws Exception {
         Promotion promotion = promotionRepository.findById(promotionId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy khuyến mãi"));
 
         LocalDateTime now = LocalDateTime.now();
-        
+
         // Check if promotion is active and not expired
-        if (!"ACTIVE".equals(promotion.getStatus()) || 
-            promotion.getStartDate().isAfter(now) || 
-            promotion.getEndDate().isBefore(now)) {
+        if (!Promotion.PromotionStatus.ACTIVE.name().equals(promotion.getStatus()) ||
+                promotion.getStartDate().isAfter(now) ||
+                promotion.getEndDate().isBefore(now)) {
             throw new Exception("Khuyến mãi không còn hiệu lực");
         }
 
@@ -319,7 +323,56 @@ public class PromotionService implements IPromotionService {
             throw new Exception("Đơn hàng không đạt giá trị tối thiểu cho khuyến mãi");
         }
 
-        return PromotionResponse.fromPromotion(promotion);
+        // Check total usage limit
+        if (promotion.getUsageLimit() != null && promotion.getUsedCount() >= promotion.getUsageLimit()) {
+            throw new Exception("Mã khuyến mãi đã hết lượt sử dụng");
+        }
+
+        return true;
+    }
+
+    @Override
+    public boolean validatePromotionForUser(String promotionId, Long orderValue, User user) throws Exception {
+        Promotion promotion = promotionRepository.findById(promotionId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy khuyến mãi"));
+
+        // Validate basic promotion rules
+        validatePromotion(promotionId, orderValue);
+
+        // Kiểm tra mã chỉ dành cho người dùng mới
+        if (promotion.getIsNewUserOnly() != null && promotion.getIsNewUserOnly()) {
+            long orderCount = orderRepository.countByBuyerId(user.getId());
+            if (orderCount > 0) {
+                throw new Exception("Mã khuyến mãi này chỉ dành cho người dùng mới");
+            }
+        }
+
+        // Kiểm tra giới hạn sử dụng mỗi người
+        if (promotion.getUsageLimitPerUser() != null) {
+            int userUsageCount = promotionUsageRepository.countByPromotionAndUser(promotion, user);
+            if (userUsageCount >= promotion.getUsageLimitPerUser()) {
+                throw new Exception("Bạn đã sử dụng hết số lần cho phép với mã khuyến mãi này");
+            }
+        }
+
+        return true;
+    }
+
+    @Override
+    public void recordPromotionUsage(Promotion promotion, User user) throws Exception {
+        // Update promotion used count
+        promotion.setUsedCount(promotion.getUsedCount() + 1);
+        promotionRepository.save(promotion);
+
+        // Record usage in history
+        PromotionUsage usage = PromotionUsage.builder()
+                .promotion(promotion)
+                .user(user)
+                .usedAt(LocalDateTime.now())
+                .usageCount(promotionUsageRepository.countByPromotionAndUser(promotion, user) + 1)
+                .build();
+
+        promotionUsageRepository.save(usage);
     }
 
     @Override
@@ -344,12 +397,6 @@ public class PromotionService implements IPromotionService {
     }
 
     @Override
-    public Page<PromotionResponse> getExpiredPromotions(Pageable pageable) {
-        Page<Promotion> promotions = promotionRepository.findExpiredPromotions(LocalDateTime.now(), pageable);
-        return promotions.map(PromotionResponse::fromPromotion);
-    }
-
-    @Override
     public Page<PromotionResponse> getExpiredPlatformPromotions(Pageable pageable) {
         Page<Promotion> promotions = promotionRepository.findExpiredPlatformPromotions(LocalDateTime.now(), pageable);
         return promotions.map(PromotionResponse::fromPromotion);
@@ -362,20 +409,15 @@ public class PromotionService implements IPromotionService {
     }
 
     @Override
-    public Page<PromotionResponse> getDeletedPromotions(Pageable pageable) {
-        Page<Promotion> promotions = promotionRepository.findDeletedPromotions(pageable);
-        return promotions.map(PromotionResponse::fromPromotion);
-    }
-
-    @Override
     public Page<PromotionResponse> getDeletedPlatformPromotions(Pageable pageable) {
         Page<Promotion> promotions = promotionRepository.findDeletedPlatformPromotions(pageable);
         return promotions.map(PromotionResponse::fromPromotion);
     }
 
     @Override
-    public Page<Promotion> getPlatformPromotions(Pageable pageable) {
-        return promotionRepository.findByIssuer("PLATFORM", pageable);
+    public Page<Promotion> getPlatformPromotionsForCustomer(Pageable pageable) {
+        return promotionRepository.findByIssuerForCustomer(Promotion.Issuer.PLATFORM.name(), LocalDateTime.now(),
+                pageable);
     }
 
     @Override
@@ -388,5 +430,70 @@ public class PromotionService implements IPromotionService {
     public Page<PromotionResponse> getActivePlatformPromotions(Pageable pageable) {
         Page<Promotion> promotions = promotionRepository.findActivePlatformPromotions(pageable);
         return promotions.map(PromotionResponse::fromPromotion);
+    }
+
+    @Override
+    public Page<Promotion> getAllPromotionForCustomer(Pageable pageable) {
+        return promotionRepository.findPromotionForCustomer(LocalDateTime.now(), pageable);
+    }
+
+    @Override
+    public Page<Promotion> getStorePromotionsForCustomer(String storeId, Pageable pageable) {
+        return promotionRepository.findByStoreIdForCustomer(storeId, LocalDateTime.now(), pageable);
+    }
+
+    @Override
+    public Promotion getPromotionByCode(String promotionCode) throws Exception {
+        return promotionRepository.findByCode(promotionCode)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy khuyến mãi"));
+    }
+
+    @Override
+    public Page<PromotionResponse> getPromotionsByStoreAndStatus(String storeId, String status, Pageable pageable) {
+        return promotionRepository.findByStoreIdAndStatus(storeId, status, pageable)
+                .map(PromotionResponse::fromPromotion);
+    }
+
+    @Override
+    public Page<PromotionResponse> getExpiredPromotionsByStore(String storeId, Pageable pageable) {
+        return promotionRepository.findExpiredPromotionsByStoreId(storeId, LocalDateTime.now(), pageable)
+                .map(PromotionResponse::fromPromotion);
+    }
+
+    @Override
+    public void validatePromotionForUser(Promotion promotion, Long orderValue, User user) throws InvalidPromotionException {
+        // Check if promotion is active and not expired
+        LocalDateTime now = LocalDateTime.now();
+
+        if (!Promotion.PromotionStatus.ACTIVE.name().equals(promotion.getStatus()) ||
+                promotion.getStartDate().isAfter(now) ||
+                promotion.getEndDate().isBefore(now)) {
+            throw new InvalidPromotionException("Khuyến mãi không còn hiệu lực");
+        }
+
+        // Check minimum order value
+        if (orderValue < promotion.getMinOrderValue()) {
+            throw new InvalidPromotionException("Giá trị đơn hàng không đủ để áp dụng khuyến mãi");
+        }
+
+        // Check total usage limit
+        if (promotion.getUsageLimit() != null && promotion.getUsedCount() >= promotion.getUsageLimit()) {
+            throw new InvalidPromotionException("Khuyến mãi đã đạt giới hạn sử dụng");
+        }
+        // Kiểm tra mã chỉ dành cho người dùng mới
+        if (promotion.getIsNewUserOnly() != null && promotion.getIsNewUserOnly()) {
+            long orderCount = orderRepository.countByBuyerId(user.getId());
+            if (orderCount > 0) {
+                throw new InvalidPromotionException("Khuyến mãi chỉ áp dụng cho người dùng mới");
+            }
+        }
+
+        // Kiểm tra giới hạn sử dụng mỗi người
+        if (promotion.getUsageLimitPerUser() != null) {
+            int userUsageCount = promotionUsageRepository.countByPromotionAndUser(promotion, user);
+            if (userUsageCount >= promotion.getUsageLimitPerUser()) {
+                throw new InvalidPromotionException("Khuyến mãi đã đạt giới hạn sử dụng cho người dùng");
+            }
+        }
     }
 }

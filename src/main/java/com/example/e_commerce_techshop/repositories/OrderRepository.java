@@ -13,11 +13,11 @@ import java.util.Optional;
 
 @Repository
 public interface OrderRepository extends MongoRepository<Order, String> {
-    
-    Page<Order> findByBuyerIdOrderByCreatedAtDesc(String buyerId, Pageable pageable);
-    
-    Page<Order> findByBuyerIdAndStatusOrderByCreatedAtDesc(String buyerId, String status, Pageable pageable);
-    
+
+    Page<Order> findByBuyerIdAndStatus(String buyerId, String status, Pageable pageable);
+
+    Page<Order> findByBuyerId(String buyerId, Pageable pageable);
+
     Optional<Order> findByIdAndBuyerId(String orderId, String buyerId);
     
     long countByBuyerIdAndStatus(String buyerId, String status);

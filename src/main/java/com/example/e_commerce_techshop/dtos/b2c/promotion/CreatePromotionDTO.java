@@ -18,6 +18,9 @@ import lombok.NoArgsConstructor;
 public class CreatePromotionDTO {
     @NotBlank(message = "Tiêu đề khuyến mãi không được để trống")
     private String title;
+
+    @NotBlank(message = "Mô tả khuyến mãi không được để trống")
+    private String description;
     
     @NotBlank(message = "Mã khuyến mãi không được để trống")
     @Pattern(regexp = "^[A-Z0-9]{4,20}$", message = "Mã khuyến mãi phải từ 4-20 ký tự, chỉ chứa chữ in hoa và số")
@@ -53,6 +56,11 @@ public class CreatePromotionDTO {
 
     @Min(value = 1, message = "Giới hạn sử dụng phải lớn hơn 0")
     private Integer usageLimit; // NULL = không giới hạn
+
+    @Min(value = 1, message = "Giới hạn sử dụng mỗi người phải lớn hơn 0")
+    private Integer usageLimitPerUser; // Số lần mỗi user có thể sử dụng (NULL = không giới hạn)
+
+    private Boolean isNewUserOnly; // Chỉ áp dụng cho user mới
 
     private String categoryId;
 }

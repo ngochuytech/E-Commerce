@@ -48,7 +48,7 @@ public class ProductVariant extends BaseEntity {
     private List<ColorOption> colors;
 
     public enum VariantStatus {
-        PENDING, APPROVED, REJECTED
+        PENDING, APPROVED, REJECTED, DELETED
     }
 
     @Getter
@@ -72,5 +72,12 @@ public class ProductVariant extends BaseEntity {
             return false;
         }
     } 
+
+    public static ColorOption getColor(ProductVariant productVariant, String colorId) {
+        return productVariant.getColors().stream()
+                .filter(colorOption -> colorOption.getId().equals(colorId))
+                .findFirst()
+                .orElse(null);
+    }
 
 }

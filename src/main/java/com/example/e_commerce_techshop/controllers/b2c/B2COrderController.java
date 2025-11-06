@@ -53,7 +53,7 @@ public class B2COrderController {
     @Operation(summary = "Get store orders", description = "Retrieve paginated list of orders for a specific store with optional status filtering")
     public ResponseEntity<?> getStoreOrders(
             @Parameter(description = "ID of the store", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @RequestParam String storeId,
-            @Parameter(description = "Page number (1-based)", example = "1") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "Page number (0-based)", example = "0") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Number of items per page", example = "10") @RequestParam(defaultValue = "10") int size,
             @Parameter(description = "Filter by order status", example = "PENDING") @RequestParam(required = false) String status,
             @Parameter(hidden = true) @AuthenticationPrincipal User currentUser) throws Exception {

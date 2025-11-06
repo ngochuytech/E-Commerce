@@ -21,6 +21,8 @@ public class Promotion extends BaseEntity {
 
     private String title;
 
+    private String description;
+
     @DBRef
     private Store store;
 
@@ -48,6 +50,10 @@ public class Promotion extends BaseEntity {
     private Integer usageLimit; // Số lần sử dụng tối đa (NULL = không giới hạn)
     
     private Integer usedCount; // Số lần đã sử dụng
+
+    private Integer usageLimitPerUser; // Số lần mỗi user có thể sử dụng (NULL = không giới hạn)
+
+    private Boolean isNewUserOnly; // Chỉ áp dụng cho user mới (chưa có đơn hàng nào)
 
     private String status;
 
@@ -81,7 +87,6 @@ public class Promotion extends BaseEntity {
     public enum PromotionStatus {
         ACTIVE,
         INACTIVE,
-        EXPIRED,
         DELETED
     }   
 }

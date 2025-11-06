@@ -98,8 +98,7 @@ public class ProductVariantSerivce implements IProductVariantService{
     public void disableProduct(String productVariantId) throws Exception {
         ProductVariant productVariant = productVariantRepository.findById(productVariantId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy mẫu sản phẩm này"));
-        productVariant.setStock(0);
-        productVariant.setPrice(0L);
+        productVariant.setStatus(ProductVariant.VariantStatus.DELETED.name());
         productVariantRepository.save(productVariant);
     }
 
@@ -203,6 +202,7 @@ public class ProductVariantSerivce implements IProductVariantService{
     }
 
     @Override
+    @Transactional
     public void updateProductVariantColors(String productVariantId, String colorId, ColorOption colorOptionDTO, MultipartFile imageFile)
             throws Exception {
         ProductVariant productVariant = productVariantRepository.findById(productVariantId)
@@ -390,6 +390,20 @@ public class ProductVariantSerivce implements IProductVariantService{
         variant.setStatus("REJECTED");
         variant.setRejectionReason(reason);
         productVariantRepository.save(variant);
+    }
+
+    @Override
+    public Page<ProductVariant> getAllProductVariantsB2C(String storeId, String status, Pageable pageable) throws Exception {
+        Page<ProductVariant> productVariants;
+        if (status != null && !status.isEmpty()) {
+            if (!ProductVariant.isValidStatus(status)) {
+                throw new IllegalArgumentException("Trạng thái không hợp lệ");
+            }
+            productVariants = productVariantRepository.findByStoreIdAndStatus(storeId, status, pageable);
+        } else {
+            productVariants = productVariantRepository.findByStoreId(storeId, pageable);
+        }
+        return productVariants;
     }
 
 

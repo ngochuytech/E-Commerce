@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.e_commerce_techshop.annotations.RequireActiveAccount;
 import com.example.e_commerce_techshop.dtos.ReviewDTO;
 import com.example.e_commerce_techshop.models.Review;
 import com.example.e_commerce_techshop.models.User;
@@ -31,6 +32,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("${api.prefix}/buyer/reviews")
 @RequiredArgsConstructor
+@RequireActiveAccount
 @Tag(name = "Buyer Review Management", description = "APIs for buyer review operations")
 @SecurityRequirement(name = "bearerAuth")
 public class BuyerReviewController {

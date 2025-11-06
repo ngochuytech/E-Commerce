@@ -11,12 +11,12 @@ public interface ICartService {
     /**
      * Thêm sản phẩm vào giỏ hàng
      */
-    void addToCart(String userEmail, List<CartDTO> cartDTO) throws Exception;
+    void addToCart(User user, List<CartDTO> cartDTO) throws Exception;
     
     /**
      * Lấy tất cả sản phẩm trong giỏ hàng
      */
-    Cart getCart(String userEmail) throws Exception;
+    Cart getCart(User user) throws Exception;
     
     /**
      * Cập nhật số lượng sản phẩm trong giỏ hàng
@@ -26,17 +26,17 @@ public interface ICartService {
     /**
      * Xóa sản phẩm khỏi giỏ hàng
      */
-    void removeCartItem(String userEmail, String productVariantId, String colorId) throws Exception;
+    void removeCartItem(User user, String cartItemId) throws Exception;
     
     /**
      * Xóa toàn bộ giỏ hàng
      */
-    void clearCart(String userEmail) throws Exception;
+    void clearCart(User user) throws Exception;
     
     /**
      * Xóa các sản phẩm đã chọn khỏi giỏ hàng
      */
-    void removeSelectedItems(User user, List<String> productVariantIds, List<String> colorIds) throws Exception;
+    void removeSelectedItemsByIds(User user, List<String> cartItemIds) throws Exception;
     
     /**
      * Kiểm tra giỏ hàng có trống không

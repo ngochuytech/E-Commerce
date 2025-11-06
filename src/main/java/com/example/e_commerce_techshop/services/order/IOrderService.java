@@ -6,6 +6,7 @@ import com.example.e_commerce_techshop.models.Order;
 import com.example.e_commerce_techshop.models.User;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Map;
@@ -19,28 +20,18 @@ public interface IOrderService {
     
     /**
      * Lấy lịch sử đơn hàng
-     * @param userEmail Email của user
-     * @param page Số trang (0-based)
-     * @param size Kích thước trang
-     * @param status Trạng thái đơn hàng
-     * @return Page<OrderResponse>
      */
-    Page<Order> getOrderHistory(String userEmail, int page, int size, String status) throws Exception;
-    
+    Page<Order> getOrderHistory(User user, String status, Pageable pageable) throws Exception;
+
     /**
      * Lấy chi tiết đơn hàng
      * @param userEmail Email của user
      * @param orderId ID đơn hàng
      * @return OrderResponse
      */
-    Order getOrderDetail(String userEmail, String orderId) throws Exception;
+    Order getOrderDetail(User user, String orderId) throws Exception;
     
-    /**
-     * Hủy đơn hàng
-     * @param userEmail Email của user
-     * @param orderId ID đơn hàng
-     */
-    void cancelOrder(String userEmail, String orderId) throws Exception;
+    void cancelOrder(User user, String orderId) throws Exception;
     
     /**
      * Đếm số đơn hàng theo trạng thái

@@ -6,7 +6,8 @@ import com.example.e_commerce_techshop.dtos.buyer.address.UpdateAddressDTO;
 import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
 import com.example.e_commerce_techshop.models.Address;
 import com.example.e_commerce_techshop.models.User;
-import com.example.e_commerce_techshop.repositories.UserRepository;
+import com.example.e_commerce_techshop.repositories.user.UserRepository;
+
 import lombok.RequiredArgsConstructor;
 
 import java.util.ArrayList;
@@ -122,22 +123,17 @@ public class AddressService implements IAddressService {
         
         List<Address> addresses = user.getAddress();
         
-        // Nếu có addressId, xóa địa chỉ cụ thể
         if (addressId != null && !addressId.isEmpty()) {
-            // Có thể dùng index: addressId = "0", "1", "2"...
             try {
-                int index = Integer.parseInt(addressId);
-                if (index >= 0 && index < addresses.size()) {
-                    addresses.remove(index);
-                } else {
-                    throw new DataNotFoundException("Không tìm thấy địa chỉ với ID: " + addressId);
-                }
+                Address addressToDelete = addresses.stream()
+                        .filter(addr -> addr.getId().equals(addressId))
+                        .findFirst()
+                        .orElseThrow(() -> new DataNotFoundException("Không tìm thấy địa chỉ với ID: " + addressId));
+                
+                addresses.remove(addressToDelete);
             } catch (NumberFormatException e) {
                 throw new DataNotFoundException("ID địa chỉ không hợp lệ");
             }
-        } else {
-            // Nếu không có addressId, xóa tất cả
-            addresses.clear();
         }
         
         user.setAddress(addresses);

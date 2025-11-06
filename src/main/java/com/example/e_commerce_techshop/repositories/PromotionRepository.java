@@ -46,8 +46,21 @@ public interface PromotionRepository extends MongoRepository<Promotion, String> 
     
     boolean existsByCode(String code);
 
-    @Query("{ 'issuer': ?0, 'status': { '$ne': 'DELETED' } }")
-    Page<Promotion> findByIssuer(String issuer, Pageable pageable);
+    // Customer
+    @Query("{ 'issuer': ?0, 'status': 'ACTIVE', 'startDate': { '$lte': ?1 }, 'endDate': { '$gte': ?1 } }")
+    Page<Promotion> findByIssuerForCustomer(String issuer, LocalDateTime now, Pageable pageable);
+
+    @Query("{ 'store.$id': ObjectId(?0), 'status': 'ACTIVE', 'startDate': { '$lte': ?1 }, 'endDate': { '$gte': ?1 } }")
+    Page<Promotion> findByStoreIdForCustomer(String storeId, LocalDateTime now, Pageable pageable);
+
+    @Query("{ 'status': 'ACTIVE', 'startDate': { '$lte': ?0 }, 'endDate': { '$gte': ?0 } }")
+    Page<Promotion> findPromotionForCustomer(LocalDateTime now, Pageable pageable);
+
+    // Store Owner
+    Page<Promotion> findByStoreIdAndStatus(String storeId, String status, Pageable pageable);
+
+    @Query("{ 'store.$id': ObjectId(?0), 'endDate': { '$lt': ?1 } }")
+    Page<Promotion> findExpiredPromotionsByStoreId(String storeId, LocalDateTime now, Pageable pageable);
     
     // Admin 
     @Query("{ 'issuer': 'PLATFORM', 'status': 'DELETED' }")

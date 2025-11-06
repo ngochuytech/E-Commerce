@@ -1,26 +1,17 @@
 package com.example.e_commerce_techshop.controllers;
 
-import com.example.e_commerce_techshop.dtos.ResetPasswordDTO;
 import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.responses.ApiResponse;
 import com.example.e_commerce_techshop.services.SendGridEmailService;
 import com.example.e_commerce_techshop.services.user.IUserService;
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.util.UUID;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -28,22 +19,13 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequiredArgsConstructor
-@Tag(name = "Password Reset", description = "APIs for forgot password and reset password functionality")
+@Tag(name = "Password Reset", description = "API for forgot password functionality - sends new random password via email")
 public class ForgotPasswordController {
-    private final JavaMailSender javaMailSender;
-
     private final IUserService userService;
-
-    private final SendGridEmailService sendGridEmailService; 
-    
-    @Value("${spring.mail.properties.from:ngochuymail25@gmail.com}")
-    private String fromAddress;
-    
-    @Value("${spring.mail.properties.from-name:TechShop E-commerce}")
-    private String senderName;
+    private final SendGridEmailService sendGridEmailService;
 
     @PostMapping("/forgot-password")
-    @Operation(summary = "Request password reset", description = "Send password reset email with token to user's email address")
+    @Operation(summary = "Request password reset", description = "Generate new random password and send to user's email address")
     public ResponseEntity<?> processForgotPassword(
             HttpServletRequest request,
             @Parameter(description = "User's email address", example = "user@example.com") @RequestParam String email)
@@ -53,74 +35,79 @@ public class ForgotPasswordController {
                 return ResponseEntity.badRequest().body(ApiResponse.error("Email không tồn tại"));
             }
 
-            String token = UUID.randomUUID().toString();
-            user.setResetPasswordToken(token);
-            userService.updateResetPasswordToken(token, email);
-
-            String resetPasswordLink = getSiteURL(request) + "/reset-password?token=" + token;
+            // Tạo mật khẩu ngẫu nhiên (8-12 ký tự, bao gồm chữ hoa, chữ thường, số)
+            String newPassword = generateRandomPassword();
             
-            // ✅ Sử dụng SendGrid API
-            sendResetPasswordEmail(user.getEmail(), resetPasswordLink);
+            // Cập nhật mật khẩu mới cho user
+            userService.updatePassword(user, newPassword);
+            
+            // Gửi email với mật khẩu mới
+            sendNewPasswordEmail(user.getEmail(), newPassword);
 
-            return ResponseEntity.ok(ApiResponse.ok("Email đặt lại mật khẩu đã được gửi"));
+            return ResponseEntity.ok(ApiResponse.ok("Mật khẩu mới đã được gửi đến email của bạn"));
 
     }
 
-    @PostMapping("/reset-password")
-    @Operation(summary = "Reset password with token", description = "Reset user password using the token received via email")
-    public ResponseEntity<?> resetPassword(
-            @Parameter(description = "Reset password data with token and new password") @RequestBody ResetPasswordDTO resetPasswordDTO) {
-        User user = userService.getUserByResetPasswordToken(resetPasswordDTO.getToken());
-        if (user == null)
-            return ResponseEntity.badRequest().body(ApiResponse.error("Mã token không hợp lệ"));
-        userService.updatePassword(user, resetPasswordDTO.getPassword());
-        return ResponseEntity.ok(ApiResponse.ok("Đã đổi mật khẩu thành công"));
+    /**
+     * Tạo mật khẩu ngẫu nhiên có độ dài 10 ký tự
+     * Bao gồm: chữ hoa, chữ thường, số và ký tự đặc biệt
+     */
+    private String generateRandomPassword() {
+        String upperCase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        String lowerCase = "abcdefghijklmnopqrstuvwxyz";
+        String numbers = "0123456789";
+        String specialChars = "@#$%";
+        
+        String allChars = upperCase + lowerCase + numbers + specialChars;
+        
+        StringBuilder password = new StringBuilder();
+        
+        // Đảm bảo có ít nhất 1 ký tự mỗi loại
+        password.append(upperCase.charAt((int) (Math.random() * upperCase.length())));
+        password.append(lowerCase.charAt((int) (Math.random() * lowerCase.length())));
+        password.append(numbers.charAt((int) (Math.random() * numbers.length())));
+        password.append(specialChars.charAt((int) (Math.random() * specialChars.length())));
+        
+        // Thêm 6 ký tự ngẫu nhiên nữa (tổng 10 ký tự)
+        for (int i = 0; i < 6; i++) {
+            password.append(allChars.charAt((int) (Math.random() * allChars.length())));
+        }
+        
+        // Shuffle các ký tự để random hơn
+        char[] passwordArray = password.toString().toCharArray();
+        for (int i = passwordArray.length - 1; i > 0; i--) {
+            int j = (int) (Math.random() * (i + 1));
+            char temp = passwordArray[i];
+            passwordArray[i] = passwordArray[j];
+            passwordArray[j] = temp;
+        }
+        
+        return new String(passwordArray);
     }
-
-    public void sendEmail(String recipientEmail, String link)
-            throws MessagingException, UnsupportedEncodingException {
-        MimeMessage message = javaMailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(message);
-
-        helper.setFrom(fromAddress, senderName);
-        helper.setTo(recipientEmail);
-
-        String subject = "Yêu cầu đặt lại mật khẩu";
-
-        String content = "<p>Xin chào,</p>"
-                + "<p>Bạn đã gửi yêu cầu đặt lại mật khẩu.</p>"
-                + "<p>Click vào link bên dưới để thực hiện thao tác:</p>"
-                + "<p><a href=\"" + link + "\">Đặt lại mật khẩu</a></p>"
-                + "<br>"
-                + "<p>Bỏ qua email này nếu bạn không yêu cầu đổi mật khẩu.</p>"
-                + "<p>Cảm ơn,<br>" + senderName + "</p>";
-
-        helper.setSubject(subject);
-
-        helper.setText(content, true);
-
-        javaMailSender.send(message);
-    }
-
-    private void sendResetPasswordEmail(String email, String resetLink) throws IOException {
-        String subject = "Yêu cầu đặt lại mật khẩu";
+    
+    private void sendNewPasswordEmail(String email, String newPassword) throws IOException {
+        String subject = "Mật khẩu mới cho tài khoản TechShop";
         
         String htmlContent = "<html><body style=\"font-family: Arial, sans-serif;\">" +
-                "<div style=\"max-width: 600px; margin: 0 auto; padding: 20px;\">" +
-                "<h2>Đặt lại mật khẩu TechShop</h2>" +
-                "<p>Bạn đã yêu cầu đặt lại mật khẩu. Click vào link bên dưới để tiếp tục:</p>" +
-                "<a href=\"" + resetLink + "\" style=\"display: inline-block; padding: 12px 30px; " +
-                "background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px;\">" +
-                "Đặt lại mật khẩu</a>" +
-                "<p>Link có hiệu lực trong 30 phút.</p>" +
-                "<p>Nếu không phải bạn yêu cầu, vui lòng bỏ qua email này.</p>" +
+                "<div style=\"max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;\">" +
+                "<h2 style=\"color: #4CAF50;\">🔑 Mật khẩu mới TechShop</h2>" +
+                "<p>Bạn đã yêu cầu đặt lại mật khẩu. Dưới đây là mật khẩu mới của bạn:</p>" +
+                "<div style=\"background-color: #f5f5f5; padding: 15px; margin: 20px 0; border-radius: 5px; text-align: center;\">" +
+                "<p style=\"margin: 0; color: #666;\">Mật khẩu mới:</p>" +
+                "<h3 style=\"margin: 10px 0; color: #333; font-family: 'Courier New', monospace; letter-spacing: 2px;\">" + 
+                newPassword + "</h3>" +
+                "</div>" +
+                "<p><strong>⚠️ Lưu ý quan trọng:</strong></p>" +
+                "<ul style=\"color: #666;\">" +
+                "<li>Vui lòng đổi mật khẩu này sau khi đăng nhập để bảo mật tài khoản</li>" +
+                "<li>Không chia sẻ mật khẩu này với bất kỳ ai</li>" +
+                "<li>Nếu không phải bạn yêu cầu, vui lòng liên hệ bộ phận hỗ trợ ngay</li>" +
+                "</ul>" +
+                "<hr style=\"border: none; border-top: 1px solid #ddd; margin: 20px 0;\">" +
+                "<p style=\"color: #999; font-size: 12px;\">Email này được gửi tự động, vui lòng không trả lời.</p>" +
+                "<p style=\"color: #999; font-size: 12px;\">© 2025 TechShop E-commerce. All rights reserved.</p>" +
                 "</div></body></html>";
         
         sendGridEmailService.sendEmail(email, subject, htmlContent);
-    }
-
-    private String getSiteURL(HttpServletRequest request) {
-        String siteURL = request.getRequestURL().toString();
-        return siteURL.replace(request.getServletPath(), "");
     }
 }

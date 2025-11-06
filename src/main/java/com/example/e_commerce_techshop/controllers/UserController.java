@@ -1,8 +1,26 @@
 package com.example.e_commerce_techshop.controllers;
 
+import java.io.IOException;
+import java.util.List;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
 import com.example.e_commerce_techshop.components.JwtTokenProvider;
 import com.example.e_commerce_techshop.dtos.GoogleCodeRequest;
 import com.example.e_commerce_techshop.dtos.UserLoginDTO;
+import com.example.e_commerce_techshop.dtos.user.ChangePasswordDTO;
 import com.example.e_commerce_techshop.dtos.user.UserRegisterDTO;
 import com.example.e_commerce_techshop.models.Token;
 import com.example.e_commerce_techshop.models.User;
@@ -17,21 +35,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.validation.BindingResult;
-import org.springframework.validation.FieldError;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
-import java.util.List;
 
 @RestController
 @Tag(name = "User Management", description = "APIs for user registration, authentication and profile management")
@@ -140,6 +147,25 @@ public class UserController {
         return siteURL.replace(request.getServletPath(), "");
     }
 
+    @PostMapping("/change-password")
+    @Operation(summary = "Change user password", description = "Change the password of the currently authenticated user")
+    public ResponseEntity<?> changePassword(
+            @AuthenticationPrincipal User currentUser,
+            @RequestBody @Valid ChangePasswordDTO changePasswordDTO) throws Exception {
+        userService.changePassword(currentUser, changePasswordDTO.getCurrentPassword(), changePasswordDTO.getNewPassword());
+        return ResponseEntity.ok(ApiResponse.ok("Đổi mật khẩu thành công"));
+    }
+
+    @PostMapping("/send-verification-email")
+    @Operation(summary = "Send verification email", description = "Send a verification email to the user")
+    public ResponseEntity<?> sendVerificationEmail(
+            HttpServletRequest request,
+            @RequestParam("email") String email) throws Exception {
+        userService.sendVerificationEmailAgain(email, getSiteURL(request));
+        return ResponseEntity.ok(ApiResponse.ok("Đã gửi email xác minh"));
+    }
+
+    @GetMapping("/auth/social-login")
     public void socialAuth(HttpServletResponse response) throws IOException {
         String url = googleAuthService.generateAuthUrl();
         response.sendRedirect(url);

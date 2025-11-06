@@ -28,6 +28,8 @@ public class Order extends BaseEntity {
     
     private String note;
 
+    private boolean isRated;
+
     @DBRef
     private List<OrderItem> orderItems;
 
@@ -40,7 +42,7 @@ public class Order extends BaseEntity {
     private String phone; 
 
     @DBRef
-    private Promotion promotion;
+    private List<Promotion> promotions;
 
     private Address address;
 
