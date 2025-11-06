@@ -1,5 +1,6 @@
 package com.example.e_commerce_techshop.controllers.buyer;
 
+import com.example.e_commerce_techshop.annotations.RequireActiveAccount;
 import com.example.e_commerce_techshop.dtos.buyer.cart.CartDTO;
 import com.example.e_commerce_techshop.dtos.buyer.cart.UpdateQuantityDTO;
 import com.example.e_commerce_techshop.models.Cart;
@@ -28,6 +29,7 @@ import java.util.List;
 @RestController
 @RequestMapping("${api.prefix}/buyer/cart")
 @RequiredArgsConstructor
+@RequireActiveAccount
 @Tag(name = "Buyer Cart Management", description = "Shopping cart management APIs for buyers - Handle adding, updating, removing items, and cart operations")
 @SecurityRequirement(name = "bearerAuth")
 public class BuyerCartController {
@@ -54,7 +56,7 @@ public class BuyerCartController {
         }
 
         // Thêm vào giỏ hàng
-        cartService.addToCart(currentUser.getEmail(), cartDTO);
+        cartService.addToCart(currentUser, cartDTO);
 
         return ResponseEntity.ok(ApiResponse.ok("Thêm sản phẩm vào giỏ hàng thành công"));
     }
@@ -67,7 +69,7 @@ public class BuyerCartController {
     @Operation(summary = "Get shopping cart", description = "Retrieve all items in the current user's shopping cart with detailed product information and totals")
     public ResponseEntity<?> getCart(
             @Parameter(hidden = true) @AuthenticationPrincipal User currentUser) throws Exception {
-        Cart cart = cartService.getCart(currentUser.getEmail());
+        Cart cart = cartService.getCart(currentUser);
 
         return ResponseEntity.ok(ApiResponse.ok(CartResponse.fromCart(cart)));
     }
@@ -99,16 +101,25 @@ public class BuyerCartController {
      * Xóa sản phẩm khỏi giỏ hàng
      * DELETE /api/v1/buyer/cart/{cartItemId}
      */
-    @DeleteMapping("/{productVariantId}")
+    @DeleteMapping("/{cartItemId}")
     @Operation(summary = "Remove item from cart", description = "Remove a specific product variant completely from the shopping cart")
     public ResponseEntity<?> removeCartItem(
-            @Parameter(description = "ID of the product variant to remove", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String productVariantId,
-            @Parameter(description = "Color ID of the product variant (optional)", required = false, example = "red") @RequestParam(required = false) String colorId,
+            @Parameter(description = "ID of the cart item to remove", required = true) @PathVariable String cartItemId,
             @Parameter(hidden = true) @AuthenticationPrincipal User currentUser) throws Exception {
-        cartService.removeCartItem(currentUser.getEmail(), productVariantId, colorId);
+        cartService.removeCartItem(currentUser, cartItemId);
 
         return ResponseEntity.ok(ApiResponse.ok("Sản phẩm đã được xóa khỏi giỏ hàng"));
 
+    }
+
+    @DeleteMapping("")
+    @Operation(summary = "Remove many items from cart", description = "Remove a specific product variant completely from the shopping cart")
+    public ResponseEntity<?> removeManyCartItems(
+            @Parameter(description = "List of cart item IDs to remove from cart", required = true, content = @Content(array = @ArraySchema(schema = @Schema(implementation = String.class)))) 
+            @RequestBody List<String> cartItemIds,
+            @Parameter(hidden = true) @AuthenticationPrincipal User currentUser) throws Exception {
+        cartService.removeSelectedItemsByIds(currentUser, cartItemIds);
+        return ResponseEntity.ok(ApiResponse.ok("Các sản phẩm đã được xóa khỏi giỏ hàng"));
     }
 
     /**
@@ -119,7 +130,7 @@ public class BuyerCartController {
     @Operation(summary = "Clear entire cart", description = "Remove all items from the shopping cart. This action cannot be undone")
     public ResponseEntity<?> clearCart(
             @Parameter(hidden = true) @AuthenticationPrincipal User currentUser) throws Exception {
-        cartService.clearCart(currentUser.getEmail());
+        cartService.clearCart(currentUser);
 
         return ResponseEntity.ok(ApiResponse.ok("Giỏ hàng đã được xóa"));
 

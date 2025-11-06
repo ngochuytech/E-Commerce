@@ -1,5 +1,6 @@
 package com.example.e_commerce_techshop.controllers.buyer;
 
+import com.example.e_commerce_techshop.annotations.RequireActiveAccount;
 import com.example.e_commerce_techshop.dtos.buyer.OrderDTO;
 import com.example.e_commerce_techshop.models.Order;
 import com.example.e_commerce_techshop.models.User;
@@ -29,6 +30,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RestController
 @RequestMapping("${api.prefix}/buyer/orders")
 @RequiredArgsConstructor
+@RequireActiveAccount
 @Tag(name = "Buyer Order Management", description = "APIs for buyer order operations")
 @SecurityRequirement(name = "bearerAuth")
 public class BuyerOrderController {

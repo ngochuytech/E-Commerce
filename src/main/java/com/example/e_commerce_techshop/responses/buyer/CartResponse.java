@@ -30,7 +30,8 @@ public class CartResponse {
                 .build();
 
         List<CartItemResponse> cartItems = cart.getCartItems().stream()
-            .<CartItemResponse>map(cartItem -> CartItemResponse.builder()
+            .map(cartItem -> CartItemResponse.builder()
+                    .id(cartItem.getId())
                     .productId(cartItem.getProductVariant() != null ? cartItem.getProductVariant().getId() : null)
                     .productName(cartItem.getProductVariant() != null ? cartItem.getProductVariant().getName() : null)
                     .imageUrl(cartItem.getProductVariant() != null ? cartItem.getProductVariant().getPrimaryImageUrl() : null)
@@ -39,9 +40,9 @@ public class CartResponse {
                     .colorId(cartItem.getColorId())
                     .colorName(cartItem.getProductVariant() != null && cartItem.getProductVariant().getColors() != null 
                         ? cartItem.getProductVariant().getColors().stream()
-                            .filter(color -> color.getId().equals(cartItem.getColorId()))
+                            .filter(color ->  java.util.Objects.equals(color.getId(), cartItem.getColorId()))
                             .findFirst()
-                            .<String>map(color -> color.getColorName())
+                            .map(color -> color.getColorName())
                             .orElse(null)
                         : null
                     )
@@ -80,6 +81,8 @@ class UserResponse {
 @NoArgsConstructor
 @Builder
 class CartItemResponse {
+
+    private String id;
 
     private String productId;
 

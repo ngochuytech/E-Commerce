@@ -33,7 +33,7 @@ import lombok.RequiredArgsConstructor;
 @Tag(name = "Admin User Management", description = "APIs for admin to manage users")
 @SecurityRequirement(name = "Bearer Authentication")
 public class AdminUserController {
-    private final IUserService userService;
+        private final IUserService userService;
 
         @Operation(summary = "Get users (admin)", description = "Retrieve paginated list of users with optional filters")
         @GetMapping("")
@@ -45,40 +45,40 @@ public class AdminUserController {
                         @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size,
                         @Parameter(description = "Sort by field") @RequestParam(defaultValue = "createdAt") String sortBy,
                         @Parameter(description = "Sort direction: asc or desc") @RequestParam(defaultValue = "desc") String sortDir) {
-        Sort sort = sortDir.equalsIgnoreCase("desc")
-                ? Sort.by(sortBy).descending()
-                : Sort.by(sortBy).ascending();
+                Sort sort = sortDir.equalsIgnoreCase("desc")
+                                ? Sort.by(sortBy).descending()
+                                : Sort.by(sortBy).ascending();
 
-        Pageable pageable = PageRequest.of(page, size, sort);
-        Page<User> users = userService.getAllUsers(userName, userEmail, userPhone, pageable);
-        Page<UserResponse> userResponses = users.map(UserResponse::fromUser);
-        return ResponseEntity.ok(ApiResponse.ok(userResponses));
-    }
+                Pageable pageable = PageRequest.of(page, size, sort);
+                Page<User> users = userService.getAllUsers(userName, userEmail, userPhone, pageable);
+                Page<UserResponse> userResponses = users.map(UserResponse::fromUser);
+                return ResponseEntity.ok(ApiResponse.ok(userResponses));
+        }
 
-    @Operation(summary = "Ban a user", description = "Ban a user (temporary or permanent) by admin")
-    @PostMapping("/ban")
-    public ResponseEntity<?> banUser(
-            @Valid @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "BanUser payload", required = true)
-            @RequestBody BanUserDTO banUserDTO,
-            @AuthenticationPrincipal User admin) throws Exception{
-           userService.banUser(admin.getId(), banUserDTO);
-            return ResponseEntity.ok(ApiResponse.ok("Chặn người dùng thành công"));
-    }
+        @Operation(summary = "Ban a user", description = "Ban a user (temporary or permanent) by admin")
+        @PostMapping("/ban")
+        public ResponseEntity<?> banUser(
+                        @Valid @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "BanUser payload", required = true) @RequestBody BanUserDTO banUserDTO,
+                        @AuthenticationPrincipal User admin) throws Exception {
+                userService.banUser(admin.getId(), banUserDTO);
+                return ResponseEntity.ok(ApiResponse.ok("Chặn người dùng thành công"));
+        }
 
-    @Operation(summary = "Unban a user", description = "Remove ban for a user")
-    @PostMapping("/unban/{userId}")
-    public ResponseEntity<?> unbanUser(
-            @Parameter(description = "ID of user to unban") @PathVariable String userId,
-            @AuthenticationPrincipal User admin) throws Exception{
-            userService.unbanUser(admin.getId(), userId);
+        @Operation(summary = "Unban a user", description = "Remove ban for a user")
+        @PostMapping("/unban/{userId}")
+        public ResponseEntity<?> unbanUser(
+                        @Parameter(description = "ID of user to unban") @PathVariable String userId,
+                        @AuthenticationPrincipal User admin) throws Exception {
+                userService.unbanUser(admin.getId(), userId);
 
-            return ResponseEntity.ok(ApiResponse.ok("Mở chặn người dùng thành công!"));
-    }
+                return ResponseEntity.ok(ApiResponse.ok("Mở chặn người dùng thành công!"));
+        }
 
         @Operation(summary = "Check ban status", description = "Check whether a user is currently banned")
         @GetMapping("/check-ban/{userId}")
         public ResponseEntity<?> checkBanStatus(@Parameter(description = "User ID") @PathVariable String userId) {
                 boolean isBanned = userService.isUserBanned(userId);
-                return ResponseEntity.ok(ApiResponse.ok("Trạng thái người dùng: " + (isBanned ? "Đã bị chặn" : "Đang hoạt động")));
+                return ResponseEntity.ok(ApiResponse
+                                .ok("Trạng thái người dùng: " + (isBanned ? "Đã bị chặn" : "Đang hoạt động")));
         }
 }

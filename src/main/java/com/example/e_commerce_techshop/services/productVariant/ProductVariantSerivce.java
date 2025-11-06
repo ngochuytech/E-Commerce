@@ -98,8 +98,7 @@ public class ProductVariantSerivce implements IProductVariantService{
     public void disableProduct(String productVariantId) throws Exception {
         ProductVariant productVariant = productVariantRepository.findById(productVariantId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy mẫu sản phẩm này"));
-        productVariant.setStock(0);
-        productVariant.setPrice(0L);
+        productVariant.setStatus(ProductVariant.VariantStatus.DELETED.name());
         productVariantRepository.save(productVariant);
     }
 
@@ -203,6 +202,7 @@ public class ProductVariantSerivce implements IProductVariantService{
     }
 
     @Override
+    @Transactional
     public void updateProductVariantColors(String productVariantId, String colorId, ColorOption colorOptionDTO, MultipartFile imageFile)
             throws Exception {
         ProductVariant productVariant = productVariantRepository.findById(productVariantId)

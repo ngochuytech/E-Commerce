@@ -64,6 +64,8 @@ public class OrderDTO {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class SelectedCartItem {
+        private String id;
+        
         @NotBlank(message = "Product variant ID không được để trống")
         private String productVariantId;
         

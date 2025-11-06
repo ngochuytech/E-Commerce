@@ -31,6 +31,7 @@ public class Cart extends BaseEntity {
     @NoArgsConstructor
     @Builder
     public static class CartItemEmbedded {
+        private String id;
         @DBRef
         private ProductVariant productVariant;
         private int quantity;

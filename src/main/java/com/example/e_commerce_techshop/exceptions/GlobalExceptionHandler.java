@@ -67,7 +67,7 @@ public class GlobalExceptionHandler {
         }
         
         // Fallback cho các NullPointerException khác
-        if (errorMessage != null && errorMessage.contains("currentUser")) {
+        if (errorMessage != null && (errorMessage.contains("currentUser") || errorMessage.contains("user"))) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error("Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại"));
         }
@@ -98,6 +98,18 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidPromotionException.class)
     public ResponseEntity<ApiResponse<Object>> handleInvalidPromotionException(InvalidPromotionException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(UserBannedException.class)
+    public ResponseEntity<ApiResponse<Object>> handleUserBannedException(UserBannedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(AccountNotVerifiedException.class)
+    public ResponseEntity<ApiResponse<Object>> handleAccountNotVerifiedException(AccountNotVerifiedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(ApiResponse.error(ex.getMessage()));
     }
 

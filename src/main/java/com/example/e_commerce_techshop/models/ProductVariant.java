@@ -48,7 +48,7 @@ public class ProductVariant extends BaseEntity {
     private List<ColorOption> colors;
 
     public enum VariantStatus {
-        PENDING, APPROVED, REJECTED
+        PENDING, APPROVED, REJECTED, DELETED
     }
 
     @Getter

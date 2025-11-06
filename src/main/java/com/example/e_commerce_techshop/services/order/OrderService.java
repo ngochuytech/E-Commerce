@@ -402,14 +402,11 @@ public class OrderService implements IOrderService {
             orders.add(order);
         }
 
-        // 11. Xóa các sản phẩm đã thanh toán khỏi giỏ hàng
-        List<String> productVariantIds = new ArrayList<>();
-        List<String> colorIds = new ArrayList<>();
-        for (var item : orderDTO.getSelectedItems()) {
-            productVariantIds.add(item.getProductVariantId());
-            colorIds.add(item.getColorId());
-        }
-        cartService.removeSelectedItems(user, productVariantIds, colorIds);
+        List<String> selectedCartItemIds = orderDTO.getSelectedItems().stream()
+                .map(OrderDTO.SelectedCartItem::getId)
+                .collect(Collectors.toList());
+
+        cartService.removeSelectedItemsByIds(user, selectedCartItemIds);
 
         // 12. Return danh sách orders
         return orders;
