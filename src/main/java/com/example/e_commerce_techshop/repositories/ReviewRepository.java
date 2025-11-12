@@ -11,9 +11,6 @@ import java.util.List;
 
 @Repository
 public interface ReviewRepository extends MongoRepository<Review, String> {
-
-    @Query("{ 'productVariant.product.store.$id': ?0 }")
-    List<Review> findByStoreId(String storeId);
     
     @Query("{ 'order.store.$id': ?0 }")
     List<Review> findByOrder_StoreId(String storeId);

@@ -50,6 +50,6 @@ public interface IPromotionService {
     Page<PromotionResponse> getPromotionsByType(String type, Pageable pageable);
     Page<Promotion> getAllPromotions(Pageable pageable);
     Page<Promotion> getAllPromotionForCustomer(Pageable pageable);
-    Page<Promotion> getPlatformPromotionsForCustomer(Pageable pageable);
-    Page<Promotion> getStorePromotionsForCustomer(String storeId, Pageable pageable);
+    Page<PromotionResponse> getPlatformPromotionsForCustomer(Long orderValue, User user,Pageable pageable);
+    Page<PromotionResponse> getStorePromotionsForCustomer(String storeId, Long orderValue, User user, Pageable pageable);
 }

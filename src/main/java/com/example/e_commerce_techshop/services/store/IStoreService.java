@@ -16,7 +16,6 @@ public interface IStoreService {
     Store getStoreByIdAndOwnerId(String storeId, String ownerId) throws Exception;
     // Shop (B2C)
     StoreResponse createStore(StoreDTO storeDTO, User owner, MultipartFile logo) throws Exception;
-    Store uploadBanner(String storeId, MultipartFile banner) throws Exception;
     StoreResponse updateStore(String storeId, UpdateStoreDTO storeDTO) throws Exception;
     void updateStoreLogo(String storeId, MultipartFile logo) throws Exception;
     void updateStoreBanner(String storeId, MultipartFile banner) throws Exception;

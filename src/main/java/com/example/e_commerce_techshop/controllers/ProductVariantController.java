@@ -87,7 +87,7 @@ public class ProductVariantController {
     @Operation(summary = "Get latest product variants", description = "Retrieve recently added product variants with pagination and sorting")
     public ResponseEntity<?> getLatestProductVariants(
             @Parameter(description = "Page number (0-based)", example = "0") @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "Number of items per page", example = "2") @RequestParam(defaultValue = "2") int size,
+            @Parameter(description = "Number of items per page", example = "15") @RequestParam(defaultValue = "15") int size,
             @Parameter(description = "Sort field", example = "createdAt") @RequestParam(defaultValue = "createdAt") String sortBy,
             @Parameter(description = "Sort direction (asc, desc)", example = "desc") @RequestParam(defaultValue = "desc") String sortDir)
             throws Exception {

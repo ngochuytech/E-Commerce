@@ -24,8 +24,6 @@ public interface OrderRepository extends MongoRepository<Order, String> {
     
     long countByBuyerId(String buyerId);
     
-    List<Order> findByBuyerId(String buyerId);
-    
     List<Order> findByStoreId(String storeId);
     
     List<Order> findByStoreIdAndStatus(String storeId, String status);

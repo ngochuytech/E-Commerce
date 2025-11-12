@@ -14,10 +14,6 @@ import java.util.Optional;
 
 @Repository
 public interface PromotionRepository extends MongoRepository<Promotion, String> {
-    List<Promotion> findByStoreId(String storeId);
-    List<Promotion> findByStatus(String status);
-    List<Promotion> findByType(String type);
-
     // Override findAll to exclude DELETED promotions
     @Query("{ 'status': { '$ne': 'DELETED' } }")
     Page<Promotion> findAll(Pageable pageable);
@@ -28,19 +24,8 @@ public interface PromotionRepository extends MongoRepository<Promotion, String> 
     @Query("{ 'type': ?0, 'status': { '$ne': 'DELETED' } }")
     Page<Promotion> findByType(String type, Pageable pageable);
 
-    @Query("{ 'status': 'ACTIVE', 'startDate': { '$lte': ?0 }, 'endDate': { '$gte': ?0 } }")
-    Page<Promotion> findActivePromotions(LocalDateTime now, Pageable pageable);
-
-    @Query("{ 'store.$id': ObjectId(?0), 'status': 'ACTIVE', 'startDate': { '$lte': ?1 }, 'endDate': { '$gte': ?1 } }")
-    Page<Promotion> findActivePromotionsByStore(String storeId, LocalDateTime now, Pageable pageable);
-
-    @Query("{ 'endDate': { '$lt': ?0 } }")
-    Page<Promotion> findExpiredPromotions(LocalDateTime now, Pageable pageable);
-
     @Query("{ 'issuer': 'PLATFORM', 'endDate': { '$lt': ?0 } }")
     Page<Promotion> findExpiredPlatformPromotions(LocalDateTime now, Pageable pageable);
-
-    Optional<Promotion> findByIdAndStoreId(String id, String storeId);
 
     Optional<Promotion> findByCode(String code);
     

@@ -16,10 +16,13 @@ import com.example.e_commerce_techshop.responses.PromotionResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -415,9 +418,49 @@ public class PromotionService implements IPromotionService {
     }
 
     @Override
-    public Page<Promotion> getPlatformPromotionsForCustomer(Pageable pageable) {
-        return promotionRepository.findByIssuerForCustomer(Promotion.Issuer.PLATFORM.name(), LocalDateTime.now(),
+    public Page<PromotionResponse> getPlatformPromotionsForCustomer(Long orderValue, User user, Pageable pageable) {
+        Page<Promotion> promotions = promotionRepository.findByIssuerForCustomer(Promotion.Issuer.PLATFORM.name(),
+                LocalDateTime.now(),
                 pageable);
+        List<PromotionResponse> applicablePromotions = promotions.getContent().stream()
+                .filter(promotion -> {
+                    try {
+                        // Kiểm tra điều kiện áp dụng
+                        if (orderValue < promotion.getMinOrderValue()) {
+                            return false; // Không đủ giá trị đơn hàng tối thiểu
+                        }
+
+                        // Kiểm tra usage limit
+                        if (promotion.getUsageLimit() != null &&
+                                promotion.getUsedCount() >= promotion.getUsageLimit()) {
+                            return false; // Đã hết số lần sử dụng
+                        }
+
+                        // Kiểm tra new user only
+                        if (user != null && promotion.getIsNewUserOnly() != null && promotion.getIsNewUserOnly()) {
+                            long orderCount = orderRepository.countByBuyerId(user.getId());
+                            if (orderCount > 0) {
+                                return false; // Không phải user mới
+                            }
+                        }
+
+                        // Kiểm tra usage limit per user
+                        if (user != null && promotion.getUsageLimitPerUser() != null) {
+                            int userUsageCount = promotionUsageRepository.countByPromotionAndUser(promotion, user);
+                            if (userUsageCount >= promotion.getUsageLimitPerUser()) {
+                                return false; // Đã vượt quá giới hạn sử dụng của user
+                            }
+                        }
+
+                        return true;
+                    } catch (Exception e) {
+                        return false;
+                    }
+                })
+                .map(PromotionResponse::fromPromotion)
+                .collect(Collectors.toList());
+
+        return new PageImpl<>(applicablePromotions, pageable, applicablePromotions.size());
     }
 
     @Override
@@ -438,8 +481,60 @@ public class PromotionService implements IPromotionService {
     }
 
     @Override
-    public Page<Promotion> getStorePromotionsForCustomer(String storeId, Pageable pageable) {
-        return promotionRepository.findByStoreIdForCustomer(storeId, LocalDateTime.now(), pageable);
+    public Page<PromotionResponse> getStorePromotionsForCustomer(String storeId, Long orderValue, User user,
+            Pageable pageable) {
+        Page<Promotion> promotions = promotionRepository.findByStoreIdForCustomer(storeId, LocalDateTime.now(),
+                pageable);
+        // Filter các mã có thể áp dụng cho đơn hàng và convert sang PromotionResponse
+        List<PromotionResponse> applicablePromotions = promotions.getContent().stream()
+                .filter(promotion -> {
+                    try {
+                        // Kiểm tra điều kiện áp dụng
+                        if (orderValue < promotion.getMinOrderValue()) {
+                            return false; // Không đủ giá trị đơn hàng tối thiểu
+                        }
+
+                        // Kiểm tra issuer (nếu có storeId)
+                        if (storeId != null && !storeId.isEmpty()) {
+                            if (Promotion.Issuer.STORE.name().equals(promotion.getIssuer())) {
+                                if (promotion.getStore() == null ||
+                                        !promotion.getStore().getId().equals(storeId)) {
+                                    return false; // Mã của store khác
+                                }
+                            }
+                        }
+
+                        // Kiểm tra usage limit
+                        if (promotion.getUsageLimit() != null &&
+                                promotion.getUsedCount() >= promotion.getUsageLimit()) {
+                            return false; // Đã hết số lần sử dụng
+                        }
+
+                        // Kiểm tra new user only
+                        if (user != null && promotion.getIsNewUserOnly() != null && promotion.getIsNewUserOnly()) {
+                            long orderCount = orderRepository.countByBuyerId(user.getId());
+                            if (orderCount > 0) {
+                                return false; // Không phải user mới
+                            }
+                        }
+
+                        // Kiểm tra usage limit per user
+                        if (user != null && promotion.getUsageLimitPerUser() != null) {
+                            int userUsageCount = promotionUsageRepository.countByPromotionAndUser(promotion, user);
+                            if (userUsageCount >= promotion.getUsageLimitPerUser()) {
+                                return false; // Đã vượt quá giới hạn sử dụng của user
+                            }
+                        }
+
+                        return true;
+                    } catch (Exception e) {
+                        return false;
+                    }
+                })
+                .map(PromotionResponse::fromPromotion)
+                .collect(Collectors.toList());
+
+        return new PageImpl<>(applicablePromotions, pageable, applicablePromotions.size());
     }
 
     @Override
@@ -461,7 +556,8 @@ public class PromotionService implements IPromotionService {
     }
 
     @Override
-    public void validatePromotionForUser(Promotion promotion, Long orderValue, User user) throws InvalidPromotionException {
+    public void validatePromotionForUser(Promotion promotion, Long orderValue, User user)
+            throws InvalidPromotionException {
         // Check if promotion is active and not expired
         LocalDateTime now = LocalDateTime.now();
 

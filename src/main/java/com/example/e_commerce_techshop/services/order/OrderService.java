@@ -506,25 +506,6 @@ public class OrderService implements IOrderService {
         orderRepository.save(order);
     }
 
-    @Override
-    public Map<String, Long> getOrderCount(String userEmail) throws Exception {
-        // 1. Convert email to User object
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy người dùng với Email: " + userEmail));
-        String buyerId = user.getId();
-
-        // 2. Đếm orders theo status
-        Map<String, Long> counts = new HashMap<>();
-        counts.put("total", orderRepository.countByBuyerId(buyerId));
-        counts.put("pending", orderRepository.countByBuyerIdAndStatus(buyerId, "PENDING"));
-        counts.put("confirmed", orderRepository.countByBuyerIdAndStatus(buyerId, "CONFIRMED"));
-        counts.put("shipping", orderRepository.countByBuyerIdAndStatus(buyerId, "SHIPPING"));
-        counts.put("delivered", orderRepository.countByBuyerIdAndStatus(buyerId, "DELIVERED"));
-        counts.put("cancelled", orderRepository.countByBuyerIdAndStatus(buyerId, "CANCELLED"));
-
-        return counts;
-    }
-
     /**
      * Validate payment method
      */

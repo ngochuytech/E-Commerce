@@ -147,22 +147,6 @@ public class StoreService implements IStoreService {
     }
 
     @Override
-    public Store uploadBanner(String storeId, MultipartFile banner) throws Exception {
-        Store store = storeRepository.findById(storeId)
-                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy cửa hàng"));
-
-        // Delete old banner if exists
-        if (store.getBanner_url() != null && !store.getBanner_url().isEmpty()) {
-            fileUploadService.deleteFile(store.getBanner_url());
-        }
-
-        // Upload new banner
-        String bannerUrl = fileUploadService.uploadFile(banner, "stores");
-        store.setBanner_url(bannerUrl);
-        return storeRepository.save(store);
-    }
-
-    @Override
     public Page<StoreResponse> getStoresByOwner(String ownerId, Pageable pageable) {
         Page<Store> stores = storeRepository.findByOwnerId(ownerId, pageable);
         return stores.map(StoreResponse::fromStore);
