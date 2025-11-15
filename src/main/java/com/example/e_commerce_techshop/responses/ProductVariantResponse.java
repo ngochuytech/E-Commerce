@@ -30,6 +30,8 @@ public class ProductVariantResponse {
 
     private int stock;
 
+    private String status;
+
     private Map<String, String> attributes;
 
     private List<ColorResponse> colors;
@@ -100,6 +102,7 @@ public class ProductVariantResponse {
                 .price(productVariant.getPrice())
                 .description(productVariant.getDescription())
                 .stock(productVariant.getStock())
+                .status(productVariant.getStatus())
                 .attributes(attributes)
                 .colors(colors)
                 .store(storeResponse)
