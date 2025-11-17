@@ -6,7 +6,6 @@ import com.example.e_commerce_techshop.exceptions.InvalidPromotionException;
 import com.example.e_commerce_techshop.models.*;
 import com.example.e_commerce_techshop.models.ProductVariant.ColorOption;
 import com.example.e_commerce_techshop.repositories.*;
-import com.example.e_commerce_techshop.repositories.user.UserRepository;
 import com.example.e_commerce_techshop.services.cart.ICartService;
 import com.example.e_commerce_techshop.services.promotion.IPromotionService;
 
@@ -33,7 +32,6 @@ public class OrderService implements IOrderService {
 
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
-    private final UserRepository userRepository;
     private final ProductVariantRepository productVariantRepository;
     private final PromotionRepository promotionRepository;
     private final StoreRepository storeRepository;
@@ -41,6 +39,8 @@ public class OrderService implements IOrderService {
     private final ICartService cartService;
     private final PromotionUsageRepository promotionUsageRepository;
     private final IPromotionService promotionService;
+    private final WalletRepository walletRepository;
+    private final TransactionRepository transactionRepository;
 
     @Override
     @Transactional
@@ -320,6 +320,7 @@ public class OrderService implements IOrderService {
                     .totalPrice(finalTotal)
                     .shippingFee(finalShippingFee)
                     .isRated(false)
+                    .vnpTnxRef(orderDTO.getVnpTnxRef())
                     .address(Address.builder()
                             .province(orderDTO.getAddress().getProvince())
                             .ward(orderDTO.getAddress().getWard())
@@ -633,6 +634,7 @@ public class OrderService implements IOrderService {
     }
 
     @Override
+    @Transactional
     public Order updateOrderStatus(String storeId, String orderId, String newStatus) throws Exception {
         Order order = getStoreOrderDetail(storeId, orderId);
 
@@ -644,7 +646,14 @@ public class OrderService implements IOrderService {
         }
 
         order.setStatus(newStatus);
-        return orderRepository.save(order);
+        Order savedOrder = orderRepository.save(order);
+        
+        // Nếu đơn hàng chuyển sang DELIVERED, cộng tiền vào ví store
+        if ("DELIVERED".equals(newStatus)) {
+            addMoneyToStoreWallet(order);
+        }
+        
+        return savedOrder;
     }
 
     @Override
@@ -756,5 +765,53 @@ public class OrderService implements IOrderService {
             }
         }
         return total;
+    }
+    
+    /**
+     * Cộng tiền vào ví của store khi đơn hàng hoàn thành
+     */
+    private void addMoneyToStoreWallet(Order order) {
+        try {
+            Store store = order.getStore();
+            BigDecimal orderAmount = order.getTotalPrice();
+            
+            // Tìm hoặc tạo ví cho store
+            Wallet wallet = walletRepository.findByStoreId(store.getId())
+                    .orElseGet(() -> {
+                        Wallet newWallet = Wallet.builder()
+                                .store(store)
+                                .balance(BigDecimal.ZERO)
+                                .totalEarned(BigDecimal.ZERO)
+                                .totalWithdrawn(BigDecimal.ZERO)
+                                .pendingAmount(BigDecimal.ZERO)
+                                .build();
+                        return walletRepository.save(newWallet);
+                    });
+            
+            // Lưu số dư trước giao dịch
+            BigDecimal balanceBefore = wallet.getBalance();
+            
+            // Cập nhật số dư
+            wallet.setBalance(wallet.getBalance().add(orderAmount));
+            wallet.setTotalEarned(wallet.getTotalEarned().add(orderAmount));
+            walletRepository.save(wallet);
+            
+            // Tạo transaction ghi nhận
+            Transaction transaction = Transaction.builder()
+                    .wallet(wallet)
+                    .order(order)
+                    .type(Transaction.TransactionType.ORDER_COMPLETED)
+                    .amount(orderAmount)
+                    .balanceBefore(balanceBefore)
+                    .balanceAfter(wallet.getBalance())
+                    .description(String.format("Tiền từ đơn hàng #%s", order.getId()))
+                    .status("COMPLETED")
+                    .build();
+            transactionRepository.save(transaction);
+            
+        } catch (Exception e) {
+            System.err.println("Error adding money to store wallet: " + e.getMessage());
+            // Không throw exception để không ảnh hưởng đến việc cập nhật trạng thái đơn hàng
+        }
     }
 }

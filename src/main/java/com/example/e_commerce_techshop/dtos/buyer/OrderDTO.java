@@ -27,6 +27,8 @@ public class OrderDTO {
     
     private String note;
 
+    private String vnpTnxRef; // Mã tham chiếu giao dịch VNPAY (nếu có)
+
     @NotNull(message = "Địa chỉ không được để trống")
     @Valid
     private AddressDTO address;

@@ -30,6 +30,8 @@ public class Order extends BaseEntity {
 
     private boolean isRated;
 
+    private String vnpTnxRef; // Mã tham chiếu giao dịch VNPAY (nếu có)
+
     @DBRef
     private List<OrderItem> orderItems;
 
