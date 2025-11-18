@@ -1,8 +1,17 @@
 spring:
+  jackson:
+    time-zone: Asia/Ho_Chi_Minh
+    serialization:
+      write-dates-as-timestamps: false
+  jpa:
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: Asia/Ho_Chi_Minh
   data:
     mongodb:
       uri: mongodb+srv://${DB_MONGODB_USERNAME}:${DB_MONGODB_PASSWORD}@cluster0.7wqi5cz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
-      database: ${DB_MONGODB_NAME}
+      database: ${DB_MONGODB_NAME:e-commerce}
       auto-index-creation: true
       max-connections-per-host: 100
       server-selection-timeout-ms: 30000
@@ -27,8 +36,8 @@ spring:
           connectiontimeout: 10000
           timeout: 10000
           writetimeout: 10000
-      from: ${MAIL_FROM_ADDRESS}
-      from-name: ${MAIL_FROM_NAME}
+      from: ${MAIL_FROM_ADDRESS:ngochuymail25@gmail.com}
+      from-name: ${MAIL_FROM_NAME:TechShop E-commerce}
     default-encoding: UTF-8
   security:
     oauth2:
