@@ -22,6 +22,8 @@ public interface IProductService {
 
     void updateStatus(String productId, String status);
 
+    Product getByVariant(String variantId) throws Exception;
+
     // B2C methods
     Page<Product> getAllProductsB2C(String storeId,String status, Pageable pageable) throws Exception;
 
