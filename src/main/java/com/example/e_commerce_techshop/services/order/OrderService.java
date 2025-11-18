@@ -598,7 +598,7 @@ public class OrderService implements IOrderService {
     @Override
     public Page<Order> getStoreOrders(String storeId, int page, int size, String status) throws Exception {
         // Tạo Pageable (page bắt đầu từ 0)
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
         Page<Order> orders;
         if (status != null && !status.trim().isEmpty()) {
