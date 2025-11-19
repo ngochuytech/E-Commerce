@@ -1,5 +1,12 @@
 package com.example.e_commerce_techshop.services.wallet;
 
+import java.math.BigDecimal;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
 import com.example.e_commerce_techshop.models.Store;
 import com.example.e_commerce_techshop.models.Transaction;
@@ -9,15 +16,8 @@ import com.example.e_commerce_techshop.repositories.StoreRepository;
 import com.example.e_commerce_techshop.repositories.TransactionRepository;
 import com.example.e_commerce_techshop.repositories.WalletRepository;
 import com.example.e_commerce_techshop.repositories.WithdrawalRequestRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -48,9 +48,8 @@ public class WalletService implements IWalletService {
     }
 
     @Override
-    public Page<Transaction> getTransactionHistory(String storeId, int page, int size) throws Exception {
+    public Page<Transaction> getTransactionHistory(String storeId, Pageable pageable) throws Exception {
         Wallet wallet = getStoreWallet(storeId);
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         return transactionRepository.findByWalletIdOrderByCreatedAtDesc(wallet.getId(), pageable);
     }
 
@@ -92,8 +91,7 @@ public class WalletService implements IWalletService {
     }
 
     @Override
-    public Page<WithdrawalRequest> getWithdrawalRequests(String storeId, int page, int size) throws Exception {
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+    public Page<WithdrawalRequest> getWithdrawalRequests(String storeId, Pageable pageable) throws Exception {
         return withdrawalRequestRepository.findByStoreIdOrderByCreatedAtDesc(storeId, pageable);
     }
 
@@ -110,8 +108,7 @@ public class WalletService implements IWalletService {
     }
 
     @Override
-    public Page<WithdrawalRequest> getAllWithdrawalRequests(String status, int page, int size) throws Exception {
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+    public Page<WithdrawalRequest> getAllWithdrawalRequests(String status, Pageable pageable) throws Exception {
         
         if (status != null && !status.trim().isEmpty()) {
             return withdrawalRequestRepository.findByStatusOrderByCreatedAtDesc(status, pageable);
@@ -122,28 +119,12 @@ public class WalletService implements IWalletService {
 
     @Override
     @Transactional
-    public WithdrawalRequest approveWithdrawalRequest(String requestId, String adminNote) throws Exception {
-        WithdrawalRequest request = withdrawalRequestRepository.findById(requestId)
-                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy yêu cầu rút tiền"));
-
-        if (!"PENDING".equals(request.getStatus())) {
-            throw new IllegalArgumentException("Chỉ có thể duyệt yêu cầu ở trạng thái PENDING");
-        }
-
-        request.setStatus("APPROVED");
-        request.setAdminNote(adminNote);
-        
-        return withdrawalRequestRepository.save(request);
-    }
-
-    @Override
-    @Transactional
     public WithdrawalRequest rejectWithdrawalRequest(String requestId, String adminNote) throws Exception {
         WithdrawalRequest request = withdrawalRequestRepository.findById(requestId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy yêu cầu rút tiền"));
 
-        if (!"PENDING".equals(request.getStatus()) && !"APPROVED".equals(request.getStatus())) {
-            throw new IllegalArgumentException("Không thể từ chối yêu cầu ở trạng thái hiện tại");
+        if (!"PENDING".equals(request.getStatus())) {
+            throw new IllegalArgumentException("Chỉ có thể từ chối yêu cầu ở trạng thái PENDING");
         }
 
         request.setStatus("REJECTED");
@@ -154,12 +135,12 @@ public class WalletService implements IWalletService {
 
     @Override
     @Transactional
-    public WithdrawalRequest completeWithdrawalRequest(String requestId) throws Exception {
+    public WithdrawalRequest completeWithdrawalRequest(String requestId, String adminNote) throws Exception {
         WithdrawalRequest request = withdrawalRequestRepository.findById(requestId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy yêu cầu rút tiền"));
 
-        if (!"APPROVED".equals(request.getStatus())) {
-            throw new IllegalArgumentException("Chỉ có thể hoàn thành yêu cầu đã được duyệt");
+        if (!"PENDING".equals(request.getStatus())) {
+            throw new IllegalArgumentException("Chỉ có thể hoàn thành yêu cầu ở trạng thái PENDING");
         }
 
         Wallet wallet = request.getWallet();
@@ -193,6 +174,7 @@ public class WalletService implements IWalletService {
         // Cập nhật trạng thái request
         request.setStatus("COMPLETED");
         request.setTransaction(transaction);
+        request.setAdminNote(adminNote);
         
         return withdrawalRequestRepository.save(request);
     }

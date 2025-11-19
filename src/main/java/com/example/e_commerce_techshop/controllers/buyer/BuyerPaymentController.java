@@ -15,15 +15,12 @@ import com.example.e_commerce_techshop.dtos.vnpay.PaymentRefundDTO;
 import com.example.e_commerce_techshop.responses.ApiResponse;
 import com.example.e_commerce_techshop.services.vnpay.IVNPayService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequiredArgsConstructor
@@ -38,17 +35,6 @@ public class BuyerPaymentController {
             summary = "Create VNPay payment URL",
             description = "Generate a payment URL for order payment via VNPay gateway. User will be redirected to VNPay website."
     )
-    @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "200",
-                    description = "Payment URL created successfully",
-                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class))
-            ),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "400",
-                    description = "Invalid payment details"
-            )
-    })
     public ResponseEntity<?> createPayment(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     description = "Payment details including amount, bank code, and language",
@@ -66,16 +52,6 @@ public class BuyerPaymentController {
             summary = "Query payment transaction status",
             description = "Query the status of a payment transaction from VNPay. Used to verify if payment was successful."
     )
-    @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "200",
-                    description = "Transaction status retrieved successfully"
-            ),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "400",
-                    description = "Invalid transaction details"
-            )
-    })
     public ResponseEntity<?> queryTransaction(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     description = "Query details including order ID and transaction date",
@@ -92,16 +68,6 @@ public class BuyerPaymentController {
             summary = "Refund payment transaction",
             description = "Request a refund for a completed payment transaction. Must be initiated by admin or authorized person."
     )
-    @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "200",
-                    description = "Refund request submitted successfully"
-            ),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "400",
-                    description = "Invalid refund details or validation error"
-            )
-    })
     public ResponseEntity<?> refundTransaction(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     description = "Refund details including order ID, amount, and transaction date",

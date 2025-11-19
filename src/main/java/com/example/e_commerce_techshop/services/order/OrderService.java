@@ -41,6 +41,7 @@ public class OrderService implements IOrderService {
     private final IPromotionService promotionService;
     private final WalletRepository walletRepository;
     private final TransactionRepository transactionRepository;
+    private final AdminRevenueRepository adminRevenueRepository;
 
     @Override
     @Transactional
@@ -310,15 +311,22 @@ public class OrderService implements IOrderService {
 
             // 10.3.4. Tính tổng tiền cuối cùng
             BigDecimal finalShippingFee = shippingFee.subtract(shippingDiscount).max(BigDecimal.ZERO);
-            BigDecimal finalTotal = storeTotal.subtract(orderDiscount).add(finalShippingFee).max(BigDecimal.ZERO);
+            
+            // 10.3.5. Tính phí dịch vụ (cố định: 5000đ cho mỗi đơn hàng)
+            BigDecimal serviceFee = BigDecimal.valueOf(5000);
+            
+            // 10.3.6. Tính tổng tiền cuối cùng khách hàng phải thanh toán
+            BigDecimal finalTotal = storeTotal.subtract(orderDiscount).add(finalShippingFee).add(serviceFee).max(BigDecimal.ZERO);
 
             // 10.4. Tạo Order cho store này
             Order order = Order.builder()
                     .buyer(user)
                     .store(store)
                     .promotions(appliedPromotions.isEmpty() ? null : appliedPromotions)
-                    .totalPrice(finalTotal)
-                    .shippingFee(finalShippingFee)
+                    .productPrice(storeTotal) // Giá sản phẩm
+                    .shippingFee(finalShippingFee) // Phí ship
+                    .serviceFee(serviceFee) // Phí dịch vụ
+                    .totalPrice(finalTotal) // Tổng tiền khách thanh toán
                     .isRated(false)
                     .vnpTnxRef(orderDTO.getVnpTnxRef())
                     .address(Address.builder()
@@ -333,6 +341,16 @@ public class OrderService implements IOrderService {
                     .build();
 
             order = orderRepository.save(order);
+
+            // 10.4.1. Lưu phí dịch vụ cho admin
+            AdminRevenue adminRevenue = AdminRevenue.builder()
+                    .order(order)
+                    .serviceFee(serviceFee)
+                    .revenueType("SERVICE_FEE")
+                    .status("PENDING")
+                    .description(String.format("Phí dịch vụ từ đơn hàng #%s", order.getId()))
+                    .build();
+            adminRevenueRepository.save(adminRevenue);
 
             // 10.5. Tạo OrderItems cho store này và trừ stock
             List<OrderItem> orderItems = new ArrayList<>();
@@ -597,7 +615,6 @@ public class OrderService implements IOrderService {
 
     @Override
     public Page<Order> getStoreOrders(String storeId, int page, int size, String status) throws Exception {
-        // Tạo Pageable (page bắt đầu từ 0)
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
         Page<Order> orders;
@@ -651,6 +668,13 @@ public class OrderService implements IOrderService {
         // Nếu đơn hàng chuyển sang DELIVERED, cộng tiền vào ví store
         if ("DELIVERED".equals(newStatus)) {
             addMoneyToStoreWallet(order);
+            
+            // Cập nhật trạng thái AdminRevenue từ PENDING sang COLLECTED
+            adminRevenueRepository.findByOrderId(order.getId())
+                    .ifPresent(adminRevenue -> {
+                        adminRevenue.setStatus("COLLECTED");
+                        adminRevenueRepository.save(adminRevenue);
+                    });
         }
         
         return savedOrder;

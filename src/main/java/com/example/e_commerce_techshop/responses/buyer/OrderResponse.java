@@ -16,9 +16,13 @@ import lombok.*;
 public class OrderResponse {
     private String id;
 
-    private BigDecimal totalPrice;
+    private BigDecimal totalPrice; // Giá cuối cùng khách phải thanh toán
 
-    private BigDecimal shippingFee;
+    private BigDecimal productPrice; // Giá sản phẩm (tổng)
+
+    private BigDecimal shippingFee; // Phí ship
+
+    private BigDecimal serviceFee; // Phí dịch vụ (cố định)
 
     private String paymentMethod;
 
@@ -114,7 +118,9 @@ public class OrderResponse {
         return OrderResponse.builder()
                 .id(order.getId())
                 .totalPrice(order.getTotalPrice())
+                .productPrice(order.getProductPrice() != null ? order.getProductPrice() : BigDecimal.ZERO)
                 .shippingFee(order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO)
+                .serviceFee(order.getServiceFee() != null ? order.getServiceFee() : BigDecimal.ZERO)
                 .paymentMethod(order.getPaymentMethod())
                 .status(order.getStatus())
                 .isRated(order.isRated())

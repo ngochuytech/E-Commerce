@@ -4,6 +4,7 @@ import com.example.e_commerce_techshop.models.Transaction;
 import com.example.e_commerce_techshop.models.Wallet;
 import com.example.e_commerce_techshop.models.WithdrawalRequest;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 
@@ -17,7 +18,7 @@ public interface IWalletService {
     /**
      * Lấy lịch sử giao dịch của store
      */
-    Page<Transaction> getTransactionHistory(String storeId, int page, int size) throws Exception;
+    Page<Transaction> getTransactionHistory(String storeId, Pageable pageable) throws Exception;
     
     /**
      * Tạo yêu cầu rút tiền
@@ -29,7 +30,7 @@ public interface IWalletService {
     /**
      * Lấy danh sách yêu cầu rút tiền của store
      */
-    Page<WithdrawalRequest> getWithdrawalRequests(String storeId, int page, int size) throws Exception;
+    Page<WithdrawalRequest> getWithdrawalRequests(String storeId, Pageable pageable) throws Exception;
     
     /**
      * Lấy chi tiết yêu cầu rút tiền
@@ -39,12 +40,7 @@ public interface IWalletService {
     /**
      * Admin: Lấy tất cả yêu cầu rút tiền (theo status)
      */
-    Page<WithdrawalRequest> getAllWithdrawalRequests(String status, int page, int size) throws Exception;
-    
-    /**
-     * Admin: Duyệt yêu cầu rút tiền
-     */
-    WithdrawalRequest approveWithdrawalRequest(String requestId, String adminNote) throws Exception;
+    Page<WithdrawalRequest> getAllWithdrawalRequests(String status, Pageable pageable) throws Exception;
     
     /**
      * Admin: Từ chối yêu cầu rút tiền
@@ -54,5 +50,5 @@ public interface IWalletService {
     /**
      * Admin: Hoàn thành chuyển tiền (sau khi đã chuyển tiền thực tế)
      */
-    WithdrawalRequest completeWithdrawalRequest(String requestId) throws Exception;
+    WithdrawalRequest completeWithdrawalRequest(String requestId, String adminNote) throws Exception;
 }
