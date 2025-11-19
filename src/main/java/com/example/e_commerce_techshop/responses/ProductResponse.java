@@ -47,6 +47,7 @@ public class ProductResponse {
                 .id(product.getId())
                 .name(product.getName())
                 .category(product.getCategory().getDescription())
+                .brand(product.getBrand().getName())
                 .description(product.getDescription())
                 .price(product.getPrice())
                 .status(product.getStatus())

@@ -13,8 +13,6 @@ import java.util.Optional;
 @Repository
 public interface StoreRepository extends MongoRepository<Store, String> {
     List<Store> findByOwnerId(String ownerId);
-    List<Store> findByStatus(String status);
-    List<Store> findByNameContainingIgnoreCase(String name);
     Optional<Store> findByIdAndOwnerId(String id, String ownerId);
 
     Page<Store> findByStatus(String status, Pageable pageable);

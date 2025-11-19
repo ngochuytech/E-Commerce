@@ -1,6 +1,7 @@
 package com.example.e_commerce_techshop.responses.user;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.example.e_commerce_techshop.models.User;
@@ -26,6 +27,8 @@ public class UserResponse {
     private String avatar;
 
     private List<AddressResponse> address;
+
+    private List<String> roles;
 
     @Getter
     @Setter
@@ -59,6 +62,11 @@ public class UserResponse {
                             .build())
                     .toList();
         }
+
+        List<String> roleNames = new ArrayList<>();
+        if(user.getRoles() != null) {
+            roleNames = user.getRoles();
+        }
         
         return UserResponse.builder()
                 .id(user.getId())
@@ -68,6 +76,7 @@ public class UserResponse {
                 .dateOfBirth(user.getDateOfBirth())
                 .avatar(user.getAvatar())
                 .address(addressResponses)
+                .roles(roleNames)
                 .build();
     }
 

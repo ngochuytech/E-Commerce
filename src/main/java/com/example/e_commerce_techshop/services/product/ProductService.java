@@ -5,10 +5,12 @@ import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
 import com.example.e_commerce_techshop.models.Brand;
 import com.example.e_commerce_techshop.models.Category;
 import com.example.e_commerce_techshop.models.Product;
+import com.example.e_commerce_techshop.models.ProductVariant;
 import com.example.e_commerce_techshop.models.Store;
 import com.example.e_commerce_techshop.repositories.BrandRepository;
 import com.example.e_commerce_techshop.repositories.CategoryRepository;
 import com.example.e_commerce_techshop.repositories.ProductRepository;
+import com.example.e_commerce_techshop.repositories.ProductVariantRepository;
 import com.example.e_commerce_techshop.repositories.StoreRepository;
 import com.example.e_commerce_techshop.responses.ProductResponse;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProductService implements IProductService {
     private final ProductRepository productRepository;
+
+    private final ProductVariantRepository productVariantRepository;
 
     private final StoreRepository storeRepository;
 
@@ -191,5 +195,16 @@ public class ProductService implements IProductService {
             products = productRepository.findByStoreId(storeId, pageable);
         }
         return products;
+    }
+
+    @Override
+    public Product getByVariant(String variantId) throws Exception {
+        if(variantId == null || variantId.isEmpty()) {
+            throw new IllegalArgumentException("variantId không được để trống");
+        }
+        ProductVariant variant = productVariantRepository.findById(variantId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy biến thể sản phẩm với ID đã cho: " + variantId));
+        
+        return variant.getProduct();
     }
 }

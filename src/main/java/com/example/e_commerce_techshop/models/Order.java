@@ -18,9 +18,13 @@ public class Order extends BaseEntity {
     @Id
     private String id;
 
-    private BigDecimal totalPrice;
+    private BigDecimal totalPrice; // Giá cuối cùng khách phải thanh toán
 
-    private BigDecimal shippingFee;
+    private BigDecimal productPrice; // Giá sản phẩm (tổng)
+
+    private BigDecimal shippingFee; // Phí ship
+
+    private BigDecimal serviceFee; // Phí dịch vụ (cố định: 5000đ)
 
     private String paymentMethod;
 
@@ -29,6 +33,8 @@ public class Order extends BaseEntity {
     private String note;
 
     private boolean isRated;
+
+    private String vnpTnxRef; // Mã tham chiếu giao dịch VNPAY (nếu có)
 
     @DBRef
     private List<OrderItem> orderItems;

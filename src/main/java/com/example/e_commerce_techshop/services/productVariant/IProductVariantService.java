@@ -1,14 +1,15 @@
 package com.example.e_commerce_techshop.services.productVariant;
 
-import com.example.e_commerce_techshop.dtos.b2c.ProductVariant.ColorOption;
-import com.example.e_commerce_techshop.dtos.b2c.ProductVariant.ProductVariantDTO;
-import com.example.e_commerce_techshop.models.ProductVariant;
-import com.example.e_commerce_techshop.responses.ProductVariantResponse;
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
+import com.example.e_commerce_techshop.dtos.b2c.ProductVariant.ColorOption;
+import com.example.e_commerce_techshop.dtos.b2c.ProductVariant.ProductVariantDTO;
+import com.example.e_commerce_techshop.models.ProductVariant;
+import com.example.e_commerce_techshop.responses.ProductVariantResponse;
 
 public interface IProductVariantService {
 

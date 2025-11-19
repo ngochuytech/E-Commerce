@@ -33,13 +33,6 @@ public interface IOrderService {
     
     void cancelOrder(User user, String orderId) throws Exception;
     
-    /**
-     * Đếm số đơn hàng theo trạng thái
-     * @param userEmail Email của user
-     * @return Map<String, Long>
-     */
-    Map<String, Long> getOrderCount(String userEmail) throws Exception;
-    
     // ===== SELLER METHODS =====
     
     /**

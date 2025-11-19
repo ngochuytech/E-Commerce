@@ -6,7 +6,6 @@ import com.example.e_commerce_techshop.exceptions.InvalidPromotionException;
 import com.example.e_commerce_techshop.models.*;
 import com.example.e_commerce_techshop.models.ProductVariant.ColorOption;
 import com.example.e_commerce_techshop.repositories.*;
-import com.example.e_commerce_techshop.repositories.user.UserRepository;
 import com.example.e_commerce_techshop.services.cart.ICartService;
 import com.example.e_commerce_techshop.services.promotion.IPromotionService;
 
@@ -33,7 +32,6 @@ public class OrderService implements IOrderService {
 
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
-    private final UserRepository userRepository;
     private final ProductVariantRepository productVariantRepository;
     private final PromotionRepository promotionRepository;
     private final StoreRepository storeRepository;
@@ -41,6 +39,9 @@ public class OrderService implements IOrderService {
     private final ICartService cartService;
     private final PromotionUsageRepository promotionUsageRepository;
     private final IPromotionService promotionService;
+    private final WalletRepository walletRepository;
+    private final TransactionRepository transactionRepository;
+    private final AdminRevenueRepository adminRevenueRepository;
 
     @Override
     @Transactional
@@ -310,16 +311,24 @@ public class OrderService implements IOrderService {
 
             // 10.3.4. Tính tổng tiền cuối cùng
             BigDecimal finalShippingFee = shippingFee.subtract(shippingDiscount).max(BigDecimal.ZERO);
-            BigDecimal finalTotal = storeTotal.subtract(orderDiscount).add(finalShippingFee).max(BigDecimal.ZERO);
+            
+            // 10.3.5. Tính phí dịch vụ (cố định: 5000đ cho mỗi đơn hàng)
+            BigDecimal serviceFee = BigDecimal.valueOf(5000);
+            
+            // 10.3.6. Tính tổng tiền cuối cùng khách hàng phải thanh toán
+            BigDecimal finalTotal = storeTotal.subtract(orderDiscount).add(finalShippingFee).add(serviceFee).max(BigDecimal.ZERO);
 
             // 10.4. Tạo Order cho store này
             Order order = Order.builder()
                     .buyer(user)
                     .store(store)
                     .promotions(appliedPromotions.isEmpty() ? null : appliedPromotions)
-                    .totalPrice(finalTotal)
-                    .shippingFee(finalShippingFee)
+                    .productPrice(storeTotal) // Giá sản phẩm
+                    .shippingFee(finalShippingFee) // Phí ship
+                    .serviceFee(serviceFee) // Phí dịch vụ
+                    .totalPrice(finalTotal) // Tổng tiền khách thanh toán
                     .isRated(false)
+                    .vnpTnxRef(orderDTO.getVnpTnxRef())
                     .address(Address.builder()
                             .province(orderDTO.getAddress().getProvince())
                             .ward(orderDTO.getAddress().getWard())
@@ -332,6 +341,16 @@ public class OrderService implements IOrderService {
                     .build();
 
             order = orderRepository.save(order);
+
+            // 10.4.1. Lưu phí dịch vụ cho admin
+            AdminRevenue adminRevenue = AdminRevenue.builder()
+                    .order(order)
+                    .serviceFee(serviceFee)
+                    .revenueType("SERVICE_FEE")
+                    .status("PENDING")
+                    .description(String.format("Phí dịch vụ từ đơn hàng #%s", order.getId()))
+                    .build();
+            adminRevenueRepository.save(adminRevenue);
 
             // 10.5. Tạo OrderItems cho store này và trừ stock
             List<OrderItem> orderItems = new ArrayList<>();
@@ -506,25 +525,6 @@ public class OrderService implements IOrderService {
         orderRepository.save(order);
     }
 
-    @Override
-    public Map<String, Long> getOrderCount(String userEmail) throws Exception {
-        // 1. Convert email to User object
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy người dùng với Email: " + userEmail));
-        String buyerId = user.getId();
-
-        // 2. Đếm orders theo status
-        Map<String, Long> counts = new HashMap<>();
-        counts.put("total", orderRepository.countByBuyerId(buyerId));
-        counts.put("pending", orderRepository.countByBuyerIdAndStatus(buyerId, "PENDING"));
-        counts.put("confirmed", orderRepository.countByBuyerIdAndStatus(buyerId, "CONFIRMED"));
-        counts.put("shipping", orderRepository.countByBuyerIdAndStatus(buyerId, "SHIPPING"));
-        counts.put("delivered", orderRepository.countByBuyerIdAndStatus(buyerId, "DELIVERED"));
-        counts.put("cancelled", orderRepository.countByBuyerIdAndStatus(buyerId, "CANCELLED"));
-
-        return counts;
-    }
-
     /**
      * Validate payment method
      */
@@ -615,8 +615,7 @@ public class OrderService implements IOrderService {
 
     @Override
     public Page<Order> getStoreOrders(String storeId, int page, int size, String status) throws Exception {
-        // Tạo Pageable (page bắt đầu từ 0)
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
         Page<Order> orders;
         if (status != null && !status.trim().isEmpty()) {
@@ -652,6 +651,7 @@ public class OrderService implements IOrderService {
     }
 
     @Override
+    @Transactional
     public Order updateOrderStatus(String storeId, String orderId, String newStatus) throws Exception {
         Order order = getStoreOrderDetail(storeId, orderId);
 
@@ -663,7 +663,21 @@ public class OrderService implements IOrderService {
         }
 
         order.setStatus(newStatus);
-        return orderRepository.save(order);
+        Order savedOrder = orderRepository.save(order);
+        
+        // Nếu đơn hàng chuyển sang DELIVERED, cộng tiền vào ví store
+        if ("DELIVERED".equals(newStatus)) {
+            addMoneyToStoreWallet(order);
+            
+            // Cập nhật trạng thái AdminRevenue từ PENDING sang COLLECTED
+            adminRevenueRepository.findByOrderId(order.getId())
+                    .ifPresent(adminRevenue -> {
+                        adminRevenue.setStatus("COLLECTED");
+                        adminRevenueRepository.save(adminRevenue);
+                    });
+        }
+        
+        return savedOrder;
     }
 
     @Override
@@ -775,5 +789,53 @@ public class OrderService implements IOrderService {
             }
         }
         return total;
+    }
+    
+    /**
+     * Cộng tiền vào ví của store khi đơn hàng hoàn thành
+     */
+    private void addMoneyToStoreWallet(Order order) {
+        try {
+            Store store = order.getStore();
+            BigDecimal orderAmount = order.getTotalPrice();
+            
+            // Tìm hoặc tạo ví cho store
+            Wallet wallet = walletRepository.findByStoreId(store.getId())
+                    .orElseGet(() -> {
+                        Wallet newWallet = Wallet.builder()
+                                .store(store)
+                                .balance(BigDecimal.ZERO)
+                                .totalEarned(BigDecimal.ZERO)
+                                .totalWithdrawn(BigDecimal.ZERO)
+                                .pendingAmount(BigDecimal.ZERO)
+                                .build();
+                        return walletRepository.save(newWallet);
+                    });
+            
+            // Lưu số dư trước giao dịch
+            BigDecimal balanceBefore = wallet.getBalance();
+            
+            // Cập nhật số dư
+            wallet.setBalance(wallet.getBalance().add(orderAmount));
+            wallet.setTotalEarned(wallet.getTotalEarned().add(orderAmount));
+            walletRepository.save(wallet);
+            
+            // Tạo transaction ghi nhận
+            Transaction transaction = Transaction.builder()
+                    .wallet(wallet)
+                    .order(order)
+                    .type(Transaction.TransactionType.ORDER_COMPLETED)
+                    .amount(orderAmount)
+                    .balanceBefore(balanceBefore)
+                    .balanceAfter(wallet.getBalance())
+                    .description(String.format("Tiền từ đơn hàng #%s", order.getId()))
+                    .status("COMPLETED")
+                    .build();
+            transactionRepository.save(transaction);
+            
+        } catch (Exception e) {
+            System.err.println("Error adding money to store wallet: " + e.getMessage());
+            // Không throw exception để không ảnh hưởng đến việc cập nhật trạng thái đơn hàng
+        }
     }
 }

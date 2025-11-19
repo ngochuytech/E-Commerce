@@ -1,4 +1,13 @@
 spring:
+  jackson:
+    time-zone: Asia/Ho_Chi_Minh
+    serialization:
+      write-dates-as-timestamps: false
+  jpa:
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: Asia/Ho_Chi_Minh
   data:
     mongodb:
       uri: mongodb+srv://${DB_MONGODB_USERNAME}:${DB_MONGODB_PASSWORD}@cluster0.7wqi5cz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
@@ -69,5 +78,12 @@ springdoc:
 
 jwt:
   secret: EQOIAUgMdB/GxPmYT+uew/HLvOkYDOrAo3ihcFynD+Y=
-  expiration: 2592000
+  expiration: 2592000000
   expiration-refresh-token: 5184000 #60 days = 60 * 24 * 60 * 60
+
+vnpay:
+  pay-url: "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
+  return-url: "${VNPAY_RETURN_URI:http://localhost:5173/payments/payment-callback}"
+  tmn-code: "${VNPAY_TMNCODE}"
+  secret-key: "${VNPAY_SECRET_KEY}"
+  api-url: "https://sandbox.vnpayment.vn/merchant_webapi/api/transaction"

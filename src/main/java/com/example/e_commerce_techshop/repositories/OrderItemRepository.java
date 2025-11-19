@@ -15,6 +15,5 @@ public interface OrderItemRepository extends MongoRepository<OrderItem, String> 
 
     @Query("{'order.$id': {$in: ?0}}")
     List<OrderItem> findByOrderIdIn(List<String> orderIds);
-    
-    long countByOrderId(String orderId);
+
 }

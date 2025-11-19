@@ -83,4 +83,13 @@ public class ProductController {
         Page<ProductResponse> responseList = productService.findProductByCategoryAndBrand(category, brand, pageable);
         return ResponseEntity.ok(ApiResponse.ok(responseList));
     }
+
+    @GetMapping("/variant/{variantId}")
+    @Operation(summary = "Get product by variant ID", description = "Retrieve the product associated with a specific product variant ID")
+    public ResponseEntity<?> getProductByVariantId(
+            @Parameter(description = "Product variant ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable("variantId") String variantId)
+            throws Exception {
+        ProductResponse productResponse = ProductResponse.fromProduct(productService.getByVariant(variantId));
+        return ResponseEntity.ok(ApiResponse.ok(productResponse));
+    }
 }
