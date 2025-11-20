@@ -406,5 +406,36 @@ public class ProductVariantSerivce implements IProductVariantService{
         return productVariants;
     }
 
+    @Override
+    @Transactional
+    public void updateProductVariantImages(String productVariantId, List<MultipartFile> imageFiles, int indexPrimary) throws Exception {
+        ProductVariant productVariant = productVariantRepository.findById(productVariantId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy mẫu sản phẩm này"));
+
+        if (imageFiles == null || imageFiles.isEmpty()) {
+            throw new IllegalArgumentException("Phải có ít nhất một ảnh");
+        }
+
+        if (indexPrimary < 0 || indexPrimary >= imageFiles.size()) {
+            throw new IllegalArgumentException("Chỉ số ảnh chính không hợp lệ. Phải từ 0 đến " + (imageFiles.size() - 1));
+        }
+
+        // Xóa các ảnh cũ
+        if (productVariant.getImageUrls() != null && !productVariant.getImageUrls().isEmpty()) {
+            for (String imageUrl : productVariant.getImageUrls()) {
+                fileUploadService.deleteFile(imageUrl);
+            }
+        }
+
+        // Upload ảnh mới
+        List<String> newImageUrls = fileUploadService.uploadFiles(imageFiles, "product-variants");
+        productVariant.setImageUrls(newImageUrls);
+        
+        // Set ảnh chính theo chỉ số được cung cấp
+        productVariant.setPrimaryImageUrl(newImageUrls.get(indexPrimary));
+
+        productVariantRepository.save(productVariant);
+    }
+
 
 }

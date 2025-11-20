@@ -38,6 +38,8 @@ public interface IProductVariantService {
 
     void removeProductVariantColor(String productVariantId, String colorId) throws Exception;
 
+    void updateProductVariantImages(String productVariantId, List<MultipartFile> imageFiles, int indexPrimary) throws Exception;
+
     void updateStock(String productVariantId, int newStock) throws Exception;
 
     void updatePrice(String productVariantId, Long newPrice) throws Exception;
