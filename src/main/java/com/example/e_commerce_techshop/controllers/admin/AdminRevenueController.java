@@ -29,56 +29,47 @@ public class AdminRevenueController {
 
     private final AdminRevenueRepository adminRevenueRepository;
 
-    @Operation(summary = "Get revenue statistics", description = "Get total, collected, and pending service fees")
+    @Operation(summary = "Lấy thống kê doanh thu", description = "Lấy tổng phí dịch vụ và tổng tiền lỗ từ các chương trình giảm giá nền tảng")
     @GetMapping("/statistics")
     public ResponseEntity<?> getRevenueStatistics() {
-        // Tổng phí dịch vụ từ tất cả orders (PENDING + COLLECTED)
+        // Tổng phí dịch vụ từ tất cả orders
         List<AdminRevenue> allServiceFees = adminRevenueRepository.findByRevenueType("SERVICE_FEE");
         BigDecimal totalServiceFee = allServiceFees.stream()
-                .map(AdminRevenue::getServiceFee)
+                .map(AdminRevenue::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Phí dịch vụ đã thu (status = COLLECTED)
-        List<AdminRevenue> collectedFees = adminRevenueRepository.findServiceFeesByStatus("COLLECTED");
-        BigDecimal collectedFee = collectedFees.stream()
-                .map(AdminRevenue::getServiceFee)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        // Phí dịch vụ chưa thu (status = PENDING)
-        List<AdminRevenue> pendingFees = adminRevenueRepository.findServiceFeesByStatus("PENDING");
-        BigDecimal pendingFee = pendingFees.stream()
-                .map(AdminRevenue::getServiceFee)
+        // Tổng tiền lỗ từ platform discount
+        List<AdminRevenue> platformDiscountLoss = adminRevenueRepository.findByRevenueType("PLATFORM_DISCOUNT_LOSS");
+        BigDecimal totalPlatformDiscountLoss = platformDiscountLoss.stream()
+                .map(AdminRevenue::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalServiceFee", totalServiceFee);
-        stats.put("collectedFee", collectedFee);
-        stats.put("pendingFee", pendingFee);
-        stats.put("totalCount", allServiceFees.size());
-        stats.put("collectedCount", collectedFees.size());
-        stats.put("pendingCount", pendingFees.size());
+        stats.put("totalPlatformDiscountLoss", totalPlatformDiscountLoss);
+        stats.put("netRevenue", totalServiceFee.subtract(totalPlatformDiscountLoss));
+        stats.put("serviceFeeCount", allServiceFees.size());
+        stats.put("platformDiscountLossCount", platformDiscountLoss.size());
 
         return ResponseEntity.ok(ApiResponse.ok(stats));
     }
 
-    @Operation(summary = "Get pending service fees", description = "Retrieve all service fees not yet collected (status = PENDING)")
-    @GetMapping("/pending")
-    public ResponseEntity<?> getPendingRevenue(
+    @Operation(summary = "Get service fees", description = "Retrieve all service fee records")
+    @GetMapping("/service-fees")
+    public ResponseEntity<?> getServiceFees(
             @Parameter(description = "Page number (0-indexed)", required = false, example = "0") @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "Page size", required = false, example = "10") @RequestParam(defaultValue = "10") int size,
-            @Parameter(description = "Sort by field", required = false, example = "createdAt") @RequestParam(defaultValue = "createdAt") String sortBy,
-            @Parameter(description = "Sort direction (asc/desc)", required = false, example = "desc") @RequestParam(defaultValue = "desc") String sortDir) {
+            @Parameter(description = "Page size", required = false, example = "10") @RequestParam(defaultValue = "10") int size) {
         
-        List<AdminRevenue> allPending = adminRevenueRepository.findByStatus("PENDING");
+        List<AdminRevenue> allServiceFees = adminRevenueRepository.findByRevenueType("SERVICE_FEE");
         int start = page * size;
-        int end = Math.min(start + size, allPending.size());
-        List<AdminRevenue> paginatedPending = allPending.subList(start, end);
+        int end = Math.min(start + size, allServiceFees.size());
+        List<AdminRevenue> paginatedFees = allServiceFees.subList(start, end);
 
-        BigDecimal total = allPending.stream()
-                .map(AdminRevenue::getServiceFee)
+        BigDecimal total = allServiceFees.stream()
+                .map(AdminRevenue::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        List<AdminRevenueResponse> responseList = paginatedPending.stream()
+        List<AdminRevenueResponse> responseList = paginatedFees.stream()
                 .map(AdminRevenueResponse::fromAdminRevenue)
                 .toList();
 
@@ -86,30 +77,28 @@ public class AdminRevenueController {
         response.put("revenues", responseList);
         response.put("page", page);
         response.put("size", size);
-        response.put("total", allPending.size());
+        response.put("total", allServiceFees.size());
         response.put("totalAmount", total);
 
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
-    @Operation(summary = "Get collected service fees", description = "Retrieve all service fees already collected (status = COLLECTED)")
-    @GetMapping("/collected")
-    public ResponseEntity<?> getCollectedRevenue(
+    @Operation(summary = "Get platform discount losses", description = "Retrieve all platform discount loss records")
+    @GetMapping("/platform-discount-losses")
+    public ResponseEntity<?> getPlatformDiscountLosses(
             @Parameter(description = "Page number (0-indexed)", required = false, example = "0") @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "Page size", required = false, example = "10") @RequestParam(defaultValue = "10") int size,
-            @Parameter(description = "Sort by field", required = false, example = "createdAt") @RequestParam(defaultValue = "createdAt") String sortBy,
-            @Parameter(description = "Sort direction (asc/desc)", required = false, example = "desc") @RequestParam(defaultValue = "desc") String sortDir) {
+            @Parameter(description = "Page size", required = false, example = "10") @RequestParam(defaultValue = "10") int size) {
         
-        List<AdminRevenue> allCollected = adminRevenueRepository.findByStatus("COLLECTED");
+        List<AdminRevenue> allLosses = adminRevenueRepository.findByRevenueType("PLATFORM_DISCOUNT_LOSS");
         int start = page * size;
-        int end = Math.min(start + size, allCollected.size());
-        List<AdminRevenue> paginatedCollected = allCollected.subList(start, end);
+        int end = Math.min(start + size, allLosses.size());
+        List<AdminRevenue> paginatedLosses = allLosses.subList(start, end);
 
-        BigDecimal total = allCollected.stream()
-                .map(AdminRevenue::getServiceFee)
+        BigDecimal total = allLosses.stream()
+                .map(AdminRevenue::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        List<AdminRevenueResponse> responseList = paginatedCollected.stream()
+        List<AdminRevenueResponse> responseList = paginatedLosses.stream()
                 .map(AdminRevenueResponse::fromAdminRevenue)
                 .toList();
 
@@ -117,7 +106,7 @@ public class AdminRevenueController {
         response.put("revenues", responseList);
         response.put("page", page);
         response.put("size", size);
-        response.put("total", allCollected.size());
+        response.put("total", allLosses.size());
         response.put("totalAmount", total);
 
         return ResponseEntity.ok(ApiResponse.ok(response));
@@ -140,7 +129,7 @@ public class AdminRevenueController {
         List<AdminRevenue> paginatedRevenues = allRevenues.subList(startIdx, endIdx);
 
         BigDecimal total = allRevenues.stream()
-                .map(AdminRevenue::getServiceFee)
+                .map(AdminRevenue::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         List<AdminRevenueResponse> responseList = paginatedRevenues.stream()
@@ -159,16 +148,16 @@ public class AdminRevenueController {
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
-    @Operation(summary = "Get all admin revenues", description = "Retrieve all service fee records with pagination and sorting")
+    @Operation(summary = "Get all admin revenues", description = "Retrieve all revenue records with pagination and filtering by type")
     @GetMapping("")
     public ResponseEntity<?> getAllRevenues(
-            @Parameter(description = "Filter by status (PENDING/COLLECTED)", required = false, example = "PENDING") @RequestParam(required = false) String status,
+            @Parameter(description = "Filter by revenue type (SERVICE_FEE/PLATFORM_DISCOUNT_LOSS)", required = false, example = "SERVICE_FEE") @RequestParam(required = false) String revenueType,
             @Parameter(description = "Page number (0-indexed)", required = false, example = "0") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size", required = false, example = "10") @RequestParam(defaultValue = "10") int size) {
 
         List<AdminRevenue> revenues;
-        if (status != null && !status.trim().isEmpty()) {
-            revenues = adminRevenueRepository.findByStatus(status);
+        if (revenueType != null && !revenueType.trim().isEmpty()) {
+            revenues = adminRevenueRepository.findByRevenueType(revenueType);
         } else {
             revenues = adminRevenueRepository.findAll();
         }

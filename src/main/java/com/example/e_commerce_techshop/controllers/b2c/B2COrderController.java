@@ -83,23 +83,6 @@ public class B2COrderController {
     }
 
     /**
-     * Cập nhật trạng thái đơn hàng
-     * PUT /api/v1/b2c/orders/{orderId}/status?storeId={storeId}
-     */
-    @PutMapping("/{orderId}/status")
-    @Operation(summary = "Update order status", description = "Update the status of an order (PENDING, CONFIRMED, SHIPPING, DELIVERED, CANCELLED)")
-    public ResponseEntity<?> updateOrderStatus(
-            @Parameter(description = "ID of the order", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d2") @PathVariable String orderId,
-            @Parameter(description = "ID of the store", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @RequestParam String storeId,
-            @Parameter(description = "New status for the order", required = true, example = "CONFIRMED") @RequestParam String status,
-            @Parameter(hidden = true) @AuthenticationPrincipal User currentUser) throws Exception {
-        validateUserStore(currentUser, storeId);
-        Order updatedOrder = orderService.updateOrderStatus(storeId, orderId, status);
-
-        return ResponseEntity.ok(ApiResponse.ok(OrderResponse.fromOrder(updatedOrder)));
-    }
-
-    /**
      * Xác nhận đơn hàng
      * PUT /api/v1/b2c/orders/{orderId}/confirm?storeId={storeId}
      */
@@ -110,41 +93,9 @@ public class B2COrderController {
             @Parameter(description = "ID of the store", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @RequestParam String storeId,
             @Parameter(hidden = true) @AuthenticationPrincipal User currentUser) throws Exception {
         validateUserStore(currentUser, storeId);
-        orderService.updateOrderStatus(storeId, orderId, "CONFIRMED");
+        orderService.confirmOrder(storeId, orderId);
 
         return ResponseEntity.ok(ApiResponse.ok("Đơn hàng đã được xác nhận"));
-    }
-
-    /**
-     * Chuyển đơn hàng sang trạng thái đang giao
-     * PUT /api/v1/b2c/orders/{orderId}/ship?storeId={storeId}
-     */
-    @PutMapping("/{orderId}/ship")
-    @Operation(summary = "Ship order", description = "Mark order as shipped and change status to SHIPPING")
-    public ResponseEntity<?> shipOrder(
-            @Parameter(description = "ID of the order to ship", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d2") @PathVariable String orderId,
-            @Parameter(description = "ID of the store", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @RequestParam String storeId,
-            @Parameter(hidden = true) @AuthenticationPrincipal User currentUser) throws Exception {
-        validateUserStore(currentUser, storeId);
-        orderService.updateOrderStatus(storeId, orderId, "SHIPPING");
-
-        return ResponseEntity.ok(ApiResponse.ok("Đơn hàng đã chuyển sang trạng thái đang giao"));
-    }
-
-    /**
-     * Hoàn thành đơn hàng
-     * PUT /api/v1/b2c/orders/{orderId}/deliver?storeId={storeId}
-     */
-    @PutMapping("/{orderId}/deliver")
-    @Operation(summary = "Deliver order", description = "Mark order as delivered and change status to DELIVERED")
-    public ResponseEntity<?> deliverOrder(
-            @Parameter(description = "ID of the order to mark as delivered", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d2") @PathVariable String orderId,
-            @Parameter(description = "ID of the store", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @RequestParam String storeId,
-            @Parameter(hidden = true) @AuthenticationPrincipal User currentUser) throws Exception {
-        validateUserStore(currentUser, storeId);
-        orderService.updateOrderStatus(storeId, orderId, "DELIVERED");
-
-        return ResponseEntity.ok(ApiResponse.ok("Đơn hàng đã được giao thành công"));
     }
 
     /**
@@ -152,14 +103,14 @@ public class B2COrderController {
      * PUT /api/v1/b2c/orders/{orderId}/cancel?storeId={storeId}
      */
     @PutMapping("/{orderId}/cancel")
-    @Operation(summary = "Cancel order", description = "Cancel an order and change status to CANCELLED with optional reason")
+    @Operation(summary = "Hủy đơn hàng", description = "Hủy một đơn hàng và thay đổi trạng thái thành CANCELLED")
     public ResponseEntity<?> cancelOrder(
             @Parameter(description = "ID of the order to cancel", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d2") @PathVariable String orderId,
             @Parameter(description = "ID of the store", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @RequestParam String storeId,
-            @Parameter(description = "Reason for cancellation", example = "Khách hàng yêu cầu hủy") @RequestParam(required = false) String reason,
+            @Parameter(description = "Lý do hủy đơn", example = "Khách hàng yêu cầu hủy") @RequestParam(required = false) String reason,
             @Parameter(hidden = true) @AuthenticationPrincipal User currentUser) throws Exception {
         validateUserStore(currentUser, storeId);
-        orderService.updateOrderStatus(storeId, orderId, "CANCELLED");
+        orderService.rejectOrder(storeId, orderId, reason);
 
         return ResponseEntity.ok(ApiResponse.ok("Đơn hàng đã được hủy"));
     }

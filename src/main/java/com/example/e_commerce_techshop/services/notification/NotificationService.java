@@ -2,8 +2,10 @@ package com.example.e_commerce_techshop.services.notification;
 
 import com.example.e_commerce_techshop.dtos.NotificationDTO;
 import com.example.e_commerce_techshop.models.Notification;
+import com.example.e_commerce_techshop.models.Store;
 import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.repositories.NotificationRepository;
+import com.example.e_commerce_techshop.repositories.StoreRepository;
 import com.example.e_commerce_techshop.repositories.user.UserRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -14,13 +16,15 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class NotificationService implements INotificationService{
+public class NotificationService implements INotificationService {
     private final NotificationRepository notificationRepository;
-
     private final UserRepository userRepository;
+    private final StoreRepository storeRepository;
+
+    // ===== USER NOTIFICATIONS =====
 
     @Override
-    public Notification createNotification(String userId, String title, String message) throws Exception {
+    public Notification createUserNotification(String userId, String title, String message) throws Exception {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
 
@@ -33,8 +37,9 @@ public class NotificationService implements INotificationService{
         return notificationRepository.save(notification);
     }
 
+    @Override
     @Transactional
-    public Notification createNotification(NotificationDTO notificationDTO) {
+    public Notification createUserNotification(NotificationDTO notificationDTO) throws Exception {
         User user = userRepository.findById(notificationDTO.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + notificationDTO.getUserId()));
 
@@ -47,6 +52,7 @@ public class NotificationService implements INotificationService{
         return notificationRepository.save(notification);
     }
 
+    @Override
     public List<Notification> getUserNotifications(String userId, Boolean isRead) {
         if (isRead != null) {
             return notificationRepository.findByUserIdAndIsReadOrderByCreatedAtDesc(userId, isRead);
@@ -54,6 +60,7 @@ public class NotificationService implements INotificationService{
         return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
     }
 
+    @Override
     @Transactional
     public void markAsRead(String notificationId) {
         Notification notification = notificationRepository.findById(notificationId)
@@ -62,10 +69,71 @@ public class NotificationService implements INotificationService{
         notificationRepository.save(notification);
     }
 
+    @Override
     @Transactional
     public void markAllAsRead(String userId) {
         List<Notification> notifications = notificationRepository.findByUserIdAndIsReadOrderByCreatedAtDesc(userId, false);
         notifications.forEach(notification -> notification.setIsRead(true));
         notificationRepository.saveAll(notifications);
+    }
+
+    @Override
+    public long getUserUnreadCount(String userId) {
+        return notificationRepository.countByUserIdAndIsRead(userId, false);
+    }
+
+    // ===== STORE NOTIFICATIONS =====
+
+    @Override
+    public Notification createStoreNotification(String storeId, String title, String message) throws Exception {
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new RuntimeException("Store not found with id: " + storeId));
+
+        Notification notification = Notification.builder()
+                .store(store)
+                .title(title)
+                .message(message)
+                .isRead(false)
+                .build();
+        return notificationRepository.save(notification);
+    }
+
+    @Override
+    public List<Notification> getStoreNotifications(String storeId, Boolean isRead) {
+        if (isRead != null) {
+            return notificationRepository.findByStoreIdAndIsReadOrderByCreatedAtDesc(storeId, isRead);
+        }
+        return notificationRepository.findByStoreIdOrderByCreatedAtDesc(storeId);
+    }
+
+    @Override
+    @Transactional
+    public void markStoreNotificationAsRead(String notificationId) {
+        Notification notification = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new RuntimeException("Notification not found with id: " + notificationId));
+        notification.setIsRead(true);
+        notificationRepository.save(notification);
+    }
+
+    @Override
+    @Transactional
+    public void markAllStoreNotificationsAsRead(String storeId) {
+        List<Notification> notifications = notificationRepository.findByStoreIdAndIsReadOrderByCreatedAtDesc(storeId, false);
+        notifications.forEach(notification -> notification.setIsRead(true));
+        notificationRepository.saveAll(notifications);
+    }
+
+    @Override
+    @Transactional
+    public void deleteNotification(String notificationId) {
+        if (!notificationRepository.existsById(notificationId)) {
+            throw new RuntimeException("Notification not found with id: " + notificationId);
+        }
+        notificationRepository.deleteById(notificationId);
+    }
+
+    @Override
+    public long getStoreUnreadCount(String storeId) {
+        return notificationRepository.countByStoreIdAndIsRead(storeId, false);
     }
 }

@@ -12,60 +12,32 @@ import java.util.List;
 import java.util.Map;
 
 public interface IOrderService {
-    
-    /**
-     * Tạo đơn hàng từ cart
-     */
+
     List<Order> checkout(User user, OrderDTO orderDTO) throws Exception;
-    
-    /**
-     * Lấy lịch sử đơn hàng
-     */
+
+    // Lấy lịch sử đơn hàng
     Page<Order> getOrderHistory(User user, String status, Pageable pageable) throws Exception;
 
-    /**
-     * Lấy chi tiết đơn hàng
-     * @param userEmail Email của user
-     * @param orderId ID đơn hàng
-     * @return OrderResponse
-     */
+    // Lấy chi tiết đơn hàng
     Order getOrderDetail(User user, String orderId) throws Exception;
-    
+
+    // Hủy đơn hàng
     void cancelOrder(User user, String orderId) throws Exception;
     
     // ===== SELLER METHODS =====
-    
-    /**
-     * Lấy đơn hàng của store (cho seller)
-     * @param storeId ID của store
-     * @param page Số trang
-     * @param size Kích thước trang
-     * @param status Trạng thái đơn hàng
-     * @return Page<Order>
-     */
+
+    //Lấy đơn hàng của store (cho seller)
     Page<Order> getStoreOrders(String storeId, int page, int size, String status) throws Exception;
     
-    /**
-     * Lấy chi tiết đơn hàng của store
-     * @param storeId ID của store
-     * @param orderId ID đơn hàng
-     * @return Order
-     */
+    //Lấy chi tiết đơn hàng của store
     Order getStoreOrderDetail(String storeId, String orderId) throws Exception;
     
-    /**
-     * Cập nhật trạng thái đơn hàng (cho seller)
-     * @param storeId ID của store
-     * @param orderId ID đơn hàng
-     * @param newStatus Trạng thái mới
-     */
-    Order updateOrderStatus(String storeId, String orderId, String newStatus) throws Exception;
-    
-    /**
-     * Thống kê đơn hàng của store
-     * @param storeId ID của store
-     * @return Map<String, Object>
-     */
+    // Xác nhận đơn hàng (cho seller)
+    Order confirmOrder(String storeId, String orderId) throws Exception;
+
+    Order rejectOrder(String storeId, String orderId, String reason) throws Exception;
+
+    // Thống kê đơn hàng của store
     Map<String, Object> getStoreOrderStatistics(String storeId) throws Exception;
     
     /**

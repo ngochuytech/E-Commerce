@@ -191,6 +191,6 @@ public class StoreService implements IStoreService {
     @Override
     public Store getStoreByIdAndOwnerId(String storeId, String ownerId) throws Exception {
         return storeRepository.findByIdAndOwnerId(storeId, ownerId)
-                .orElse(null);
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy cửa hàng hoặc bạn không phải chủ sở hữu"));
     }
 }

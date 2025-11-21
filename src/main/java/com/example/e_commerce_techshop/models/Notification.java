@@ -22,6 +22,9 @@ public class Notification {
     @DBRef
     private User user;
 
+    @DBRef
+    private Store store;
+
     private String title;
 
     private String message;

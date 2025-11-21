@@ -118,15 +118,6 @@ public class ReviewService implements IReviewService {
         return new PageImpl<>(pageContent, pageable, allReviews.size());
     }
 
-    // Simple version for B2C API
-    @Override
-    public List<ReviewResponse> getReviewsByProduct(String productId) {
-        List<Review> reviews = reviewRepository.findByProductId(productId);
-        return reviews.stream()
-                .map(ReviewResponse::fromReview)
-                .collect(Collectors.toList());
-    }
-
     @Override
     public List<Review> getReviewsByUser(String userId) {
         // Kiểm tra user tồn tại
@@ -193,13 +184,6 @@ public class ReviewService implements IReviewService {
         return reviewRepository.findByProductVariantId(productVariantId, pageable);
     }
     
-    @Override
-    public List<ReviewResponse> getReviewsByProductVariant(String productVariantId) {
-        List<Review> reviews = reviewRepository.findByProductVariantId(productVariantId);
-        return reviews.stream()
-                .map(ReviewResponse::fromReview)
-                .collect(Collectors.toList());
-    }
     
     @Override
     public ReviewResponse getReviewById(String reviewId) {
@@ -209,30 +193,6 @@ public class ReviewService implements IReviewService {
         return ReviewResponse.fromReview(review);
     }
     
-    @Override
-    public ReviewResponse respondToReview(String reviewId, String response) {
-//        Review review = reviewRepository.findById(reviewId)
-//                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy đánh giá với ID: " + reviewId));
-//
-//        review.setSellerResponse(response);
-//        Review updatedReview = reviewRepository.save(review);
-//
-//        return ReviewResponse.fromReview(updatedReview);
-
-        // Seller Response ko có trong DB
-        return null;
-    }
-    
-    @Override
-    public List<ReviewResponse> getPendingReviewsByStore(String storeId) {
-//        List<Review> reviews = reviewRepository.findPendingReviewsByStoreId(storeId);
-//        return reviews.stream()
-//                .map(ReviewResponse::fromReview)
-//                .collect(Collectors.toList());
-
-        // Seller Response ko có trong DB
-        return null;
-    }
     
     @Override
     public Double getAverageRatingByStore(String storeId) {

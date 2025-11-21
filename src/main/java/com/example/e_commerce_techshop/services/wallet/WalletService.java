@@ -178,4 +178,40 @@ public class WalletService implements IWalletService {
         
         return withdrawalRequestRepository.save(request);
     }
+
+    @Override
+    @Transactional
+    public void addOrderPaymentToWallet(String storeId, String orderId, BigDecimal amount, String description) throws Exception {
+        // Validate amount
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Số tiền phải lớn hơn 0");
+        }
+
+        // Lấy wallet của store (hoặc tạo mới nếu chưa có)
+        Wallet wallet = getStoreWallet(storeId);
+
+        // Lưu số dư trước giao dịch
+        BigDecimal balanceBefore = wallet.getBalance();
+
+        // Cộng tiền vào ví
+        wallet.setBalance(wallet.getBalance().add(amount));
+        wallet.setTotalEarned(wallet.getTotalEarned().add(amount));
+        walletRepository.save(wallet);
+
+        // Tạo transaction ghi nhận
+        Transaction transaction = Transaction.builder()
+                .wallet(wallet)
+                .type(Transaction.TransactionType.ORDER_COMPLETED)
+                .amount(amount)
+                .balanceBefore(balanceBefore)
+                .balanceAfter(wallet.getBalance())
+                .description(description != null ? description : 
+                    String.format("Thanh toán từ đơn hàng #%s", orderId))
+                .status("COMPLETED")
+                .build();
+        transactionRepository.save(transaction);
+
+        System.out.println(String.format("[WalletService] Đã cộng %s vào ví shop %s từ đơn hàng #%s", 
+            amount, storeId, orderId));
+    }
 }

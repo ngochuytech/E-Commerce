@@ -28,6 +28,8 @@ public interface IProductVariantService {
     Page<ProductVariantResponse> searchByName(String name, int page, int size, String sortBy, String sortDir) throws Exception;
 
     // Shop (B2C) methods
+    Page<ProductVariant> getAllProductVariantsB2C(String storeId, String status, Pageable pageable) throws Exception;
+
     void createProductVariant(ProductVariantDTO productVariantDTO, List<MultipartFile> imageFiles) throws Exception;
 
     void createProductVariant(ProductVariantDTO productVariantDTO) throws Exception;
@@ -47,10 +49,6 @@ public interface IProductVariantService {
     void updatePriceAndStock(String productVariantId, Long newPrice, int newStock) throws Exception;
 
     void disableProduct(String productVariantId) throws Exception;
-
-    // B2C methods
-
-    Page<ProductVariant> getAllProductVariantsB2C(String storeId, String status, Pageable pageable) throws Exception;
 
     // Admin methods
     Page<ProductVariantResponse> getVariantsByStatus(String status, Pageable pageable);
