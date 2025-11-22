@@ -93,6 +93,8 @@ public class UserController {
                 .username(user.getFullName())
                 .id(user.getId())
                 .roles(roles)
+                .isActive(user.getIsActive())
+                .enable(user.getEnable())
                 .build();
         return ResponseEntity.ok(ApiResponse.ok(loginResponse));
     }
@@ -195,6 +197,8 @@ public class UserController {
                 .refreshToken(jwtToken.getRefreshToken())
                 .username(user.getFullName())
                 .roles(roles)
+                .enable(user.getEnable())
+                .isActive(user.getIsActive())
                 .id(user.getId())
                 .build();
 

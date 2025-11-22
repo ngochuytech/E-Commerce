@@ -26,6 +26,10 @@ public class UserResponse {
 
     private String avatar;
 
+    private boolean isActive;
+
+    private boolean enable;
+
     private List<AddressResponse> address;
 
     private List<String> roles;
@@ -76,6 +80,8 @@ public class UserResponse {
                 .dateOfBirth(user.getDateOfBirth())
                 .avatar(user.getAvatar())
                 .address(addressResponses)
+                .isActive(user.getIsActive())
+                .enable(user.getEnable())
                 .roles(roleNames)
                 .build();
     }

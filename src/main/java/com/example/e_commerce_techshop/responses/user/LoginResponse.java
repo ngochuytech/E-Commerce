@@ -28,4 +28,7 @@ public class LoginResponse {
     private String username;
 
     private List<String> roles;
+
+    private boolean isActive;
+    private boolean enable;
 }
