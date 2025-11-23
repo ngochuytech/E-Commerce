@@ -307,4 +307,10 @@ public class UserService implements IUserService {
         userRepository.save(user);
         sendVerificationEmail(user, siteURL);
     }
+
+    @Override
+    public User getUserById(String userId) throws Exception {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy user với ID này"));
+    }
 }

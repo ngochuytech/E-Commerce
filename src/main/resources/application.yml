@@ -78,7 +78,7 @@ springdoc:
 
 jwt:
   secret: EQOIAUgMdB/GxPmYT+uew/HLvOkYDOrAo3ihcFynD+Y=
-  expiration: 2592000000
+  expiration: 2592000
   expiration-refresh-token: 5184000 #60 days = 60 * 24 * 60 * 60
 
 vnpay:

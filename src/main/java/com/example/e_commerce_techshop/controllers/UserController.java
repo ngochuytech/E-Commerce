@@ -1,8 +1,10 @@
 package com.example.e_commerce_techshop.controllers;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -35,6 +37,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -53,7 +56,6 @@ public class UserController {
 
     private final JwtTokenProvider jwtTokenProvider;
 
-
     @GetMapping("/current")
     @Operation(summary = "Get current user profile", description = "Retrieve profile information of the currently authenticated user")
     @SecurityRequirement(name = "bearerAuth")
@@ -67,7 +69,8 @@ public class UserController {
     public ResponseEntity<?> login(
             @Parameter(description = "User login credentials") @RequestBody @Valid UserLoginDTO userLoginDTO,
             BindingResult result,
-            HttpServletRequest request) throws Exception {
+            HttpServletRequest request,
+            HttpServletResponse response) throws Exception {
         if (result.hasErrors()) {
             List<String> errorMessages = result.getFieldErrors()
                     .stream()
@@ -79,22 +82,92 @@ public class UserController {
         String userAgent = request.getHeader("User-Agent");
         User user = userService.getUserByToken(token);
         Token jwtToken = tokenService.addToken(user, token, isMobileDevice(userAgent));
-        
-        List<String> roles = user.getAuthorities() != null 
-            ? user.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .toList()
-            : List.of();
-        
+
+        Cookie refreshTokenCookie = new Cookie("refreshToken", jwtToken.getRefreshToken());
+        refreshTokenCookie.setHttpOnly(true);
+        refreshTokenCookie.setSecure(true);
+        refreshTokenCookie.setPath("/");
+        refreshTokenCookie.setMaxAge(7 * 24 * 60 * 60); // 7 ngày
+        refreshTokenCookie.setAttribute("SameSite", "Strict"); // Chống CSRF
+        response.addCookie(refreshTokenCookie);
+
+        List<String> roles = user.getAuthorities() != null
+                ? user.getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .toList()
+                : List.of();
+
         LoginResponse loginResponse = LoginResponse.builder()
                 .message("Đăng nhập thành công")
                 .token(jwtToken.getToken())
-                .refreshToken(jwtToken.getRefreshToken())
                 .username(user.getFullName())
                 .id(user.getId())
                 .roles(roles)
                 .isActive(user.getIsActive())
                 .enable(user.getEnable())
+                .build();
+        return ResponseEntity.ok(ApiResponse.ok(loginResponse));
+    }
+
+    @PostMapping("/logout")
+    @Operation(summary = "User logout", description = "Logout user and revoke refresh token")
+    public ResponseEntity<?> logout(HttpServletRequest request,
+            HttpServletResponse response) throws Exception {
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            String refreshToken = Arrays.stream(cookies)
+                    .filter(cookie -> "refreshToken".equals(cookie.getName()))
+                    .findFirst()
+                    .map(Cookie::getValue)
+                    .orElse(null);
+            if (refreshToken != null) {
+                tokenService.revokeToken(refreshToken);
+            }
+        }
+        Cookie deleteCookie = new Cookie("refreshToken", null);
+        deleteCookie.setHttpOnly(true);
+        deleteCookie.setSecure(true);
+        deleteCookie.setPath("/");
+        deleteCookie.setMaxAge(0);
+        response.addCookie(deleteCookie);
+        return ResponseEntity.ok(ApiResponse.ok("Đăng xuất thành công"));
+    }
+
+    @PostMapping("/refresh-token")
+    @Operation(summary = "Refresh access token", description = "Get new access token using refresh token from cookie")
+    public ResponseEntity<?> refreshToken(HttpServletRequest request,
+            HttpServletResponse response) throws Exception {
+        Cookie[] cookies = request.getCookies();
+        if(cookies == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Không tìm thấy refresh token"));
+        }
+        String refreshToken = Arrays.stream(cookies)
+                .filter(cookie -> "refreshToken".equals(cookie.getName()))
+                .findFirst()
+                .map(Cookie::getValue)
+                .orElse(null);
+        Token tokenEntity = tokenService.findByRefreshToken(refreshToken);
+        if (tokenEntity == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Refresh token không hợp lệ"));
+        }
+        User user = userService.getUserById(tokenEntity.getUser().getId());
+        Token newToken = tokenService.refreshToken(refreshToken, user);
+        Cookie refreshTokenCookie = new Cookie("refreshToken", newToken.getRefreshToken());
+        refreshTokenCookie.setHttpOnly(true);
+        refreshTokenCookie.setSecure(true);
+        refreshTokenCookie.setPath("/");
+        refreshTokenCookie.setMaxAge(7 * 24 * 60 * 60);
+        response.addCookie(refreshTokenCookie);
+        LoginResponse loginResponse = LoginResponse.builder()
+                .message("Làm mới token thành công")
+                .token(newToken.getToken())
+                .username(user.getFullName())
+                .enable(user.getEnable())
+                .isActive(user.getIsActive())
+                .roles(user.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList())
+                .id(user.getId())
                 .build();
         return ResponseEntity.ok(ApiResponse.ok(loginResponse));
     }
@@ -141,7 +214,7 @@ public class UserController {
     }
 
     private boolean isMobileDevice(String userAgent) {
-        return userAgent.toLowerCase().contains("mobile");
+        return userAgent != null && userAgent.toLowerCase().contains("mobile");
     }
 
     private String getSiteURL(HttpServletRequest request) {
@@ -154,7 +227,8 @@ public class UserController {
     public ResponseEntity<?> changePassword(
             @AuthenticationPrincipal User currentUser,
             @RequestBody @Valid ChangePasswordDTO changePasswordDTO) throws Exception {
-        userService.changePassword(currentUser, changePasswordDTO.getCurrentPassword(), changePasswordDTO.getNewPassword());
+        userService.changePassword(currentUser, changePasswordDTO.getCurrentPassword(),
+                changePasswordDTO.getNewPassword());
         return ResponseEntity.ok(ApiResponse.ok("Đổi mật khẩu thành công"));
     }
 
@@ -177,6 +251,7 @@ public class UserController {
     @Operation(summary = "Google OAuth callback", description = "Handle Google OAuth authentication callback and login user")
     public ResponseEntity<?> callback(
             HttpServletRequest httpServletRequest,
+            HttpServletResponse response,
             @Parameter(description = "Google authorization code") @RequestBody GoogleCodeRequest request)
             throws Exception {
         String userAgent = httpServletRequest.getHeader("User-Agent");
@@ -184,17 +259,23 @@ public class UserController {
         String token = jwtTokenProvider.generateToken(user);
         Token jwtToken = tokenService.addToken(user, token, isMobileDevice(userAgent));
 
-        List<String> roles = user.getAuthorities() != null 
-            ? user.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .toList()
-            : List.of();
+        Cookie refreshTokenCookie = new Cookie("refreshToken", jwtToken.getRefreshToken());
+        refreshTokenCookie.setHttpOnly(true);
+        refreshTokenCookie.setSecure(true);
+        refreshTokenCookie.setPath("/");
+        refreshTokenCookie.setMaxAge(7 * 24 * 60 * 60);
+        response.addCookie(refreshTokenCookie);
+
+        List<String> roles = user.getAuthorities() != null
+                ? user.getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .toList()
+                : List.of();
 
         LoginResponse loginResponse = LoginResponse.builder()
                 .message("Đăng nhập thành công!")
                 .token(jwtToken.getToken())
                 .tokenType(jwtToken.getTokenType())
-                .refreshToken(jwtToken.getRefreshToken())
                 .username(user.getFullName())
                 .roles(roles)
                 .enable(user.getEnable())

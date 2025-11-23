@@ -21,6 +21,8 @@ public interface IUserService {
 
     User getUserByToken(String token) throws Exception;
 
+    User getUserById(String userId) throws Exception;
+
     void updateResetPasswordToken(String token, String email) throws Exception;
 
     User getUserByResetPasswordToken(String token);
