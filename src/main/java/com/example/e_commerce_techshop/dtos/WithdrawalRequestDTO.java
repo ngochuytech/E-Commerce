@@ -1,4 +1,4 @@
-package com.example.e_commerce_techshop.dtos.buyer;
+package com.example.e_commerce_techshop.dtos;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

@@ -4,11 +4,14 @@ import com.example.e_commerce_techshop.dtos.NotificationDTO;
 import com.example.e_commerce_techshop.models.Notification;
 import com.example.e_commerce_techshop.models.Store;
 import com.example.e_commerce_techshop.models.User;
+import com.example.e_commerce_techshop.models.Notification.NotificationType;
 import com.example.e_commerce_techshop.repositories.NotificationRepository;
 import com.example.e_commerce_techshop.repositories.StoreRepository;
 import com.example.e_commerce_techshop.repositories.user.UserRepository;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -135,5 +138,72 @@ public class NotificationService implements INotificationService {
     @Override
     public long getStoreUnreadCount(String storeId) {
         return notificationRepository.countByStoreIdAndIsRead(storeId, false);
+    }
+
+    // ===== ADMIN NOTIFICATIONS =====
+
+    @Override
+    @Transactional
+    public Notification createAdminNotification(String title, String message, String type, String relatedId) throws Exception {
+        Notification notification = Notification.builder()
+                .title(title)
+                .message(message)
+                .type(NotificationType.valueOf(type))
+                .relatedId(relatedId)
+                .isAdmin(true)
+                .isRead(false)
+                .build();
+        return notificationRepository.save(notification);
+    }
+
+    @Override
+    public List<Notification> getAdminNotifications(Boolean isRead) {
+        if (isRead != null) {
+            return notificationRepository.findByIsAdminAndIsReadOrderByCreatedAtDesc(true, isRead);
+        }
+        return notificationRepository.findByIsAdminOrderByCreatedAtDesc(true);
+    }
+
+    @Override
+    @Transactional
+    public void markAdminNotificationAsRead(String notificationId) {
+        Notification notification = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new RuntimeException("Notification not found with id: " + notificationId));
+        if (!notification.getIsAdmin()) {
+            throw new RuntimeException("This is not an admin notification");
+        }
+        notification.setIsRead(true);
+        notificationRepository.save(notification);
+    }
+
+    @Override
+    @Transactional
+    public void markAllAdminNotificationsAsRead() {
+        List<Notification> notifications = notificationRepository.findByIsAdminAndIsReadOrderByCreatedAtDesc(true, false);
+        notifications.forEach(notification -> notification.setIsRead(true));
+        notificationRepository.saveAll(notifications);
+    }
+
+    @Override
+    public long getAdminUnreadCount() {
+        return notificationRepository.countByIsAdminAndIsRead(true, false);
+    }
+
+    @Override
+    public Page<Notification> getAdminNotificationsPage(Pageable pageable) {
+        return notificationRepository.findByIsAdminOrderByCreatedAtDesc(true, pageable);
+    }
+
+    @Override
+    public Page<Notification> getAdminNotificationsPage(Boolean isRead, Pageable pageable) {
+        if (isRead != null) {
+            return notificationRepository.findByIsAdminAndIsReadOrderByCreatedAtDesc(true, isRead, pageable);
+        }
+        return notificationRepository.findByIsAdminOrderByCreatedAtDesc(true, pageable);
+    }
+
+    @Override
+    public Page<Notification> getAdminNotificationsByTypePage(String type, Pageable pageable) {
+        return notificationRepository.findByIsAdminAndTypeOrderByCreatedAtDesc(true, type, pageable);
     }
 }

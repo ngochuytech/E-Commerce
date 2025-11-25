@@ -5,6 +5,9 @@ import com.example.e_commerce_techshop.models.Notification;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 public interface INotificationService {
 
     // ===== USER NOTIFICATIONS =====
@@ -68,4 +71,45 @@ public interface INotificationService {
      * Lấy số notification chưa đọc của store
      */
     long getStoreUnreadCount(String storeId);
+
+    // ===== ADMIN NOTIFICATIONS =====
+    /**
+     * Tạo notification cho admin
+     */
+    Notification createAdminNotification(String title, String message, String type, String relatedId) throws Exception;
+
+    /**
+     * Lấy tất cả notification của admin
+     */
+    List<Notification> getAdminNotifications(Boolean isRead);
+
+    /**
+     * Đánh dấu notification của admin là đã đọc
+     */
+    void markAdminNotificationAsRead(String notificationId);
+
+    /**
+     * Đánh dấu tất cả notification của admin là đã đọc
+     */
+    void markAllAdminNotificationsAsRead();
+
+    /**
+     * Lấy số notification chưa đọc của admin
+     */
+    long getAdminUnreadCount();
+
+    /**
+     * Lấy danh sách admin notifications với phân trang
+     */
+    Page<Notification> getAdminNotificationsPage(Pageable pageable);
+
+    /**
+     * Lấy danh sách admin notifications theo trạng thái với phân trang
+     */
+    Page<Notification> getAdminNotificationsPage(Boolean isRead, Pageable pageable);
+
+    /**
+     * Lấy danh sách admin notifications theo type với phân trang
+     */
+    Page<Notification> getAdminNotificationsByTypePage(String type, Pageable pageable);
 }

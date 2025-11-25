@@ -17,7 +17,7 @@ public class OrderDTO {
     private List<SelectedCartItem> selectedItems;
     
     @NotBlank(message = "Phương thức thanh toán không được để trống")
-    private String paymentMethod; // COD, VNPAY, MOMO, etc.
+    private String paymentMethod; // COD, VNPAY, E_WALLET, etc.
     
     // Mã giảm giá của sàn
     private PlatformPromotions platformPromotions;

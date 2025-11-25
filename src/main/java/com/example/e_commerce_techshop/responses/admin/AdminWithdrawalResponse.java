@@ -1,4 +1,4 @@
-package com.example.e_commerce_techshop.responses;
+package com.example.e_commerce_techshop.responses.admin;
 
 import com.example.e_commerce_techshop.models.WithdrawalRequest;
 import lombok.AllArgsConstructor;
@@ -59,7 +59,7 @@ public class AdminWithdrawalResponse {
                 .bankName(request.getBankName())
                 .bankAccountNumber(request.getBankAccountNumber())
                 .bankAccountName(request.getBankAccountName())
-                .status(request.getStatus())
+                .status(request.getStatus().name())
                 .note(request.getNote())
                 .adminNote(request.getAdminNote())
                 .transactionId(request.getTransaction() != null ? request.getTransaction().getId() : null)

@@ -2,8 +2,9 @@ package com.example.e_commerce_techshop.controllers.admin;
 
 import com.example.e_commerce_techshop.models.AdminRevenue;
 import com.example.e_commerce_techshop.repositories.AdminRevenueRepository;
-import com.example.e_commerce_techshop.responses.AdminRevenueResponse;
 import com.example.e_commerce_techshop.responses.ApiResponse;
+import com.example.e_commerce_techshop.responses.admin.AdminRevenueResponse;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;

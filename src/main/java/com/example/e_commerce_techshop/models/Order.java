@@ -63,5 +63,9 @@ public class Order extends BaseEntity {
     public enum OrderStatus {
         PENDING, CONFIRMED, SHIPPING, DELIVERED, CANCELLED
     }
+
+    public enum PaymentMethod {
+        COD, BANK_TRANSFER, E_WALLET
+    }
 }
 

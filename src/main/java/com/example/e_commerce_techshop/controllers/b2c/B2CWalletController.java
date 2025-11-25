@@ -14,15 +14,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.e_commerce_techshop.dtos.buyer.WithdrawalRequestDTO;
+import com.example.e_commerce_techshop.dtos.WithdrawalRequestDTO;
 import com.example.e_commerce_techshop.models.Transaction;
 import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.models.Wallet;
 import com.example.e_commerce_techshop.models.WithdrawalRequest;
-import com.example.e_commerce_techshop.responses.AdminWithdrawalResponse;
 import com.example.e_commerce_techshop.responses.ApiResponse;
 import com.example.e_commerce_techshop.responses.TransactionResponse;
 import com.example.e_commerce_techshop.responses.WalletResponse;
+import com.example.e_commerce_techshop.responses.admin.AdminWithdrawalResponse;
 import com.example.e_commerce_techshop.services.wallet.IWalletService;
 
 import io.swagger.v3.oas.annotations.Operation;

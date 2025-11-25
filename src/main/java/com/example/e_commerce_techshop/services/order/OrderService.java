@@ -37,6 +37,7 @@ import com.example.e_commerce_techshop.services.cart.ICartService;
 import com.example.e_commerce_techshop.services.notification.INotificationService;
 import com.example.e_commerce_techshop.services.promotion.IPromotionService;
 import com.example.e_commerce_techshop.services.shipment.IShipmentService;
+import com.example.e_commerce_techshop.services.userWallet.IUserWalletService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -55,6 +56,7 @@ public class OrderService implements IOrderService {
     private final IPromotionService promotionService;
     private final INotificationService notificationService;
     private final IShipmentService shipmentService;
+    private final IUserWalletService userWalletService;
 
     @Override
     @Transactional
@@ -64,6 +66,15 @@ public class OrderService implements IOrderService {
         // 2. Validate payment method
         if (!isValidPaymentMethod(orderDTO.getPaymentMethod())) {
             throw new IllegalArgumentException("Phương thức thanh toán không hợp lệ: " + orderDTO.getPaymentMethod());
+        }
+
+        // 2.1. Nếu thanh toán bằng ví điện tử, kiểm tra số dư trước
+        if ("E_WALLET".equalsIgnoreCase(orderDTO.getPaymentMethod())) {
+            BigDecimal walletBalance = userWalletService.getWalletBalance(user.getId());
+            if (walletBalance == null || walletBalance.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new IllegalArgumentException("Số dư ví không đủ để thanh toán. Vui lòng chọn phương thức thanh toán khác.");
+            }
+            // Lưu ý: Sẽ kiểm tra lại với tổng tiền cuối cùng sau khi tính toán
         }
 
         // 3. Validate danh sách sản phẩm được chọn
@@ -228,6 +239,7 @@ public class OrderService implements IOrderService {
 
         List<Order> orders = new ArrayList<>();
         int platformOrderPromotionUsed = 0; // Đếm số lần đã dùng platform order voucher
+        BigDecimal totalPaymentAmount = BigDecimal.ZERO; // Tổng tiền cần thanh toán cho tất cả đơn hàng
 
         // 10. Tạo 1 đơn hàng cho mỗi store (theo thứ tự đã sắp xếp)
         for (Map.Entry<String, List<OrderDTO.SelectedCartItem>> storeEntry : sortedStores) {
@@ -332,6 +344,9 @@ public class OrderService implements IOrderService {
             // 10.3.6. Tính tổng tiền cuối cùng khách hàng phải thanh toán
             BigDecimal totalDiscount = storeDiscountAmount.add(platformDiscountAmount);
             BigDecimal finalTotal = storeTotal.subtract(totalDiscount).add(finalShippingFee).max(BigDecimal.ZERO);
+            
+            // Cộng dồn vào tổng tiền thanh toán
+            totalPaymentAmount = totalPaymentAmount.add(finalTotal);
 
             // 10.4. Tạo Order cho store này
             Order order = Order.builder()
@@ -429,6 +444,34 @@ public class OrderService implements IOrderService {
             orders.add(order);
         }
 
+        // 11. Nếu thanh toán bằng ví điện tử, kiểm tra và trừ tiền
+        if ("E_WALLET".equalsIgnoreCase(orderDTO.getPaymentMethod())) {
+            BigDecimal walletBalance = userWalletService.getWalletBalance(user.getId());
+            
+            if (totalPaymentAmount.compareTo(walletBalance) > 0) {
+                throw new IllegalArgumentException(
+                    String.format("Số dư ví không đủ để thanh toán. Số dư hiện tại: %s VNĐ, Tổng tiền cần thanh toán: %s VNĐ",
+                        walletBalance, totalPaymentAmount));
+            }
+
+            // Trừ tiền từ ví cho từng đơn hàng
+            for (Order order : orders) {
+                try {
+                    userWalletService.paymentFromWallet(
+                        user.getId(), 
+                        order.getId(), 
+                        order.getTotalPrice()
+                    );
+                    System.out.println(String.format("[OrderService] Đã trừ %s VNĐ từ ví cho đơn hàng #%s", 
+                        order.getTotalPrice(), order.getId()));
+                } catch (Exception e) {
+                    System.err.println(String.format("[OrderService] Lỗi khi trừ tiền từ ví cho đơn hàng #%s: %s", 
+                        order.getId(), e.getMessage()));
+                    throw new RuntimeException("Không thể thanh toán bằng ví: " + e.getMessage());
+                }
+            }
+        }
+
         List<String> selectedCartItemIds = orderDTO.getSelectedItems().stream()
                 .map(OrderDTO.SelectedCartItem::getId)
                 .collect(Collectors.toList());
@@ -523,6 +566,12 @@ public class OrderService implements IOrderService {
 
         order.setStatus(Order.OrderStatus.CANCELLED.name());
 
+        // Hoàn tiền nếu đã thanh toán (chuyển tiền về ví người dùng)
+        if (!Order.PaymentMethod.COD.name().equalsIgnoreCase(order.getPaymentMethod())) {
+            userWalletService.refundToWallet(user.getId(), order.getId(), order.getTotalPrice(),
+                    String.format("Hoàn tiền cho đơn hàng bị hủy #%s", order.getId()));
+        }
+
         // 4. Hoàn trả stock
         List<OrderItem> orderItem = orderItemRepository.findByOrderId(order.getId());
         for (OrderItem item : orderItem) {
@@ -570,7 +619,7 @@ public class OrderService implements IOrderService {
      * Validate payment method
      */
     private boolean isValidPaymentMethod(String paymentMethod) {
-        List<String> validMethods = List.of("COD", "BANK_TRANSFER", "CREDIT_CARD", "E_WALLET", "VNPAY", "MOMO");
+        List<String> validMethods = List.of("COD", "BANK_TRANSFER", "E_WALLET");
         return validMethods.contains(paymentMethod.toUpperCase());
     }
 

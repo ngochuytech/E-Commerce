@@ -1,4 +1,4 @@
-package com.example.e_commerce_techshop.responses;
+package com.example.e_commerce_techshop.responses.admin;
 
 import com.example.e_commerce_techshop.models.AdminRevenue;
 

@@ -13,7 +13,9 @@ import com.example.e_commerce_techshop.repositories.ProductRepository;
 import com.example.e_commerce_techshop.repositories.ProductVariantRepository;
 import com.example.e_commerce_techshop.repositories.StoreRepository;
 import com.example.e_commerce_techshop.responses.ProductResponse;
+import com.example.e_commerce_techshop.services.notification.INotificationService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,6 +25,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ProductService implements IProductService {
     private final ProductRepository productRepository;
 
@@ -33,6 +36,8 @@ public class ProductService implements IProductService {
     private final BrandRepository brandRepository;
 
     private final CategoryRepository categoryRepository;
+    
+    private final INotificationService notificationService;
 
     @Override
     public ProductResponse findProductById(String id) throws Exception {
@@ -93,7 +98,19 @@ public class ProductService implements IProductService {
                 .store(store)
                 .status(Product.ProductStatus.PENDING.name())
                 .build();
-        productRepository.save(product);
+        Product savedProduct = productRepository.save(product);
+        
+        // Tạo notification cho admin
+        try {
+            notificationService.createAdminNotification(
+                "Sản phẩm mới chờ phê duyệt: " + savedProduct.getName(),
+                "Sản phẩm " + savedProduct.getName() + " từ cửa hàng " + store.getName() + " chờ phê duyệt",
+                "PRODUCT_APPROVAL",
+                savedProduct.getId()
+            );
+        } catch (Exception e) {
+            log.error("Error creating admin notification for product: {}", e.getMessage());
+        }
     }
 
     @Override
