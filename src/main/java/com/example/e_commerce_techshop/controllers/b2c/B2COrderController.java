@@ -20,7 +20,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("${api.prefix}/b2c/orders")
@@ -32,9 +31,6 @@ public class B2COrderController {
     private final IOrderService orderService;
     private final IStoreService storeService;
 
-    /**
-     * Helper method để validate store thuộc về user
-     */
     private void validateUserStore(User currentUser, String storeId) {
         List<Store> userStores = storeService.getStoresByOwner(currentUser.getId());
         boolean hasStore = userStores.stream()
@@ -113,37 +109,5 @@ public class B2COrderController {
         orderService.rejectOrder(storeId, orderId, reason);
 
         return ResponseEntity.ok(ApiResponse.ok("Đơn hàng đã được hủy"));
-    }
-
-    /**
-     * Thống kê đơn hàng của store
-     * GET /api/v1/b2c/orders/statistics?storeId={storeId}
-     */
-    @GetMapping("/statistics")
-    @Operation(summary = "Get order statistics", description = "Retrieve comprehensive order statistics for a store including counts by status, trends, and performance metrics")
-    public ResponseEntity<?> getOrderStatistics(
-            @Parameter(description = "ID of the store", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @RequestParam String storeId,
-            @Parameter(hidden = true) @AuthenticationPrincipal User currentUser) throws Exception {
-        validateUserStore(currentUser, storeId);
-        Map<String, Object> stats = orderService.getStoreOrderStatistics(storeId);
-
-        return ResponseEntity.ok(ApiResponse.ok(stats));
-    }
-
-    /**
-     * Thống kê doanh thu theo khoảng thời gian
-     * GET /api/v1/b2c/orders/revenue?storeId={storeId}
-     */
-    @GetMapping("/revenue")
-    @Operation(summary = "Get revenue statistics", description = "Retrieve revenue statistics for a store within a specific date range")
-    public ResponseEntity<?> getRevenueStatistics(
-            @Parameter(description = "ID of the store", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @RequestParam String storeId,
-            @Parameter(description = "Start date (YYYY-MM-DD)", required = true, example = "2024-01-01") @RequestParam String startDate,
-            @Parameter(description = "End date (YYYY-MM-DD)", required = true, example = "2024-12-31") @RequestParam String endDate,
-            @Parameter(hidden = true) @AuthenticationPrincipal User currentUser) throws Exception {
-        validateUserStore(currentUser, storeId);
-        Map<String, Object> revenue = orderService.getStoreRevenue(storeId, startDate, endDate);
-
-        return ResponseEntity.ok(ApiResponse.ok(revenue));
     }
 }

@@ -9,7 +9,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
-import java.util.Map;
 
 public interface IOrderService {
 
@@ -36,16 +35,4 @@ public interface IOrderService {
     Order confirmOrder(String storeId, String orderId) throws Exception;
 
     Order rejectOrder(String storeId, String orderId, String reason) throws Exception;
-
-    // Thống kê đơn hàng của store
-    Map<String, Object> getStoreOrderStatistics(String storeId) throws Exception;
-    
-    /**
-     * Lấy doanh thu của store theo khoảng thời gian
-     * @param storeId ID của store
-     * @param startDate Ngày bắt đầu (yyyy-MM-dd)
-     * @param endDate Ngày kết thúc (yyyy-MM-dd)
-     * @return Map<String, Object>
-     */
-    Map<String, Object> getStoreRevenue(String storeId, String startDate, String endDate) throws Exception;
 }

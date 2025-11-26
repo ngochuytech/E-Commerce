@@ -1,0 +1,574 @@
+package com.example.e_commerce_techshop.services.statistics;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.time.temporal.WeekFields;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+
+import com.example.e_commerce_techshop.models.AdminRevenue;
+import com.example.e_commerce_techshop.models.Order;
+import com.example.e_commerce_techshop.models.ProductVariant;
+import com.example.e_commerce_techshop.repositories.AdminRevenueRepository;
+import com.example.e_commerce_techshop.repositories.OrderRepository;
+import com.example.e_commerce_techshop.repositories.ProductRepository;
+import com.example.e_commerce_techshop.repositories.ProductVariantRepository;
+import com.example.e_commerce_techshop.repositories.PromotionRepository;
+import com.example.e_commerce_techshop.repositories.StoreRepository;
+import com.example.e_commerce_techshop.repositories.user.UserRepository;
+import com.example.e_commerce_techshop.responses.admin.AdminRevenueResponse;
+
+import lombok.RequiredArgsConstructor;
+
+@Service
+@RequiredArgsConstructor
+public class StatisticsService implements IStatisticsService {
+    private final StoreRepository storeRepository;
+    private final ProductRepository productRepository;
+    private final ProductVariantRepository productVariantRepository;
+    private final UserRepository userRepository;
+    private final PromotionRepository promotionRepository;
+    private final AdminRevenueRepository adminRevenueRepository;
+    private final OrderRepository orderRepository;
+
+    @Override
+    public Map<String, Object> getAdminOverviewStatistics() throws Exception {
+        Map<String, Object> statistics = new HashMap<>();
+        try {
+            long totalPendingStores = storeRepository.countByStatus("PENDING");
+            statistics.put("totalPendingStores", totalPendingStores);
+
+            long totalPendingProducts = productRepository.countByStatus("PENDING");
+            statistics.put("totalPendingProducts", totalPendingProducts);
+
+            long totalPendingVariants = productVariantRepository.countByStatus("PENDING");
+            statistics.put("totalPendingVariants", totalPendingVariants);
+
+            long totalUsers = userRepository.count();
+            statistics.put("totalUsers", totalUsers);
+
+            long totalPromotions = promotionRepository.count();
+            statistics.put("totalPromotions", totalPromotions);
+
+        } catch (Exception e) {
+            System.out.println("Lỗi lấy thống kê " + e.getMessage());
+            statistics.put("totalPendingStores", 0);
+            statistics.put("totalPendingProducts", 0);
+            statistics.put("totalPendingVariants", 0);
+            statistics.put("totalUsers", 0);
+            statistics.put("totalPromotions", 0);
+        }
+        return statistics;
+    }
+
+    @Override
+    public Map<String, Object> getAdminRevenueStatistics() {
+        // Tổng phí dịch vụ từ tất cả orders
+        List<AdminRevenue> allServiceFees = adminRevenueRepository.findByRevenueType("SERVICE_FEE");
+        BigDecimal totalServiceFee = allServiceFees.stream()
+                .map(AdminRevenue::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // Tổng tiền lỗ từ platform discount
+        List<AdminRevenue> platformDiscountLoss = adminRevenueRepository.findByRevenueType("PLATFORM_DISCOUNT_LOSS");
+        BigDecimal totalPlatformDiscountLoss = platformDiscountLoss.stream()
+                .map(AdminRevenue::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("totalServiceFee", totalServiceFee);
+        stats.put("totalPlatformDiscountLoss", totalPlatformDiscountLoss);
+        stats.put("netRevenue", totalServiceFee.subtract(totalPlatformDiscountLoss));
+        stats.put("serviceFeeCount", allServiceFees.size());
+        stats.put("platformDiscountLossCount", platformDiscountLoss.size());
+
+        return stats;
+    }
+
+    @Override
+    public Map<String, Object> getAdminServiceFees(int page, int size) {
+        List<AdminRevenue> allServiceFees = adminRevenueRepository.findByRevenueType("SERVICE_FEE");
+        int start = page * size;
+        int end = Math.min(start + size, allServiceFees.size());
+        List<AdminRevenue> paginatedFees = allServiceFees.subList(start, end);
+
+        BigDecimal total = allServiceFees.stream()
+                .map(AdminRevenue::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        List<AdminRevenueResponse> responseList = paginatedFees.stream()
+                .map(AdminRevenueResponse::fromAdminRevenue)
+                .toList();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("revenues", responseList);
+        response.put("page", page);
+        response.put("size", size);
+        response.put("total", allServiceFees.size());
+        response.put("totalAmount", total);
+
+        return response;
+    }
+
+    @Override
+    public Map<String, Object> getAdminPlatformDiscountLosses(int page, int size) {
+        List<AdminRevenue> allLosses = adminRevenueRepository.findByRevenueType("PLATFORM_DISCOUNT_LOSS");
+        int start = page * size;
+        int end = Math.min(start + size, allLosses.size());
+        List<AdminRevenue> paginatedLosses = allLosses.subList(start, end);
+
+        BigDecimal total = allLosses.stream()
+                .map(AdminRevenue::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        List<AdminRevenueResponse> responseList = paginatedLosses.stream()
+                .map(AdminRevenueResponse::fromAdminRevenue)
+                .toList();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("revenues", responseList);
+        response.put("page", page);
+        response.put("size", size);
+        response.put("total", allLosses.size());
+        response.put("totalAmount", total);
+
+        return response;
+    }
+
+    @Override
+    public Map<String, Object> getAdminRevenueByDateRange(String startDate, String endDate, int page, int size) {
+        LocalDateTime start = LocalDateTime.parse(startDate + "T00:00:00");
+        LocalDateTime end = LocalDateTime.parse(endDate + "T23:59:59");
+
+        List<AdminRevenue> allRevenues = adminRevenueRepository.findByCreatedAtBetween(start, end);
+        int startIdx = page * size;
+        int endIdx = Math.min(startIdx + size, allRevenues.size());
+        List<AdminRevenue> paginatedRevenues = allRevenues.subList(startIdx, endIdx);
+
+        BigDecimal total = allRevenues.stream()
+                .map(AdminRevenue::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        List<AdminRevenueResponse> responseList = paginatedRevenues.stream()
+                .map(AdminRevenueResponse::fromAdminRevenue)
+                .toList();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("revenues", responseList);
+        response.put("startDate", startDate);
+        response.put("endDate", endDate);
+        response.put("page", page);
+        response.put("size", size);
+        response.put("total", allRevenues.size());
+        response.put("totalAmount", total);
+
+        return response;
+    }
+
+    @Override
+    public Map<String, Object> getRevenueChartData(String period) {
+        Map<String, Object> chartData = new HashMap<>();
+        
+        // Lấy riêng biệt theo loại doanh thu
+        List<AdminRevenue> serviceFeeRevenues = adminRevenueRepository.findByRevenueType("SERVICE_FEE");
+        List<AdminRevenue> discountLossRevenues = adminRevenueRepository.findByRevenueType("PLATFORM_DISCOUNT_LOSS");
+
+        if (serviceFeeRevenues.isEmpty() && discountLossRevenues.isEmpty()) {
+            chartData.put("labels", new ArrayList<>());
+            chartData.put("serviceFees", new ArrayList<>());
+            chartData.put("discountLosses", new ArrayList<>());
+            chartData.put("netRevenue", new ArrayList<>());
+            return chartData;
+        }
+
+        Map<String, BigDecimal> serviceFeeData = new LinkedHashMap<>();
+        Map<String, BigDecimal> discountLossData = new LinkedHashMap<>();
+
+        if ("WEEK".equalsIgnoreCase(period)) {
+            getWeeklyDataSeparate(serviceFeeRevenues, discountLossRevenues, serviceFeeData, discountLossData);
+        } else if ("MONTH".equalsIgnoreCase(period)) {
+            getMonthlyDataSeparate(serviceFeeRevenues, discountLossRevenues, serviceFeeData, discountLossData);
+        } else if ("YEAR".equalsIgnoreCase(period)) {
+            getYearlyDataSeparate(serviceFeeRevenues, discountLossRevenues, serviceFeeData, discountLossData);
+        }
+
+        List<String> labels = new ArrayList<>(serviceFeeData.keySet());
+        List<BigDecimal> serviceFees = new ArrayList<>(serviceFeeData.values());
+        List<BigDecimal> discountLosses = new ArrayList<>(discountLossData.values());
+        List<BigDecimal> netRevenues = new ArrayList<>();
+
+        for (int i = 0; i < serviceFees.size(); i++) {
+            netRevenues.add(serviceFees.get(i).subtract(discountLosses.get(i)));
+        }
+
+        chartData.put("labels", labels);
+        chartData.put("serviceFees", serviceFees);
+        chartData.put("serviceFeeLabel", "Phí dịch vụ");
+        chartData.put("discountLosses", discountLosses);
+        chartData.put("discountLossLabel", "Mất mát từ giảm giá");
+        chartData.put("netRevenue", netRevenues);
+        chartData.put("netRevenueLabel", "Doanh thu ròng");
+        chartData.put("period", period.toUpperCase());
+
+        return chartData;
+    }
+
+    private void getWeeklyDataSeparate(List<AdminRevenue> serviceFeeRevenues, List<AdminRevenue> discountLossRevenues,
+            Map<String, BigDecimal> serviceFeeData, Map<String, BigDecimal> discountLossData) {
+        WeekFields weekFields = WeekFields.ISO;
+
+        // Xử lý service fees
+        serviceFeeRevenues.stream()
+                .filter(r -> r.getCreatedAt() != null && r.getAmount() != null)
+                .collect(Collectors.groupingBy(
+                        r -> {
+                            LocalDateTime createdAt = r.getCreatedAt();
+                            int weekOfYear = createdAt.get(weekFields.weekOfYear());
+                            int year = createdAt.getYear();
+                            return String.format("Tuần %d/%d", weekOfYear, year);
+                        },
+                        LinkedHashMap::new,
+                        Collectors.mapping(AdminRevenue::getAmount, 
+                                Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))
+                ))
+                .forEach(serviceFeeData::put);
+
+        // Xử lý discount losses
+        discountLossRevenues.stream()
+                .filter(r -> r.getCreatedAt() != null && r.getAmount() != null)
+                .collect(Collectors.groupingBy(
+                        r -> {
+                            LocalDateTime createdAt = r.getCreatedAt();
+                            int weekOfYear = createdAt.get(weekFields.weekOfYear());
+                            int year = createdAt.getYear();
+                            return String.format("Tuần %d/%d", weekOfYear, year);
+                        },
+                        LinkedHashMap::new,
+                        Collectors.mapping(AdminRevenue::getAmount, 
+                                Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))
+                ))
+                .forEach(discountLossData::put);
+        
+        // Đảm bảo cả hai map có cùng keys
+        serviceFeeData.keySet().forEach(week -> discountLossData.putIfAbsent(week, BigDecimal.ZERO));
+        discountLossData.keySet().forEach(week -> serviceFeeData.putIfAbsent(week, BigDecimal.ZERO));
+    }
+
+    private void getMonthlyDataSeparate(List<AdminRevenue> serviceFeeRevenues, List<AdminRevenue> discountLossRevenues,
+            Map<String, BigDecimal> serviceFeeData, Map<String, BigDecimal> discountLossData) {
+        
+        // Xử lý service fees
+        serviceFeeRevenues.stream()
+                .filter(r -> r.getCreatedAt() != null && r.getAmount() != null)
+                .collect(Collectors.groupingBy(
+                        r -> {
+                            YearMonth yearMonth = YearMonth.from(r.getCreatedAt());
+                            return yearMonth.format(java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy",
+                                    java.util.Locale.forLanguageTag("vi_VN")));
+                        },
+                        LinkedHashMap::new,
+                        Collectors.mapping(AdminRevenue::getAmount, 
+                                Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))
+                ))
+                .forEach(serviceFeeData::put);
+
+        // Xử lý discount losses
+        discountLossRevenues.stream()
+                .filter(r -> r.getCreatedAt() != null && r.getAmount() != null)
+                .collect(Collectors.groupingBy(
+                        r -> {
+                            YearMonth yearMonth = YearMonth.from(r.getCreatedAt());
+                            return yearMonth.format(java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy",
+                                    java.util.Locale.forLanguageTag("vi_VN")));
+                        },
+                        LinkedHashMap::new,
+                        Collectors.mapping(AdminRevenue::getAmount, 
+                                Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))
+                ))
+                .forEach(discountLossData::put);
+        
+        // Đảm bảo cả hai map có cùng keys
+        serviceFeeData.keySet().forEach(month -> discountLossData.putIfAbsent(month, BigDecimal.ZERO));
+        discountLossData.keySet().forEach(month -> serviceFeeData.putIfAbsent(month, BigDecimal.ZERO));
+    }
+
+    private void getYearlyDataSeparate(List<AdminRevenue> serviceFeeRevenues, List<AdminRevenue> discountLossRevenues,
+            Map<String, BigDecimal> serviceFeeData, Map<String, BigDecimal> discountLossData) {
+        
+        // Xử lý service fees
+        serviceFeeRevenues.stream()
+                .filter(r -> r.getCreatedAt() != null && r.getAmount() != null)
+                .collect(Collectors.groupingBy(
+                        r -> String.format("Năm %d", r.getCreatedAt().getYear()),
+                        LinkedHashMap::new,
+                        Collectors.mapping(AdminRevenue::getAmount, 
+                                Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))
+                ))
+                .forEach(serviceFeeData::put);
+
+        // Xử lý discount losses
+        discountLossRevenues.stream()
+                .filter(r -> r.getCreatedAt() != null && r.getAmount() != null)
+                .collect(Collectors.groupingBy(
+                        r -> String.format("Năm %d", r.getCreatedAt().getYear()),
+                        LinkedHashMap::new,
+                        Collectors.mapping(AdminRevenue::getAmount, 
+                                Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))
+                ))
+                .forEach(discountLossData::put);
+        
+        // Đảm bảo cả hai map có cùng keys
+        serviceFeeData.keySet().forEach(year -> discountLossData.putIfAbsent(year, BigDecimal.ZERO));
+        discountLossData.keySet().forEach(year -> serviceFeeData.putIfAbsent(year, BigDecimal.ZERO));
+    }
+
+    @Override
+    public Map<String, Object> getStoreOverviewStatistics(String storeId) {
+        Map<String, Object> overview = new HashMap<>();
+        
+        try {
+            LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
+            LocalDateTime endOfDay = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59);
+            
+            List<Order> todayOrders = orderRepository.findByStoreIdAndStatusAndDateRange(storeId, "DELIVERED", startOfDay, endOfDay);
+            
+            BigDecimal todayRevenue = todayOrders.stream()
+                    .map(Order::getTotalPrice)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            
+            long newOrdersToday = todayOrders.size();
+            long variantAmount = productVariantRepository.countByStoreIdAndStatus(storeId, "APPROVED");
+            
+            overview.put("todayRevenue", todayRevenue);
+            overview.put("newOrdersToday", newOrdersToday);
+            overview.put("variantAmount", variantAmount);
+            
+        } catch (Exception e) {
+            System.out.println("Lỗi lấy thống kê store overview: " + e.getMessage());
+            overview.put("todayRevenue", BigDecimal.ZERO);
+            overview.put("newOrdersToday", 0);
+        }
+        
+        return overview;
+    }
+
+    @Override
+    public Map<String, Object> getStoreRevenueChartData(String storeId, String period) throws Exception {
+        Map<String, Object> chartData = new HashMap<>();
+        
+        List<Order> allOrders = orderRepository.findByStoreIdAndStatus(storeId, "DELIVERED");
+        
+        if (allOrders.isEmpty()) {
+            chartData.put("labels", new ArrayList<>());
+            chartData.put("revenues", new ArrayList<>());
+            chartData.put("revenueLabel", "Doanh thu");
+            chartData.put("period", period.toUpperCase());
+            return chartData;
+        }
+        
+        Map<String, BigDecimal> revenueData = new LinkedHashMap<>();
+        
+        if ("WEEK".equalsIgnoreCase(period)) {
+            getStoreWeeklyRevenueData(allOrders, revenueData);
+        } else if ("MONTH".equalsIgnoreCase(period)) {
+            getStoreMonthlyRevenueData(allOrders, revenueData);
+        } else if ("YEAR".equalsIgnoreCase(period)) {
+            getStoreYearlyRevenueData(allOrders, revenueData);
+        }
+        
+        List<String> labels = new ArrayList<>(revenueData.keySet());
+        List<BigDecimal> revenues = new ArrayList<>(revenueData.values());
+        
+        chartData.put("labels", labels);
+        chartData.put("revenues", revenues);
+        chartData.put("revenueLabel", "Doanh thu");
+        chartData.put("period", period.toUpperCase());
+        
+        return chartData;
+    }
+    
+    private void getStoreWeeklyRevenueData(List<Order> orders, Map<String, BigDecimal> revenueData) {
+        WeekFields weekFields = WeekFields.ISO;
+        
+        orders.stream()
+            .filter(o -> o.getCreatedAt() != null && o.getTotalPrice() != null)
+            .collect(Collectors.groupingBy(
+                o -> {
+                    LocalDateTime createdAt = o.getCreatedAt();
+                    int weekOfYear = createdAt.get(weekFields.weekOfYear());
+                    int year = createdAt.getYear();
+                    return String.format("Tuần %d/%d", weekOfYear, year);
+                },
+                LinkedHashMap::new,
+                Collectors.toList()
+            ))
+            .forEach((week, items) -> {
+                BigDecimal totalRevenue = items.stream()
+                    .map(Order::getTotalPrice)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+                revenueData.put(week, totalRevenue);
+            });
+    }
+    
+    private void getStoreMonthlyRevenueData(List<Order> orders, Map<String, BigDecimal> revenueData) {
+        orders.stream()
+            .filter(o -> o.getCreatedAt() != null && o.getTotalPrice() != null)
+            .collect(Collectors.groupingBy(
+                o -> {
+                    YearMonth yearMonth = YearMonth.from(o.getCreatedAt());
+                    return yearMonth.format(java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy", java.util.Locale.forLanguageTag("vi_VN")));
+                },
+                LinkedHashMap::new,
+                Collectors.toList()
+            ))
+            .forEach((month, items) -> {
+                BigDecimal totalRevenue = items.stream()
+                    .map(Order::getTotalPrice)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+                revenueData.put(month, totalRevenue);
+            });
+    }
+    
+    private void getStoreYearlyRevenueData(List<Order> orders, Map<String, BigDecimal> revenueData) {
+        orders.stream()
+            .filter(o -> o.getCreatedAt() != null && o.getTotalPrice() != null)
+            .collect(Collectors.groupingBy(
+                o -> String.format("Năm %d", o.getCreatedAt().getYear()),
+                LinkedHashMap::new,
+                Collectors.toList()
+            ))
+            .forEach((year, items) -> {
+                BigDecimal totalRevenue = items.stream()
+                    .map(Order::getTotalPrice)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+                revenueData.put(year, totalRevenue);
+            });
+    }
+
+    @Override
+    public Map<String, Object> getStoreOrdersChartData(String storeId, String period) throws Exception {
+        Map<String, Object> chartData = new HashMap<>();
+        
+        List<Order> allOrders = orderRepository.findByStoreIdAndStatus(storeId, "DELIVERED");
+        
+        if (allOrders.isEmpty()) {
+            chartData.put("labels", new ArrayList<>());
+            chartData.put("orderCounts", new ArrayList<>());
+            chartData.put("orderCountLabel", "Số đơn hàng");
+            chartData.put("period", period.toUpperCase());
+            return chartData;
+        }
+        
+        Map<String, Long> orderData = new LinkedHashMap<>();
+        
+        if ("WEEK".equalsIgnoreCase(period)) {
+            getStoreWeeklyOrderCount(allOrders, orderData);
+        } else if ("MONTH".equalsIgnoreCase(period)) {
+            getStoreMonthlyOrderCount(allOrders, orderData);
+        } else if ("YEAR".equalsIgnoreCase(period)) {
+            getStoreYearlyOrderCount(allOrders, orderData);
+        }
+        
+        List<String> labels = new ArrayList<>(orderData.keySet());
+        List<Long> orderCounts = new ArrayList<>(orderData.values());
+        
+        chartData.put("labels", labels);
+        chartData.put("orderCounts", orderCounts);
+        chartData.put("orderCountLabel", "Số đơn hàng");
+        chartData.put("period", period.toUpperCase());
+        
+        return chartData;
+    }
+    
+    private void getStoreWeeklyOrderCount(List<Order> orders, Map<String, Long> orderData) {
+        WeekFields weekFields = WeekFields.ISO;
+        
+        orders.stream()
+            .filter(o -> o.getCreatedAt() != null)
+            .collect(Collectors.groupingBy(
+                o -> {
+                    LocalDateTime createdAt = o.getCreatedAt();
+                    int weekOfYear = createdAt.get(weekFields.weekOfYear());
+                    int year = createdAt.getYear();
+                    return String.format("Tuần %d/%d", weekOfYear, year);
+                },
+                LinkedHashMap::new,
+                Collectors.counting()
+            ))
+            .forEach(orderData::put);
+    }
+    
+    private void getStoreMonthlyOrderCount(List<Order> orders, Map<String, Long> orderData) {
+        orders.stream()
+            .filter(o -> o.getCreatedAt() != null)
+            .collect(Collectors.groupingBy(
+                o -> {
+                    YearMonth yearMonth = YearMonth.from(o.getCreatedAt());
+                    return yearMonth.format(java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy", java.util.Locale.forLanguageTag("vi_VN")));
+                },
+                LinkedHashMap::new,
+                Collectors.counting()
+            ))
+            .forEach(orderData::put);
+    }
+    
+    private void getStoreYearlyOrderCount(List<Order> orders, Map<String, Long> orderData) {
+        orders.stream()
+            .filter(o -> o.getCreatedAt() != null)
+            .collect(Collectors.groupingBy(
+                o -> String.format("Năm %d", o.getCreatedAt().getYear()),
+                LinkedHashMap::new,
+                Collectors.counting()
+            ))
+            .forEach(orderData::put);
+    }
+
+    @Override
+    public Map<String, Object> getOrderCountByStatus(String storeId) throws Exception {
+        Map<String, Object> orderStats = new HashMap<>();
+        long totalOrders = orderRepository.countByStoreId(storeId);
+        long deliveredOrders = orderRepository.countByStoreIdAndStatus(storeId, "DELIVERED");
+        long pendingOrders = orderRepository.countByStoreIdAndStatus(storeId, "PENDING");
+        long cancelledOrders = orderRepository.countByStoreIdAndStatus(storeId, "CANCELLED");
+        long shippingOrders = orderRepository.countByStoreIdAndStatus(storeId, "SHIPPING");
+        long confirmedOrders = orderRepository.countByStoreIdAndStatus(storeId, "CONFIRMED");
+        orderStats.put("totalOrders", totalOrders);
+        orderStats.put("deliveredOrders", deliveredOrders);
+        orderStats.put("pendingOrders", pendingOrders);
+        orderStats.put("cancelledOrders", cancelledOrders);
+        orderStats.put("shippingOrders", shippingOrders);
+        orderStats.put("confirmedOrders", confirmedOrders);
+        return orderStats;
+    }
+
+    @Override
+    public Map<String, Object> getVariantCountByStockStatus(String storeId) throws Exception {
+        Map<String, Object> variantStats = new HashMap<>();
+        
+        List<ProductVariant> variants = 
+            productVariantRepository.findByStoreIdAndStatus(storeId, "APPROVED");
+        
+        long totalProducts = variants.size();
+        
+        long lowStockProducts = variants.stream()
+            .filter(v -> v.getStock() > 0 && v.getStock() <= 10)
+            .count();
+        
+        long outOfStockProducts = variants.stream()
+            .filter(v -> v.getStock() == 0)
+            .count();
+        
+        variantStats.put("totalProducts", totalProducts);
+        variantStats.put("lowStockProducts", lowStockProducts);
+        variantStats.put("outOfStockProducts", outOfStockProducts);
+        
+        return variantStats;
+    }
+}

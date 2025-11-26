@@ -29,9 +29,9 @@ public interface OrderRepository extends MongoRepository<Order, String> {
     List<Order> findByStoreIdAndStatus(String storeId, String status);
     
     long countByStoreIdAndStatus(String storeId, String status);
-    
-    @Query("{ 'store.$id': ?0, 'createdAt': { '$gte': ?1, '$lte': ?2 } }")
-    List<Order> findByStoreIdAndDateRange(String storeId, LocalDateTime start, LocalDateTime end);
+
+    @Query("{ 'store.$id': ?0, 'status': ?1, 'createdAt': { '$gte': ?2, '$lte': ?3 } }")
+    List<Order> findByStoreIdAndStatusAndDateRange(String storeId, String status, LocalDateTime start, LocalDateTime end);
     
     Page<Order> findByStoreId(String storeId, Pageable pageable);
     

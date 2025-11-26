@@ -3,6 +3,7 @@ package com.example.e_commerce_techshop.services.user;
 import com.example.e_commerce_techshop.components.JwtTokenProvider;
 import com.example.e_commerce_techshop.dtos.UserLoginDTO;
 import com.example.e_commerce_techshop.dtos.admin.user.BanUserDTO;
+import com.example.e_commerce_techshop.dtos.user.UpdateUserDTO;
 import com.example.e_commerce_techshop.dtos.user.UserRegisterDTO;
 import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
 import com.example.e_commerce_techshop.exceptions.ExpiredTokenException;
@@ -87,6 +88,13 @@ public class UserService implements IUserService {
                 .enable(false)
                 .verificationCode(verificationCode)
                 .build();
+
+        if( userDTO.getPhone() != null ) {
+            newUser.setPhone(userDTO.getPhone());
+        }
+        if( userDTO.getDateOfBirth() != null ) {
+            newUser.setDateOfBirth(userDTO.getDateOfBirth());
+        }
         userRepository.save(newUser);
         sendVerificationEmail(newUser, siteURL);
     }
@@ -312,5 +320,19 @@ public class UserService implements IUserService {
     public User getUserById(String userId) throws Exception {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy user với ID này"));
+    }
+
+    @Override
+    public void updateUserProfile(User currentUser, UpdateUserDTO userUpdateDTO) throws Exception {
+        if (userUpdateDTO.getFullName() != null && !userUpdateDTO.getFullName().isBlank()) {
+            currentUser.setFullName(userUpdateDTO.getFullName());
+        }
+        if (userUpdateDTO.getPhone() != null) {
+            currentUser.setPhone(userUpdateDTO.getPhone());
+        }
+        if (userUpdateDTO.getDateOfBirth() != null) {
+            currentUser.setDateOfBirth(userUpdateDTO.getDateOfBirth());
+        }
+        userRepository.save(currentUser);
     }
 }

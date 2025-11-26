@@ -1,6 +1,9 @@
 package com.example.e_commerce_techshop.repositories;
 
 import com.example.e_commerce_techshop.models.ProductVariant;
+
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
@@ -21,4 +24,10 @@ public interface ProductVariantRepository extends MongoRepository<ProductVariant
 
     @Query("{'name': {$regex: ?0, $options: 'i'}, 'status': ?1}")
     Page<ProductVariant> searchByNameAndStatus(String name, String status, Pageable pageable);
+
+    long countByStatus(String status);
+
+    long countByStoreIdAndStatus(String storeId, String status);
+
+    List<ProductVariant> findByStoreIdAndStatus(String storeId, String status);
 }

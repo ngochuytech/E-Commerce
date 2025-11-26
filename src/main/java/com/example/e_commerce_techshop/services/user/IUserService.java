@@ -2,6 +2,7 @@ package com.example.e_commerce_techshop.services.user;
 
 import com.example.e_commerce_techshop.dtos.UserLoginDTO;
 import com.example.e_commerce_techshop.dtos.admin.user.BanUserDTO;
+import com.example.e_commerce_techshop.dtos.user.UpdateUserDTO;
 import com.example.e_commerce_techshop.dtos.user.UserRegisterDTO;
 import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.responses.user.UserResponse;
@@ -34,6 +35,8 @@ public interface IUserService {
     UserResponse getCurrentUser(String email) throws Exception;
 
     User findByEmail(String email) throws Exception;
+
+    void updateUserProfile(User currentUser, UpdateUserDTO userUpdateDTO) throws Exception;
 
     void updateUserAvatar(User user, MultipartFile avatarFile) throws Exception;
 

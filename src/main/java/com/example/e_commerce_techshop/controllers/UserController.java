@@ -23,6 +23,7 @@ import com.example.e_commerce_techshop.components.JwtTokenProvider;
 import com.example.e_commerce_techshop.dtos.GoogleCodeRequest;
 import com.example.e_commerce_techshop.dtos.UserLoginDTO;
 import com.example.e_commerce_techshop.dtos.user.ChangePasswordDTO;
+import com.example.e_commerce_techshop.dtos.user.UpdateUserDTO;
 import com.example.e_commerce_techshop.dtos.user.UserRegisterDTO;
 import com.example.e_commerce_techshop.models.Token;
 import com.example.e_commerce_techshop.models.User;
@@ -211,6 +212,16 @@ public class UserController {
         else
             return ResponseEntity.badRequest().body(ApiResponse.error("Xác minh tài khoản thất bại! Do tài khoản của" +
                     "bạn đã được xác minh hoặc mã code xác nhận không chính xác."));
+    }
+
+    @PutMapping("/profile")
+    @Operation(summary = "Update user profile", description = "Update the profile information of the currently authenticated user")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<?> updateProfile(
+            @Parameter(description = "Currently authenticated user", required = true) @AuthenticationPrincipal User currentUser,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "User profile information to update", required = true) @RequestBody @Valid UpdateUserDTO userDTO) throws Exception {
+        userService.updateUserProfile(currentUser, userDTO);
+        return ResponseEntity.ok(ApiResponse.ok("Cập nhật thông tin cá nhân thành công"));
     }
 
     private boolean isMobileDevice(String userAgent) {

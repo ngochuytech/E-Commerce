@@ -1,6 +1,6 @@
 package com.example.e_commerce_techshop.responses.user;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,7 +22,7 @@ public class UserResponse {
 
     private String fullName;
 
-    private LocalDateTime dateOfBirth;
+    private LocalDate dateOfBirth;
 
     private String avatar;
 

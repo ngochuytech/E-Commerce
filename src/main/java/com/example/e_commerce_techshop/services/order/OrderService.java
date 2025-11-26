@@ -770,66 +770,6 @@ public class OrderService implements IOrderService {
     }
 
     @Override
-    public Map<String, Object> getStoreOrderStatistics(String storeId) throws Exception {
-        Map<String, Object> stats = new HashMap<>();
-
-        // Tổng số đơn hàng
-        long totalOrders = orderRepository.countByStoreId(storeId);
-        stats.put("totalOrders", totalOrders);
-
-        // Đếm theo trạng thái
-        stats.put("pending", orderRepository.countByStoreIdAndStatus(storeId, "PENDING"));
-        stats.put("confirmed", orderRepository.countByStoreIdAndStatus(storeId, "CONFIRMED"));
-        stats.put("shipping", orderRepository.countByStoreIdAndStatus(storeId, "SHIPPING"));
-        stats.put("delivered", orderRepository.countByStoreIdAndStatus(storeId, "DELIVERED"));
-        stats.put("cancelled", orderRepository.countByStoreIdAndStatus(storeId, "CANCELLED"));
-
-        // Tính tổng doanh thu (chỉ đơn hàng hoàn thành)
-        List<Order> completedOrders = orderRepository.findByStoreIdAndStatus(storeId, "DELIVERED");
-        BigDecimal totalRevenue = completedOrders.stream()
-                .map(Order::getTotalPrice)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        stats.put("totalRevenue", totalRevenue);
-
-        return stats;
-    }
-
-    @Override
-    public Map<String, Object> getStoreRevenue(String storeId, String startDate, String endDate) throws Exception {
-        LocalDateTime start = LocalDateTime.parse(startDate + "T00:00:00");
-        LocalDateTime end = LocalDateTime.parse(endDate + "T23:59:59");
-
-        List<Order> orders = orderRepository.findByStoreIdAndDateRange(storeId, start, end);
-
-        Map<String, Object> revenue = new HashMap<>();
-
-        // Lọc theo trạng thái và tính doanh thu
-        BigDecimal totalRevenue = BigDecimal.ZERO;
-        BigDecimal pendingRevenue = BigDecimal.ZERO;
-        long totalOrders = 0;
-        long completedOrders = 0;
-
-        for (Order order : orders) {
-            totalOrders++;
-            if ("DELIVERED".equals(order.getStatus())) {
-                totalRevenue = totalRevenue.add(order.getTotalPrice());
-                completedOrders++;
-            } else if (!"CANCELLED".equals(order.getStatus())) {
-                pendingRevenue = pendingRevenue.add(order.getTotalPrice());
-            }
-        }
-
-        revenue.put("totalRevenue", totalRevenue);
-        revenue.put("pendingRevenue", pendingRevenue);
-        revenue.put("totalOrders", totalOrders);
-        revenue.put("completedOrders", completedOrders);
-        revenue.put("startDate", startDate);
-        revenue.put("endDate", endDate);
-
-        return revenue;
-    }
-
-    @Override
     public Order rejectOrder(String storeId, String orderId, String reason) throws Exception {
         Order order = getStoreOrderDetail(storeId, orderId);
         order.setStatus(Order.OrderStatus.CANCELLED.name());

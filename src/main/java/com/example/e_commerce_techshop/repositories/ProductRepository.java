@@ -39,4 +39,6 @@ public interface ProductRepository extends MongoRepository<Product, String> {
 
     Page<Product> findByStoreIdAndStatus(String storeId, String status, Pageable pageable);
 
+    long countByStatus(String status);
+
 }
