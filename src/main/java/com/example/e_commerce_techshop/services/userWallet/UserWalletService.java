@@ -265,6 +265,7 @@ public class UserWalletService implements IUserWalletService {
                 .balanceAfter(wallet.getBalance())
                 .description(String.format("Rút tiền về tài khoản %s - %s", 
                     request.getBankName(), request.getBankAccountNumber()))
+                .withDrawalId(requestId)
                 .build();
         transaction = userTransactionRepository.save(transaction);
 

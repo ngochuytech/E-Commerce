@@ -1,6 +1,7 @@
 package com.example.e_commerce_techshop.responses;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 import com.example.e_commerce_techshop.models.UserWithdrawalRequest.WithdrawalStatus;
 
@@ -30,6 +31,10 @@ public class UserWithDrawalRequestResponse {
 
     private String paymentGatewayTxnId;
 
+    private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
+
     @Data
     @Builder
     private static class UserResponse {
@@ -56,6 +61,8 @@ public class UserWithDrawalRequestResponse {
                 .note(request.getNote())
                 .adminNote(request.getAdminNote())
                 .paymentGatewayTxnId(request.getPaymentGatewayTxnId())
+                .createdAt(request.getCreatedAt())
+                .updatedAt(request.getUpdatedAt())
                 .build();
     }
 }

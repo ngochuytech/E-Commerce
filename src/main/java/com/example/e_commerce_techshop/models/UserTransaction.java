@@ -33,6 +33,8 @@ public class UserTransaction extends BaseEntity {
     private BigDecimal balanceAfter; // Số dư sau giao dịch
     
     private String description; // Mô tả giao dịch
+
+    private String withDrawalId;
     
     public enum TransactionType {
         REFUND, // Hoàn tiền từ đơn hàng bị hủy

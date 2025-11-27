@@ -17,6 +17,7 @@ public class BuyerTransactionResponse {
     private BigDecimal balanceBefore;
     private BigDecimal balanceAfter;
     private String description;
+    private String withDrawalId;
     private String createdAt;
     private String updatedAt;
 
@@ -46,6 +47,7 @@ public class BuyerTransactionResponse {
                 .balanceBefore(transaction.getBalanceBefore())
                 .balanceAfter(transaction.getBalanceAfter())
                 .description(transaction.getDescription())
+                .withDrawalId(transaction.getWithDrawalId())
                 .createdAt(transaction.getCreatedAt() != null ? transaction.getCreatedAt().toString() : null)
                 .updatedAt(transaction.getUpdatedAt() != null ? transaction.getUpdatedAt().toString() : null)
                 .build();
