@@ -1,5 +1,8 @@
 package com.example.e_commerce_techshop.controllers.admin;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,18 +43,32 @@ public class AdminStatisticsController {
     @GetMapping("/service-fees")
     public ResponseEntity<?> getServiceFees(
             @Parameter(description = "Page number (0-indexed)", required = false, example = "0") @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "Page size", required = false, example = "10") @RequestParam(defaultValue = "10") int size) {
+            @Parameter(description = "Page size", required = false, example = "10") @RequestParam(defaultValue = "10") int size,
+            @Parameter(description = "Sort by field") @RequestParam(defaultValue = "createdAt") String sortBy,
+            @Parameter(description = "Sort direction: asc or desc") @RequestParam(defaultValue = "desc") String sortDir) {
 
-        return ResponseEntity.ok(ApiResponse.ok(statisticsService.getAdminServiceFees(page, size)));
+        Sort sort = sortDir.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+        return ResponseEntity.ok(ApiResponse.ok(statisticsService.getAdminServiceFees(pageable)));
     }
 
     @Operation(summary = "Get platform discount losses", description = "Retrieve all platform discount loss records")
     @GetMapping("/platform-discount-losses")
     public ResponseEntity<?> getPlatformDiscountLosses(
             @Parameter(description = "Page number (0-indexed)", required = false, example = "0") @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "Page size", required = false, example = "10") @RequestParam(defaultValue = "10") int size) {
+            @Parameter(description = "Page size", required = false, example = "10") @RequestParam(defaultValue = "10") int size,
+            @Parameter(description = "Sort by field") @RequestParam(defaultValue = "createdAt") String sortBy,
+            @Parameter(description = "Sort direction: asc or desc") @RequestParam(defaultValue = "desc") String sortDir) {
 
-        return ResponseEntity.ok(ApiResponse.ok(statisticsService.getAdminPlatformDiscountLosses(page, size)));
+        Sort sort = sortDir.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+        return ResponseEntity.ok(ApiResponse.ok(statisticsService.getAdminPlatformDiscountLosses(pageable)));
     }
 
     @Operation(summary = "Get revenue by date range", description = "Get service fees collected in a specific date range")
@@ -60,10 +77,17 @@ public class AdminStatisticsController {
             @Parameter(description = "Start date (format: yyyy-MM-dd)", required = true, example = "2025-11-01") @RequestParam String startDate,
             @Parameter(description = "End date (format: yyyy-MM-dd)", required = true, example = "2025-11-30") @RequestParam String endDate,
             @Parameter(description = "Page number (0-indexed)", required = false, example = "0") @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "Page size", required = false, example = "10") @RequestParam(defaultValue = "10") int size) {
+            @Parameter(description = "Page size", required = false, example = "10") @RequestParam(defaultValue = "10") int size,
+            @Parameter(description = "Sort by field") @RequestParam(defaultValue = "createdAt") String sortBy,
+            @Parameter(description = "Sort direction: asc or desc") @RequestParam(defaultValue = "desc") String sortDir) {
 
+        Sort sort = sortDir.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
         return ResponseEntity
-                .ok(ApiResponse.ok(statisticsService.getAdminRevenueByDateRange(startDate, endDate, page, size)));
+                .ok(ApiResponse.ok(statisticsService.getAdminRevenueByDateRange(startDate, endDate, pageable)));
     }
 
     @Operation(summary = "Get revenue chart data", description = "Get revenue data for chart visualization by period (WEEK/MONTH/YEAR)")
