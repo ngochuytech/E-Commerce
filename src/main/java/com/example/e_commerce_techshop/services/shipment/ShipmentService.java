@@ -60,7 +60,8 @@ public class ShipmentService implements IShipmentService {
             notificationService.createUserNotification(order.getBuyer().getId(),
                     "Đơn hàng đang được chuẩn bị",
                     String.format("Cửa hàng %s đang chuẩn bị hàng cho đơn #%s. Dự kiến giao: %s",
-                            order.getStore().getName(), orderId, "2 ngày"));
+                            order.getStore().getName(), orderId, "2 ngày"),
+                        orderId);
         } catch (Exception e) {
             System.err.println("Error sending notification: " + e.getMessage());
         }
@@ -135,7 +136,8 @@ public class ShipmentService implements IShipmentService {
             String message = getStatusMessage(newStatus);
             notificationService.createUserNotification(order.getBuyer().getId(),
                     "Cập nhật vận chuyển",
-                    String.format("Đơn hàng #%s: %s", order.getId(), message));
+                    String.format("Đơn hàng #%s: %s", order.getId(), message),
+                    order.getId());
         } catch (Exception e) {
             System.err.println("Error sending notification: " + e.getMessage());
         }

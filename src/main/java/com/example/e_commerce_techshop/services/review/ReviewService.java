@@ -6,13 +6,17 @@ import com.example.e_commerce_techshop.models.*;
 import com.example.e_commerce_techshop.repositories.*;
 import com.example.e_commerce_techshop.repositories.user.UserRepository;
 import com.example.e_commerce_techshop.responses.ReviewResponse;
+import com.example.e_commerce_techshop.services.FileUploadService;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,10 +31,11 @@ public class ReviewService implements IReviewService {
     private final ProductVariantRepository productVariantRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
+    private final FileUploadService fileUploadService;
 
     @Override
     @Transactional
-    public void createReview(ReviewDTO reviewDTO, User currentUser) {
+    public void createReview(ReviewDTO reviewDTO, List<MultipartFile> images, User currentUser) throws Exception {
         // Kiểm tra order tồn tại và thuộc về user
         Order order = orderRepository.findById(reviewDTO.getOrderId())
                 .orElseThrow(() -> new DataNotFoundException("Order not found"));
@@ -58,6 +63,12 @@ public class ReviewService implements IReviewService {
             throw new IllegalArgumentException("You have already reviewed this product in this order");
         }
 
+        List<String > imageUrls = new ArrayList<>();
+
+        if(images != null && !images.isEmpty()) {
+            imageUrls = fileUploadService.uploadFiles(images, "reviews");
+        }
+
         // Tạo review mới
         Review review = Review.builder()
                 .rating(reviewDTO.getRating())
@@ -65,6 +76,7 @@ public class ReviewService implements IReviewService {
                 .order(order)
                 .productVariant(productVariant)
                 .user(currentUser)
+                .imageUrls(imageUrls)
                 .build();
         order.setRated(true);
         

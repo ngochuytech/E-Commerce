@@ -3,6 +3,7 @@ package com.example.e_commerce_techshop.controllers.buyer;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -12,7 +13,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.example.e_commerce_techshop.annotations.RequireActiveAccount;
 import com.example.e_commerce_techshop.dtos.ReviewDTO;
@@ -20,7 +23,7 @@ import com.example.e_commerce_techshop.models.Review;
 import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.responses.ApiResponse;
 import com.example.e_commerce_techshop.responses.ReviewResponse;
-import com.example.e_commerce_techshop.services.review.ReviewService;
+import com.example.e_commerce_techshop.services.review.IReviewService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -37,27 +40,29 @@ import lombok.RequiredArgsConstructor;
 @SecurityRequirement(name = "bearerAuth")
 public class BuyerReviewController {
 
-    private final ReviewService reviewService;
+    private final IReviewService reviewService;
 
     /**
      * Tạo review mới cho sản phẩm
      */
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Create product review", description = "Create a new review for a product with rating and comment")
-    public ResponseEntity<ApiResponse<?>> createReview(
-            @Parameter(description = "Review information including rating, comment, and product variant ID") @Valid @RequestBody ReviewDTO reviewDTO,
+    public ResponseEntity<?> createReview(
+            @Parameter(description = "Review information including rating, comment, and product variant ID") @Valid @RequestPart("review") ReviewDTO reviewDTO,
+            @Parameter(description = "Optional images for the review") @RequestPart(value = "images", required = false) List<MultipartFile> images,
             @AuthenticationPrincipal User currentUser) throws Exception {
-        reviewService.createReview(reviewDTO, currentUser);
+        reviewService.createReview(reviewDTO, images, currentUser);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Tạo đánh giá thành công"));
     }
 
-        /**
+
+    /**
      * Lấy danh sách reviews của user hiện tại
      */
     @GetMapping("/my-reviews")
     @Operation(summary = "Get my reviews", description = "Retrieve all reviews created by the current authenticated user")
-    public ResponseEntity<ApiResponse<List<ReviewResponse>>> getMyReviews(
+    public ResponseEntity<?> getMyReviews(
             @AuthenticationPrincipal User currentUser) throws Exception {
 
         List<Review> reviews = reviewService.getReviewsByUser(currentUser.getId());
@@ -73,7 +78,7 @@ public class BuyerReviewController {
      */
     @PutMapping("/{reviewId}")
     @Operation(summary = "Update review", description = "Update an existing review (only by the review owner)")
-    public ResponseEntity<ApiResponse<?>> updateReview(
+    public ResponseEntity<?> updateReview(
             @Parameter(description = "Review ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String reviewId,
             @Parameter(description = "Updated review information") @Valid @RequestBody ReviewDTO reviewDTO,
             @AuthenticationPrincipal User currentUser) throws Exception {
@@ -88,7 +93,7 @@ public class BuyerReviewController {
      */
     @DeleteMapping("/{reviewId}")
     @Operation(summary = "Delete review", description = "Delete a review (only by the review owner)")
-    public ResponseEntity<ApiResponse<String>> deleteReview(
+    public ResponseEntity<?> deleteReview(
             @Parameter(description = "Review ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String reviewId,
             @AuthenticationPrincipal User currentUser) throws Exception {
         reviewService.deleteReview(reviewId, currentUser);

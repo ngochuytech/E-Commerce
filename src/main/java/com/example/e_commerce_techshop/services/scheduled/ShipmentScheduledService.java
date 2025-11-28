@@ -60,7 +60,8 @@ public class ShipmentScheduledService {
                     Order order = shipment.getOrder();
                     notificationService.createUserNotification(order.getBuyer().getId(),
                             "Đơn hàng của bạn đã được nhân viên lấy hàng",
-                            String.format("Đơn hàng #%s đang được vận chuyển đến bạn", order.getId()));
+                            String.format("Đơn hàng #%s đang được vận chuyển đến bạn", order.getId()),
+                        order.getId());
                 } catch (Exception e) {
                     System.err.println("Error sending notification: " + e.getMessage());
                 }
@@ -159,12 +160,14 @@ public class ShipmentScheduledService {
                     // Thông báo cho khách hàng
                     notificationService.createUserNotification(order.getBuyer().getId(),
                             "Đơn hàng đã được giao thành công",
-                            String.format("Đơn hàng #%s đã được giao đến bạn. Cảm ơn bạn đã mua sắm!", order.getId()));
+                            String.format("Đơn hàng #%s đã được giao đến bạn. Cảm ơn bạn đã mua sắm!", order.getId()),
+                            order.getId());
 
                     // Thông báo cho người bán (store)
                     notificationService.createStoreNotification(order.getStore().getId(),
                             "Đơn hàng đã được giao",
-                            String.format("Đơn hàng #%s đã được giao thành công", order.getId()));
+                            String.format("Đơn hàng #%s đã được giao thành công", order.getId()),
+                            order.getId());
                 } catch (Exception e) {
                     System.err.println("Error sending notification: " + e.getMessage());
                 }

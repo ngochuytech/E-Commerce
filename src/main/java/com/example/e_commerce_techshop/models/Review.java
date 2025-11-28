@@ -1,12 +1,14 @@
 package com.example.e_commerce_techshop.models;
 
+import java.util.List;
+
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import lombok.*;
 
-@Document(collection  = "reviews")
+@Document(collection = "reviews")
 @Getter
 @Setter
 @AllArgsConstructor
@@ -20,6 +22,8 @@ public class Review extends BaseEntity {
 
     private String comment;
 
+    private List<String> imageUrls;
+
     @DBRef
     private Order order;
 
@@ -29,6 +33,3 @@ public class Review extends BaseEntity {
     @DBRef
     private User user;
 }
-
-
-

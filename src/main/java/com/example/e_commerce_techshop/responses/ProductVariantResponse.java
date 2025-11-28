@@ -24,6 +24,8 @@ public class ProductVariantResponse {
     @JsonProperty("primary_image")
     private String primaryImage;
 
+    private String productId;
+
     private Long price;
 
     private String description;
@@ -97,6 +99,7 @@ public class ProductVariantResponse {
         return ProductVariantResponse.builder()
                 .id(productVariant.getId())
                 .name(productVariant.getName())
+                .productId(productVariant.getProduct().getId())
                 .images(imageUrls)
                 .primaryImage(primaryImageUrl)
                 .price(productVariant.getPrice())

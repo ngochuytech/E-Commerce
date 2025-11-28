@@ -25,4 +25,6 @@ public class NotificationDTO {
 
     @JsonProperty("is_read")
     private Boolean isRead;
+
+    private String relatedId;
 }

@@ -97,7 +97,8 @@ public class UserWalletService implements IUserWalletService {
             notificationService.createUserNotification(
                 userId,
                 "Hoàn tiền vào ví",
-                "Bạn đã nhận được hoàn tiền " + amount + " VNĐ"
+                "Bạn đã nhận được hoàn tiền " + amount + " VNĐ",
+                wallet.getId()
             );
         } catch (Exception e) {
             log.error("Error creating user notification for refund: {}", e.getMessage());
@@ -164,14 +165,15 @@ public class UserWalletService implements IUserWalletService {
             notificationService.createUserNotification(
                 userId,
                 "Yêu cầu rút tiền",
-                "Yêu cầu rút " + amount + " VNĐ của bạn đã được gửi. Vui lòng chờ admin xác nhận."
+                "Yêu cầu rút " + amount + " VNĐ của bạn đã được gửi. Vui lòng chờ admin xác nhận.",
+                savedRequest.getId()
             );
 
             notificationService.createAdminNotification(
                 "Yêu cầu rút tiền mới",
                 "Người dùng " + user.getFullName() + " đã tạo yêu cầu rút " + amount + " VNĐ.",
                 Notification.NotificationType.PAYMENT.name(),
-                request.getId()
+                savedRequest.getId()
             );
         } catch (Exception e) {
             log.error("Error creating user notification for withdrawal request: {}", e.getMessage());
@@ -226,7 +228,8 @@ public class UserWalletService implements IUserWalletService {
             notificationService.createUserNotification(
                 request.getUser().getId(),
                 "Yêu cầu rút tiền bị từ chối",
-                "Yêu cầu rút " + request.getAmount() + " VNĐ của bạn đã bị từ chối. Lý do: " + adminNote
+                "Yêu cầu rút " + request.getAmount() + " VNĐ của bạn đã bị từ chối. Lý do: " + adminNote,
+                request.getId()
             );
         } catch (Exception e) {
             log.error("Error creating user notification for rejection: {}", e.getMessage());
@@ -277,7 +280,8 @@ public class UserWalletService implements IUserWalletService {
             notificationService.createUserNotification(
                 request.getUser().getId(),
                 "Rút tiền thành công",
-                "Yêu cầu rút " + request.getAmount() + " VNĐ của bạn đã được hoàn thành. Kiểm tra tài khoản ngân hàng của bạn."
+                "Yêu cầu rút " + request.getAmount() + " VNĐ của bạn đã được hoàn thành. Kiểm tra tài khoản ngân hàng của bạn.",
+                request.getId()
             );
         } catch (Exception e) {
             log.error("Error creating user notification for completion: {}", e.getMessage());

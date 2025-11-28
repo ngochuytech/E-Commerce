@@ -4,8 +4,10 @@ import com.example.e_commerce_techshop.dtos.ReviewDTO;
 import com.example.e_commerce_techshop.models.Review;
 import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.responses.ReviewResponse;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -13,7 +15,7 @@ import java.util.Map;
 public interface IReviewService {
     
     // CRUD operations
-    void createReview(ReviewDTO reviewDTO, User currentUser);
+    void createReview(ReviewDTO reviewDTO, List<MultipartFile> images, User currentUser) throws Exception;
     void updateReview(String reviewId, ReviewDTO reviewDTO, User currentUser);
     void deleteReview(String reviewId, User currentUser);
     

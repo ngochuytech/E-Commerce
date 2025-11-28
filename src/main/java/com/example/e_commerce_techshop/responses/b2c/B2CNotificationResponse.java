@@ -1,4 +1,4 @@
-package com.example.e_commerce_techshop.responses;
+package com.example.e_commerce_techshop.responses.b2c;
 
 import java.time.LocalDateTime;
 
@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class NotificationResponse {
+public class B2CNotificationResponse {
     private String id;
 
     private String title;
@@ -22,12 +22,11 @@ public class NotificationResponse {
 
     private Boolean isRead;
 
+    private String relatedId;
+
     private LocalDateTime createdAt;
 
     private UserResponse user;
-
-    private StoreResponse store;
-
     @Data
     @Builder
     @AllArgsConstructor
@@ -37,16 +36,7 @@ public class NotificationResponse {
         private String name;
     }
 
-    @Data
-    @Builder
-    @AllArgsConstructor
-    @NoArgsConstructor
-    private static class StoreResponse {
-        private String id;
-        private String name;
-    }
-
-    public static NotificationResponse fromNotification(Notification notification) {
+    public static B2CNotificationResponse fromNotification(Notification notification) {
         if (notification == null) {
             return null;
         }
@@ -59,22 +49,14 @@ public class NotificationResponse {
                     .build();
         }
 
-        StoreResponse storeResponse = null;
-        if (notification.getStore() != null) {
-            storeResponse = StoreResponse.builder()
-                    .id(notification.getStore().getId())
-                    .name(notification.getStore().getName())
-                    .build();
-        }
-
-        return NotificationResponse.builder()
+        return B2CNotificationResponse.builder()
                 .id(notification.getId())
                 .title(notification.getTitle())
                 .message(notification.getMessage())
                 .isRead(notification.getIsRead())
                 .createdAt(notification.getCreatedAt())
                 .user(userResponse)
-                .store(storeResponse)
+                .relatedId(notification.getRelatedId())
                 .build();
     }
 

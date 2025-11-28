@@ -14,7 +14,7 @@ public interface INotificationService {
     /**
      * Tạo notification cho user
      */
-    Notification createUserNotification(String userId, String title, String message) throws Exception;
+    Notification createUserNotification(String userId, String title, String message, String relatedId) throws Exception;
 
     /**
      * Tạo notification cho user từ DTO
@@ -24,7 +24,7 @@ public interface INotificationService {
     /**
      * Lấy notification của user
      */
-    List<Notification> getUserNotifications(String userId, Boolean isRead);
+    Page<Notification> getUserNotifications(String userId, Boolean isRead, Pageable pageable);
 
     /**
      * Đánh dấu notification là đã đọc
@@ -40,12 +40,12 @@ public interface INotificationService {
     /**
      * Tạo notification cho store
      */
-    Notification createStoreNotification(String storeId, String title, String message) throws Exception;
+    Notification createStoreNotification(String storeId, String title, String message, String relatedId) throws Exception;
 
     /**
      * Lấy notification của store
      */
-    List<Notification> getStoreNotifications(String storeId, Boolean isRead);
+    Page<Notification> getStoreNotifications(String storeId, Boolean isRead, Pageable pageable);
 
     /**
      * Đánh dấu notification của store là đã đọc

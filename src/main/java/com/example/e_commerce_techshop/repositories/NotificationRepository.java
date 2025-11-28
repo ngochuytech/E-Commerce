@@ -12,30 +12,36 @@ import java.util.List;
 @Repository
 public interface NotificationRepository extends MongoRepository<Notification, String> {
     // ===== USER NOTIFICATIONS =====
-    List<Notification> findByUserIdOrderByCreatedAtDesc(String userId);
+    List<Notification> findByUserIdAndIsRead(String userId, boolean isRead);
 
-    List<Notification> findByUserIdAndIsReadOrderByCreatedAtDesc(String userId, boolean isRead);
+    Page<Notification> findByUserIdOrderByCreatedAtDesc(String userId, Pageable pageable);
+
+    Page<Notification> findByUserIdAndIsReadOrderByCreatedAtDesc(String userId, boolean isRead, Pageable pageable);
 
     long countByUserIdAndIsRead(String userId, boolean isRead);
 
     // ===== STORE NOTIFICATIONS =====
-    List<Notification> findByStoreIdOrderByCreatedAtDesc(String storeId);
+    List<Notification> findByStoreIdAndIsRead(String storeId, boolean isRead);
 
-    List<Notification> findByStoreIdAndIsReadOrderByCreatedAtDesc(String storeId, boolean isRead);
+    Page<Notification> findByStoreIdOrderByCreatedAtDesc(String storeId, Pageable pageable);
+
+    Page<Notification> findByStoreIdAndIsReadOrderByCreatedAtDesc(String storeId, boolean isRead, Pageable pageable);
 
     long countByStoreIdAndIsRead(String storeId, boolean isRead);
 
     // ===== ADMIN NOTIFICATIONS =====
+    List<Notification> findByIsAdminAndIsRead(boolean isAdmin, boolean isRead);
+
     List<Notification> findByIsAdminAndIsReadOrderByCreatedAtDesc(boolean isAdmin, boolean isRead);
 
     List<Notification> findByIsAdminOrderByCreatedAtDesc(boolean isAdmin);
 
     long countByIsAdminAndIsRead(boolean isAdmin, boolean isRead);
-    
+
     // Pagination methods for admin notifications
     Page<Notification> findByIsAdminOrderByCreatedAtDesc(boolean isAdmin, Pageable pageable);
-    
+
     Page<Notification> findByIsAdminAndIsReadOrderByCreatedAtDesc(boolean isAdmin, boolean isRead, Pageable pageable);
-    
+
     Page<Notification> findByIsAdminAndTypeOrderByCreatedAtDesc(boolean isAdmin, String type, Pageable pageable);
 }

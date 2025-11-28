@@ -27,7 +27,7 @@ public class NotificationService implements INotificationService {
     // ===== USER NOTIFICATIONS =====
 
     @Override
-    public Notification createUserNotification(String userId, String title, String message) throws Exception {
+    public Notification createUserNotification(String userId, String title, String message, String relatedId) throws Exception {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
 
@@ -36,6 +36,7 @@ public class NotificationService implements INotificationService {
                 .title(title)
                 .message(message)
                 .isRead(false)
+                .relatedId(relatedId)
                 .build();
         return notificationRepository.save(notification);
     }
@@ -51,16 +52,17 @@ public class NotificationService implements INotificationService {
                 .title(notificationDTO.getTitle())
                 .message(notificationDTO.getMessage())
                 .isRead(false)
+                .relatedId(notificationDTO.getRelatedId())
                 .build();
         return notificationRepository.save(notification);
     }
 
     @Override
-    public List<Notification> getUserNotifications(String userId, Boolean isRead) {
+    public Page<Notification> getUserNotifications(String userId, Boolean isRead, Pageable pageable) {
         if (isRead != null) {
-            return notificationRepository.findByUserIdAndIsReadOrderByCreatedAtDesc(userId, isRead);
+            return notificationRepository.findByUserIdAndIsReadOrderByCreatedAtDesc(userId, isRead, pageable);
         }
-        return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
     }
 
     @Override
@@ -75,7 +77,7 @@ public class NotificationService implements INotificationService {
     @Override
     @Transactional
     public void markAllAsRead(String userId) {
-        List<Notification> notifications = notificationRepository.findByUserIdAndIsReadOrderByCreatedAtDesc(userId, false);
+        List<Notification> notifications = notificationRepository.findByUserIdAndIsRead(userId, false);
         notifications.forEach(notification -> notification.setIsRead(true));
         notificationRepository.saveAll(notifications);
     }
@@ -88,7 +90,7 @@ public class NotificationService implements INotificationService {
     // ===== STORE NOTIFICATIONS =====
 
     @Override
-    public Notification createStoreNotification(String storeId, String title, String message) throws Exception {
+    public Notification createStoreNotification(String storeId, String title, String message, String relatedId) throws Exception {
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new RuntimeException("Store not found with id: " + storeId));
 
@@ -97,16 +99,17 @@ public class NotificationService implements INotificationService {
                 .title(title)
                 .message(message)
                 .isRead(false)
+                .relatedId(relatedId)
                 .build();
         return notificationRepository.save(notification);
     }
 
     @Override
-    public List<Notification> getStoreNotifications(String storeId, Boolean isRead) {
+    public Page<Notification> getStoreNotifications(String storeId, Boolean isRead, Pageable pageable) {
         if (isRead != null) {
-            return notificationRepository.findByStoreIdAndIsReadOrderByCreatedAtDesc(storeId, isRead);
+            return notificationRepository.findByStoreIdAndIsReadOrderByCreatedAtDesc(storeId, isRead, pageable);
         }
-        return notificationRepository.findByStoreIdOrderByCreatedAtDesc(storeId);
+        return notificationRepository.findByStoreIdOrderByCreatedAtDesc(storeId, pageable);
     }
 
     @Override
@@ -121,7 +124,7 @@ public class NotificationService implements INotificationService {
     @Override
     @Transactional
     public void markAllStoreNotificationsAsRead(String storeId) {
-        List<Notification> notifications = notificationRepository.findByStoreIdAndIsReadOrderByCreatedAtDesc(storeId, false);
+        List<Notification> notifications = notificationRepository.findByStoreIdAndIsRead(storeId, false);
         notifications.forEach(notification -> notification.setIsRead(true));
         notificationRepository.saveAll(notifications);
     }
@@ -179,7 +182,7 @@ public class NotificationService implements INotificationService {
     @Override
     @Transactional
     public void markAllAdminNotificationsAsRead() {
-        List<Notification> notifications = notificationRepository.findByIsAdminAndIsReadOrderByCreatedAtDesc(true, false);
+        List<Notification> notifications = notificationRepository.findByIsAdminAndIsRead(true, false);
         notifications.forEach(notification -> notification.setIsRead(true));
         notificationRepository.saveAll(notifications);
     }

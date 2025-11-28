@@ -485,7 +485,8 @@ public class OrderService implements IOrderService {
                 notificationService.createUserNotification(user.getId(),
                         "Đơn hàng mới được tạo",
                         String.format("Đơn hàng #%s của bạn đã được tạo thành công. Tổng tiền: %,.0f đ",
-                                order.getId(), order.getTotalPrice().doubleValue()));
+                                order.getId(), order.getTotalPrice().doubleValue()), 
+                            order.getId());
 
                 // Thông báo cho chủ shop (store)
                 // Giá gửi cho shop = productPrice - storeDiscountAmount (chỉ discount từ mã của shop) - serviceFee
@@ -496,7 +497,8 @@ public class OrderService implements IOrderService {
                 notificationService.createStoreNotification(order.getStore().getId(),
                         "Có đơn hàng mới",
                         String.format("Bạn nhận được đơn hàng mới #%s từ khách %s. Giá: %,.0f đ",
-                                order.getId(), user.getFullName(), storePrice.doubleValue()));
+                                order.getId(), user.getFullName(), storePrice.doubleValue()), 
+                            order.getId());
             } catch (Exception e) {
                 System.err.println("Error creating notification: " + e.getMessage());
             }
@@ -609,7 +611,8 @@ public class OrderService implements IOrderService {
         try {
             notificationService.createStoreNotification(order.getStore().getId(),
                     "Đơn hàng bị hủy",
-                    String.format("Khách hàng %s đã hủy đơn hàng #%s", user.getFullName(), order.getId()));
+                    String.format("Khách hàng %s đã hủy đơn hàng #%s", user.getFullName(), order.getId()),
+                    order.getId());
         } catch (Exception e) {
             System.err.println("Error creating notification: " + e.getMessage());
         }
@@ -754,7 +757,8 @@ public class OrderService implements IOrderService {
             notificationService.createUserNotification(order.getBuyer().getId(),
                     "Cập nhật trạng thái đơn hàng",
                     String.format("Đơn hàng #%s của bạn đã được cập nhật: %s",
-                            order.getId(), statusMessage));
+                            order.getId(), statusMessage),
+                        order.getId());
         } catch (Exception e) {
             System.err.println("Error creating notification: " + e.getMessage());
         }
