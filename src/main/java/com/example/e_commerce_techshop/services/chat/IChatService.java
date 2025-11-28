@@ -13,7 +13,7 @@ public interface IChatService {
     
     Page<ConversationDTO> getUserConversations(String userId, Pageable pageable);
     
-    ConversationDTO getOrCreateConversation(String userId1, String storeId);
+    ConversationDTO getOrCreateConversation(String userId1, String userId2, String storeId);
     
     void archiveConversation(String conversationId, String currentUserId);
     

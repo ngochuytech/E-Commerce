@@ -149,10 +149,11 @@ public class ChatRestController {
     @Operation(summary = "Tìm cuộc trò chuyện hiện có hoặc tạo mới giữa các người dùng")
     public ResponseEntity<ConversationDTO> findOrCreateConversation(
             @RequestParam String storeId,
+            @RequestParam String recipientId,
             @AuthenticationPrincipal User currentUser) {
         
         ConversationDTO conversation = chatService.getOrCreateConversation(
-                currentUser.getId(), storeId);
+                currentUser.getId(), recipientId, storeId);
         return ResponseEntity.ok(conversation);
     }
 }

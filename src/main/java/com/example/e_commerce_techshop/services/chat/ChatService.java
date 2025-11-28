@@ -137,11 +137,13 @@ public class ChatService implements IChatService {
 
     @Override
     @Transactional
-    public ConversationDTO getOrCreateConversation(String userId1, String storeId) {
+    public ConversationDTO getOrCreateConversation(String userId1, String userId2, String storeId) {
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new DataNotFoundException("Store not found"));
 
-        var existingConv = conversationRepository.findBuyerStoreConversation(userId1, storeId);
+        List<String> participantIds = Arrays.asList(userId1, userId2);
+
+        Optional<Conversation> existingConv = conversationRepository.findByParticipantIdsAndStoreId(participantIds, storeId);
 
         if (existingConv.isPresent()) {
             return convertToDTO(existingConv.get(), userId1);
