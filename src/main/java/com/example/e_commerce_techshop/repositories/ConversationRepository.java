@@ -21,13 +21,17 @@ public interface ConversationRepository extends MongoRepository<Conversation, St
     @Query("{ 'participantIds': { $all: ?0 }, 'type': ?1 }")
     Optional<Conversation> findByParticipantIdsAndType(List<String> participantIds, Conversation.ConversationType type);
 
+    // Find BUYER_SELLER conversation with specific store
+    @Query("{ 'participantIds': { $all: ?0 }, 'storeId': ?1, 'type': 'BUYER_SELLER' }")
+    Optional<Conversation> findByParticipantIdsAndStoreId(List<String> participantIds, String storeId);
+
     // Find conversations by store
     @Query("{ 'storeId': ?0, 'status': { $ne: 'CLOSED' } }")
     Page<Conversation> findByStoreId(String storeId, Pageable pageable);
 
     // Find conversation between buyer and store
-    @Query("{ 'participantIds': { $all: ?0 }, 'storeId': ?1, 'type': 'BUYER_SELLER' }")
-    Optional<Conversation> findBuyerStoreConversation(List<String> participantIds, String storeId);
+    @Query("{ 'participantIds': ?0, 'storeId': ?1, 'type': 'BUYER_SELLER' }")
+    Optional<Conversation> findBuyerStoreConversation(String participantId, String storeId);
 
     // Count unread conversations for user
     @Query(value = "{ 'participantIds': ?0, 'unreadCounts': { $elemMatch: { 'userId': ?0, 'count': { $gt: 0 } } } }", count = true)

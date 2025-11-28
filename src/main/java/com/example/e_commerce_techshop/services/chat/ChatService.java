@@ -19,6 +19,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -40,16 +41,13 @@ public class ChatService implements IChatService {
                 .orElseThrow(() -> new DataNotFoundException("User not found"));
 
         String recipientId;
-        
+
         // For BUYER_SELLER: get seller from store
         if (request.getType() == Conversation.ConversationType.BUYER_SELLER) {
-            if (request.getStoreId() == null) {
-                throw new IllegalArgumentException("Store ID is required for buyer-seller conversation");
-            }
-            
+
             Store store = storeRepository.findById(request.getStoreId())
                     .orElseThrow(() -> new DataNotFoundException("Store not found"));
-            
+
             // Get store owner as recipient
             recipientId = store.getOwner().getId();
         } else {
@@ -67,8 +65,17 @@ public class ChatService implements IChatService {
         List<String> participantIds = Arrays.asList(currentUserId, recipientId);
 
         // Check if conversation already exists
-        var existingConv = conversationRepository.findByParticipantIdsAndType(
-                participantIds, request.getType());
+        Optional<Conversation> existingConv;
+
+        if (request.getType() == Conversation.ConversationType.BUYER_SELLER && request.getStoreId() != null) {
+            // For BUYER_SELLER: check by participants AND storeId
+            existingConv = conversationRepository.findByParticipantIdsAndStoreId(
+                    participantIds, request.getStoreId());
+        } else {
+            // For other types: check by participants and type only
+            existingConv = conversationRepository.findByParticipantIdsAndType(
+                    participantIds, request.getType());
+        }
 
         if (existingConv.isPresent()) {
             return convertToDTO(existingConv.get(), currentUserId);
@@ -130,10 +137,11 @@ public class ChatService implements IChatService {
 
     @Override
     @Transactional
-    public ConversationDTO getOrCreateConversation(String userId1, String userId2, String storeId) {
-        List<String> participantIds = Arrays.asList(userId1, userId2);
+    public ConversationDTO getOrCreateConversation(String userId1, String storeId) {
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new DataNotFoundException("Store not found"));
 
-        var existingConv = conversationRepository.findBuyerStoreConversation(participantIds, storeId);
+        var existingConv = conversationRepository.findBuyerStoreConversation(userId1, storeId);
 
         if (existingConv.isPresent()) {
             return convertToDTO(existingConv.get(), userId1);
@@ -141,7 +149,7 @@ public class ChatService implements IChatService {
 
         // Create new conversation
         CreateConversationRequest request = CreateConversationRequest.builder()
-                .recipientId(userId2)
+                .recipientId(store.getOwner().getId())
                 .type(Conversation.ConversationType.BUYER_SELLER)
                 .storeId(storeId)
                 .build();
@@ -217,27 +225,26 @@ public class ChatService implements IChatService {
 
         // Send via WebSocket to all participants
         ChatMessageDTO messageDTO = convertMessageToDTO(message);
-        
+
         // Broadcast to all participants via user queue
         conversation.getParticipantIds().forEach(participantId -> {
             messagingTemplate.convertAndSendToUser(
                     participantId,
                     "/queue/messages",
-                    messageDTO
-            );
+                    messageDTO);
         });
-        
+
         // Also broadcast to conversation topic for redundancy
         messagingTemplate.convertAndSend(
                 "/topic/conversation/" + request.getConversationId(),
-                messageDTO
-        );
+                messageDTO);
 
         return messageDTO;
     }
 
     @Override
-    public Page<ChatMessageDTO> getConversationMessages(String conversationId, String currentUserId, Pageable pageable) {
+    public Page<ChatMessageDTO> getConversationMessages(String conversationId, String currentUserId,
+            Pageable pageable) {
         Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new DataNotFoundException("Conversation not found"));
 
@@ -271,8 +278,7 @@ public class ChatService implements IChatService {
 
             messagingTemplate.convertAndSend(
                     "/topic/conversation/" + message.getConversationId() + "/read",
-                    receipt
-            );
+                    receipt);
         }
     }
 
