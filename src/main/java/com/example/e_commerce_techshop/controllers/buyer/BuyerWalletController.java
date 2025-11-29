@@ -143,7 +143,7 @@ public class BuyerWalletController {
     @GetMapping("/withdrawal-requests")
     @Operation(
             summary = "Lấy danh sách yêu cầu rút tiền",
-            description = "Lấy danh sách các yêu cầu rút tiền của khách hàng (PENDING: chờ duyệt, APPROVED: đã duyệt, REJECTED: bị từ chối, COMPLETED: hoàn thành)",
+            description = "Lấy danh sách các yêu cầu rút tiền của khách hàng (PENDING: chờ duyệt, REJECTED: bị từ chối, COMPLETED: hoàn thành)",
             tags = {"Ví Điện Tử Khách Hàng"}
     )
     public ResponseEntity<?> getWithdrawalRequests(

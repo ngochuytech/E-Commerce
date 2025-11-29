@@ -157,7 +157,7 @@ public class WalletService implements IWalletService {
         WithdrawalRequest request = withdrawalRequestRepository.findById(requestId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy yêu cầu rút tiền"));
 
-        if (!"PENDING".equals(request.getStatus())) {
+        if (!WithdrawalRequest.WithdrawalStatus.PENDING.equals(request.getStatus())) {
             throw new IllegalArgumentException("Chỉ có thể từ chối yêu cầu ở trạng thái PENDING");
         }
 
@@ -173,7 +173,7 @@ public class WalletService implements IWalletService {
         WithdrawalRequest request = withdrawalRequestRepository.findById(requestId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy yêu cầu rút tiền"));
 
-        if (!"PENDING".equals(request.getStatus())) {
+        if (!WithdrawalRequest.WithdrawalStatus.PENDING.equals(request.getStatus())) {
             throw new IllegalArgumentException("Chỉ có thể hoàn thành yêu cầu ở trạng thái PENDING");
         }
 

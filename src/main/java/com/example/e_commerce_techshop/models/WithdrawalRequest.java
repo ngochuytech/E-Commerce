@@ -45,7 +45,6 @@ public class WithdrawalRequest extends BaseEntity {
 
     public enum WithdrawalStatus {
         PENDING,
-        APPROVED,
         REJECTED,
         COMPLETED
     }
