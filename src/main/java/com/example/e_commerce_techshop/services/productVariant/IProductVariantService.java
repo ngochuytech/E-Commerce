@@ -30,7 +30,7 @@ public interface IProductVariantService {
     // Shop (B2C) methods
     Page<ProductVariant> getAllProductVariantsB2C(String storeId, String status, Pageable pageable) throws Exception;
 
-    void createProductVariant(ProductVariantDTO productVariantDTO, List<MultipartFile> imageFiles) throws Exception;
+    void createProductVariant(ProductVariantDTO productVariantDTO, List<MultipartFile> imageFiles, Integer primaryImageIndex) throws Exception;
 
     void createProductVariant(ProductVariantDTO productVariantDTO) throws Exception;
 

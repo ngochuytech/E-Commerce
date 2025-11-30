@@ -34,7 +34,7 @@ public class ProductVariantSerivce implements IProductVariantService{
 
     @Override
     @Transactional
-    public void createProductVariant(ProductVariantDTO productVariantDTO, List<MultipartFile> imageFiles) throws Exception {
+    public void createProductVariant(ProductVariantDTO productVariantDTO, List<MultipartFile> imageFiles, Integer primaryImageIndex) throws Exception {
         Product product = productRepository.findById(productVariantDTO.getProductId())
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy product này"));
 
@@ -48,7 +48,11 @@ public class ProductVariantSerivce implements IProductVariantService{
         
         if (imageFiles != null && !imageFiles.isEmpty()) {
             imageUrls = fileUploadService.uploadFiles(imageFiles, "product-variants");
-            primaryImageUrl = imageUrls.get(0); // Ảnh đầu tiên là ảnh chính
+            if (primaryImageIndex != null && primaryImageIndex >= 0 && primaryImageIndex < imageUrls.size()) {
+                primaryImageUrl = imageUrls.get(primaryImageIndex);
+            } else {
+                throw new IllegalArgumentException("Chỉ số ảnh chính không hợp lệ. Phải từ 0 đến " + (imageUrls.size() - 1));
+            }
         }
 
         ProductVariant productVariant = ProductVariant.builder()
