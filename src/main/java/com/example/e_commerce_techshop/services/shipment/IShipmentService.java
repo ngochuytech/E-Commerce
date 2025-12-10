@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
+import java.util.Map;
 
 public interface IShipmentService {
 
@@ -22,6 +23,8 @@ public interface IShipmentService {
      * Lấy danh sách shipment của store
      */
     Page<Shipment> getStoreShipments(String storeId, String status, Pageable pageable) throws Exception;
+
+    Map<String, Long> getShipmentCountByStatus(String storeId) throws Exception;
 
     /**
      * Cập nhật trạng thái shipment (dành cho vận chuyển cập nhật)

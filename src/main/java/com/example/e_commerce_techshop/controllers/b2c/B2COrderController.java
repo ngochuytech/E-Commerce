@@ -10,6 +10,9 @@ import com.example.e_commerce_techshop.services.store.IStoreService;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +23,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("${api.prefix}/b2c/orders")
@@ -51,15 +55,18 @@ public class B2COrderController {
             @Parameter(description = "ID of the store", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @RequestParam String storeId,
             @Parameter(description = "Page number (0-based)", example = "0") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Number of items per page", example = "10") @RequestParam(defaultValue = "10") int size,
+            @Parameter(description = "Sort by field") @RequestParam(defaultValue = "createdAt") String sortBy,
+            @Parameter(description = "Sort direction: asc or desc") @RequestParam(defaultValue = "desc") String sortDir,
             @Parameter(description = "Filter by order status", example = "PENDING") @RequestParam(required = false) String status,
             @Parameter(hidden = true) @AuthenticationPrincipal User currentUser) throws Exception {
         // Validate user có quyền truy cập store này
         validateUserStore(currentUser, storeId);
+        Pageable pageable = PageRequest.of(page, size,
+                sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending());
 
-        Page<Order> orderPage = orderService.getStoreOrders(storeId, page, size, status);
-        Page<OrderResponse> orderResponsePage = orderPage.map(OrderResponse::fromOrder);
+        Page<OrderResponse> orderPage = orderService.getStoreOrders(storeId, status, pageable);
 
-        return ResponseEntity.ok(ApiResponse.ok(orderResponsePage));
+        return ResponseEntity.ok(ApiResponse.ok(orderPage));
     }
 
     /**
@@ -76,6 +83,17 @@ public class B2COrderController {
         Order order = orderService.getStoreOrderDetail(storeId, orderId);
 
         return ResponseEntity.ok(ApiResponse.ok(OrderResponse.fromOrder(order)));
+    }
+
+    @GetMapping("/store/{storeId}/count-by-status")
+    @Operation(summary = "Đếm số lượng đơn hàng theo trạng thái")
+    public ResponseEntity<?> countOrdersByStatus(
+            @Parameter(description = "ID of the store", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
+            @Parameter(hidden = true) @AuthenticationPrincipal User currentUser) throws Exception {
+        validateUserStore(currentUser, storeId);
+        Map<String, Long> counts = orderService.countOrdersByStatus(storeId);
+
+        return ResponseEntity.ok(ApiResponse.ok(counts));
     }
 
     /**

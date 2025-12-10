@@ -15,7 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -61,7 +63,7 @@ public class ShipmentService implements IShipmentService {
                     "Đơn hàng đang được chuẩn bị",
                     String.format("Cửa hàng %s đang chuẩn bị hàng cho đơn #%s. Dự kiến giao: %s",
                             order.getStore().getName(), orderId, "2 ngày"),
-                        orderId);
+                    orderId);
         } catch (Exception e) {
             System.err.println("Error sending notification: " + e.getMessage());
         }
@@ -91,8 +93,7 @@ public class ShipmentService implements IShipmentService {
             return new org.springframework.data.domain.PageImpl<>(
                     shipments.subList(start, end),
                     pageable,
-                    shipments.size()
-            );
+                    shipments.size());
         } else {
             List<Shipment> shipments = shipmentRepository.findByStoreId(storeId);
             int start = (int) pageable.getOffset();
@@ -100,8 +101,7 @@ public class ShipmentService implements IShipmentService {
             return new org.springframework.data.domain.PageImpl<>(
                     shipments.subList(start, end),
                     pageable,
-                    shipments.size()
-            );
+                    shipments.size());
         }
     }
 
@@ -121,7 +121,7 @@ public class ShipmentService implements IShipmentService {
         }
 
         shipment.setStatus(newStatus);
-        
+
         // Cập nhật lịch sử
         if (shipment.getHistory() == null) {
             shipment.setHistory(new ArrayList<>());
@@ -180,5 +180,29 @@ public class ShipmentService implements IShipmentService {
             case "FAILED" -> "Giao hàng thất bại, sẽ thử lại";
             default -> "Cập nhật: " + status;
         };
+    }
+
+    @Override
+    public Map<String, Long> getShipmentCountByStatus(String storeId) throws Exception {
+        Map<String, Long> statusCounts = new HashMap<>();
+
+        long pickingUp = shipmentRepository.countByStoreIdAndStatus(storeId,
+                Shipment.ShipmentStatus.PICKING_UP.name());
+        long shipping = shipmentRepository.countByStoreIdAndStatus(storeId,
+                Shipment.ShipmentStatus.SHIPPING.name());
+        long delivered = shipmentRepository.countByStoreIdAndStatus(storeId,
+                Shipment.ShipmentStatus.DELIVERED.name());
+        long failed = shipmentRepository.countByStoreIdAndStatus(storeId,
+                Shipment.ShipmentStatus.FAILED.name());
+
+        long total = pickingUp + shipping + delivered + failed;
+
+        statusCounts.put("total", total);
+        statusCounts.put("pickingUp", pickingUp);
+        statusCounts.put("shipping", shipping);
+        statusCounts.put("delivered", delivered);
+        statusCounts.put("failed", failed);
+
+        return statusCounts;
     }
 }

@@ -17,6 +17,12 @@ spring:
       server-selection-timeout-ms: 30000
       connect-timeout-ms: 10000
       socket-timeout-ms: 30000
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
+      username: ${REDIS_USERNAME}
+      
   servlet:
     multipart:
       max-file-size: 30MB

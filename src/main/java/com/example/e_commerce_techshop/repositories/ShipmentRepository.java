@@ -37,4 +37,10 @@ public interface ShipmentRepository extends MongoRepository<Shipment, String> {
      * Tìm shipment theo store và trạng thái
      */
     List<Shipment> findByStoreIdAndStatus(String storeId, String status);
+
+    @Query(value = "{ 'store.$id': ObjectId(?0) }", count = true)
+    long countByStoreId(String storeId);
+
+    @Query(value = "{ 'store.$id': ObjectId(?0), 'status': ?1 }", count = true)
+    long countByStoreIdAndStatus(String storeId, String status);
 }

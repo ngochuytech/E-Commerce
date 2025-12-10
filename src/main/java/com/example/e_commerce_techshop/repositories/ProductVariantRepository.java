@@ -12,7 +12,8 @@ import org.springframework.data.mongodb.repository.Query;
 public interface ProductVariantRepository extends MongoRepository<ProductVariant, String> {
     Page<ProductVariant> findByCategoryNameAndStatus(String categoryName, String status, Pageable pageable);
 
-    Page<ProductVariant> findByCategoryNameAndBrandNameAndStatus(String category, String brand, String status, Pageable pageable);
+    Page<ProductVariant> findByCategoryNameAndBrandNameAndStatus(String category, String brand, String status,
+            Pageable pageable);
 
     Page<ProductVariant> findByStoreIdAndStatus(String storeId, String status, Pageable pageable);
 
@@ -28,6 +29,17 @@ public interface ProductVariantRepository extends MongoRepository<ProductVariant
     long countByStatus(String status);
 
     long countByStoreIdAndStatus(String storeId, String status);
+
+    @Query(value = "{'storeId': ?0, 'status': ?1, 'stock': 0}", count = true)
+    long countByStoreIdAndStatusAndStockZero(String storeId, String status);
+
+    // Đếm sản phẩm sắp hết hàng (stock > 0 và <= 10)
+    @Query(value = "{ 'storeId': ?0, 'status': ?1, 'stock': { '$gt': 0, '$lte': 10 } }", count = true)
+    long countByStoreIdAndStatusAndLowStock(String storeId, String status);
+
+    // Đếm sản phẩm hết hàng (stock = 0)
+    @Query(value = "{ 'storeId': ?0, 'status': ?1, 'stock': 0 }", count = true)
+    long countByStoreIdAndStatusAndOutOfStock(String storeId, String status);
 
     List<ProductVariant> findByStoreIdAndStatus(String storeId, String status);
 }

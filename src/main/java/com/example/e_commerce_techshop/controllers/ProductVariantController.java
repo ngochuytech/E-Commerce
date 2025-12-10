@@ -91,8 +91,10 @@ public class ProductVariantController {
             @Parameter(description = "Sort field", example = "createdAt") @RequestParam(defaultValue = "createdAt") String sortBy,
             @Parameter(description = "Sort direction (asc, desc)", example = "desc") @RequestParam(defaultValue = "desc") String sortDir)
             throws Exception {
-        Page<ProductVariantResponse> response = productVariantService.getLatestProductVariants(page, size, sortBy,
-                sortDir);
+        Pageable pageable = PageRequest.of(page, size,
+                sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending());
+
+        Page<ProductVariantResponse> response = productVariantService.getLatestProductVariants(pageable);
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
@@ -105,7 +107,9 @@ public class ProductVariantController {
             @Parameter(description = "Sort field", example = "createdAt") @RequestParam(defaultValue = "createdAt") String sortBy,
             @Parameter(description = "Sort direction (asc, desc)", example = "desc") @RequestParam(defaultValue = "desc") String sortDir)
             throws Exception {
-        Page<ProductVariantResponse> response = productVariantService.getByStore(storeId, page, size, sortBy, sortDir);
+        Pageable pageable = PageRequest.of(page, size,
+                sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending());
+        Page<ProductVariantResponse> response = productVariantService.getByStore(storeId, pageable);
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 

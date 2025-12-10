@@ -7,6 +7,8 @@ import com.example.e_commerce_techshop.models.Promotion;
 import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.responses.PromotionResponse;
 
+import java.util.Map;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -41,6 +43,7 @@ public interface IPromotionService {
     Page<PromotionResponse> getInactivePlatformPromotions(Pageable pageable);
     Page<PromotionResponse> getActivePlatformPromotions(Pageable pageable);
         // Store Owner
+    Map<String, Long> countPromotionsByStatus(String storeId) throws Exception;
     Page<PromotionResponse> getPromotionsByStore(String storeId, Pageable pageable);
     Page<PromotionResponse> getPromotionsByStoreAndStatus(String storeId, String status, Pageable pageable);
     Page<PromotionResponse> getExpiredPromotionsByStore(String storeId, Pageable pageable);

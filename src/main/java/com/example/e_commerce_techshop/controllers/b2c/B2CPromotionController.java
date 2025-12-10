@@ -1,6 +1,7 @@
 package com.example.e_commerce_techshop.controllers.b2c;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -140,6 +141,14 @@ public class B2CPromotionController {
         Pageable pageable = PageRequest.of(page, size, sort);
         Page<PromotionResponse> promotions = promotionService.getPromotionsByStoreAndStatus(storeId, Promotion.PromotionStatus.DELETED.name(), pageable);
         return ResponseEntity.ok(ApiResponse.ok(promotions));
+    }
+
+    @GetMapping("/store/{storeId}/count-by-status")
+    @Operation(summary = "Đếm số lượng khuyến mãi theo trạng thái")
+    public ResponseEntity<?> countPromotionsByStatus(
+            @Parameter(description = "ID of the store", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId) throws Exception {
+        Map<String, Long> counts = promotionService.countPromotionsByStatus(storeId);
+        return ResponseEntity.ok(ApiResponse.ok(counts));
     }
 
     // Promotion Management APIs - Store specific (Auto-assign issuer=STORE)

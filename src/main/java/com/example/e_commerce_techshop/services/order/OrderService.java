@@ -9,9 +9,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +32,7 @@ import com.example.e_commerce_techshop.repositories.ProductVariantRepository;
 import com.example.e_commerce_techshop.repositories.PromotionRepository;
 import com.example.e_commerce_techshop.repositories.PromotionUsageRepository;
 import com.example.e_commerce_techshop.repositories.StoreRepository;
+import com.example.e_commerce_techshop.responses.buyer.OrderResponse;
 import com.example.e_commerce_techshop.services.cart.ICartService;
 import com.example.e_commerce_techshop.services.notification.INotificationService;
 import com.example.e_commerce_techshop.services.promotion.IPromotionService;
@@ -72,7 +72,8 @@ public class OrderService implements IOrderService {
         if ("E_WALLET".equalsIgnoreCase(orderDTO.getPaymentMethod())) {
             BigDecimal walletBalance = userWalletService.getWalletBalance(user.getId());
             if (walletBalance == null || walletBalance.compareTo(BigDecimal.ZERO) <= 0) {
-                throw new IllegalArgumentException("Số dư ví không đủ để thanh toán. Vui lòng chọn phương thức thanh toán khác.");
+                throw new IllegalArgumentException(
+                        "Số dư ví không đủ để thanh toán. Vui lòng chọn phương thức thanh toán khác.");
             }
             // Lưu ý: Sẽ kiểm tra lại với tổng tiền cuối cùng sau khi tính toán
         }
@@ -344,7 +345,7 @@ public class OrderService implements IOrderService {
             // 10.3.6. Tính tổng tiền cuối cùng khách hàng phải thanh toán
             BigDecimal totalDiscount = storeDiscountAmount.add(platformDiscountAmount);
             BigDecimal finalTotal = storeTotal.subtract(totalDiscount).add(finalShippingFee).max(BigDecimal.ZERO);
-            
+
             // Cộng dồn vào tổng tiền thanh toán
             totalPaymentAmount = totalPaymentAmount.add(finalTotal);
 
@@ -447,26 +448,26 @@ public class OrderService implements IOrderService {
         // 11. Nếu thanh toán bằng ví điện tử, kiểm tra và trừ tiền
         if ("E_WALLET".equalsIgnoreCase(orderDTO.getPaymentMethod())) {
             BigDecimal walletBalance = userWalletService.getWalletBalance(user.getId());
-            
+
             if (totalPaymentAmount.compareTo(walletBalance) > 0) {
                 throw new IllegalArgumentException(
-                    String.format("Số dư ví không đủ để thanh toán. Số dư hiện tại: %s VNĐ, Tổng tiền cần thanh toán: %s VNĐ",
-                        walletBalance, totalPaymentAmount));
+                        String.format(
+                                "Số dư ví không đủ để thanh toán. Số dư hiện tại: %s VNĐ, Tổng tiền cần thanh toán: %s VNĐ",
+                                walletBalance, totalPaymentAmount));
             }
 
             // Trừ tiền từ ví cho từng đơn hàng
             for (Order order : orders) {
                 try {
                     userWalletService.paymentFromWallet(
-                        user.getId(), 
-                        order.getId(), 
-                        order.getTotalPrice()
-                    );
-                    System.out.println(String.format("[OrderService] Đã trừ %s VNĐ từ ví cho đơn hàng #%s", 
-                        order.getTotalPrice(), order.getId()));
+                            user.getId(),
+                            order.getId(),
+                            order.getTotalPrice());
+                    System.out.println(String.format("[OrderService] Đã trừ %s VNĐ từ ví cho đơn hàng #%s",
+                            order.getTotalPrice(), order.getId()));
                 } catch (Exception e) {
-                    System.err.println(String.format("[OrderService] Lỗi khi trừ tiền từ ví cho đơn hàng #%s: %s", 
-                        order.getId(), e.getMessage()));
+                    System.err.println(String.format("[OrderService] Lỗi khi trừ tiền từ ví cho đơn hàng #%s: %s",
+                            order.getId(), e.getMessage()));
                     throw new RuntimeException("Không thể thanh toán bằng ví: " + e.getMessage());
                 }
             }
@@ -485,11 +486,12 @@ public class OrderService implements IOrderService {
                 notificationService.createUserNotification(user.getId(),
                         "Đơn hàng mới được tạo",
                         String.format("Đơn hàng #%s của bạn đã được tạo thành công. Tổng tiền: %,.0f đ",
-                                order.getId(), order.getTotalPrice().doubleValue()), 
-                            order.getId());
+                                order.getId(), order.getTotalPrice().doubleValue()),
+                        order.getId());
 
                 // Thông báo cho chủ shop (store)
-                // Giá gửi cho shop = productPrice - storeDiscountAmount (chỉ discount từ mã của shop) - serviceFee
+                // Giá gửi cho shop = productPrice - storeDiscountAmount (chỉ discount từ mã của
+                // shop) - serviceFee
                 BigDecimal storePrice = order.getProductPrice().subtract(order.getStoreDiscountAmount() != null
                         ? order.getStoreDiscountAmount()
                         : BigDecimal.ZERO)
@@ -497,8 +499,8 @@ public class OrderService implements IOrderService {
                 notificationService.createStoreNotification(order.getStore().getId(),
                         "Có đơn hàng mới",
                         String.format("Bạn nhận được đơn hàng mới #%s từ khách %s. Giá: %,.0f đ",
-                                order.getId(), user.getFullName(), storePrice.doubleValue()), 
-                            order.getId());
+                                order.getId(), user.getFullName(), storePrice.doubleValue()),
+                        order.getId());
             } catch (Exception e) {
                 System.err.println("Error creating notification: " + e.getMessage());
             }
@@ -707,9 +709,7 @@ public class OrderService implements IOrderService {
     // ===== SELLER METHODS =====
 
     @Override
-    public Page<Order> getStoreOrders(String storeId, int page, int size, String status) throws Exception {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-
+    public Page<OrderResponse> getStoreOrders(String storeId, String status, Pageable pageable) throws Exception {
         Page<Order> orders;
         if (status != null && !status.trim().isEmpty()) {
             orders = orderRepository.findByStoreIdAndStatus(storeId, status, pageable);
@@ -717,13 +717,23 @@ public class OrderService implements IOrderService {
             orders = orderRepository.findByStoreId(storeId, pageable);
         }
 
-        // Load orderItems cho mỗi order
-        for (Order order : orders.getContent()) {
-            List<OrderItem> orderItems = orderItemRepository.findByOrderId(order.getId());
-            order.setOrderItems(orderItems);
+        if (!orders.getContent().isEmpty()) {
+            List<String> orderIds = orders.getContent().stream()
+                    .map(Order::getId)
+                    .toList();
+
+            List<OrderItem> allOrderItems = orderItemRepository.findByOrderIdIn(orderIds);
+
+            Map<String, List<OrderItem>> itemsByOrderId = allOrderItems.stream()
+                    .collect(Collectors.groupingBy(item -> item.getOrder().getId()));
+
+            orders.getContent().forEach(order -> {
+                List<OrderItem> items = itemsByOrderId.getOrDefault(order.getId(), new ArrayList<>());
+                order.setOrderItems(items);
+            });
         }
 
-        return orders;
+        return orders.map(OrderResponse::fromOrder);
     }
 
     @Override
@@ -758,7 +768,7 @@ public class OrderService implements IOrderService {
                     "Cập nhật trạng thái đơn hàng",
                     String.format("Đơn hàng #%s của bạn đã được cập nhật: %s",
                             order.getId(), statusMessage),
-                        order.getId());
+                    order.getId());
         } catch (Exception e) {
             System.err.println("Error creating notification: " + e.getMessage());
         }
@@ -824,6 +834,28 @@ public class OrderService implements IOrderService {
             case "CANCELLED" -> "Đơn hàng đã bị hủy";
             default -> "Trạng thái đơn hàng: " + status;
         };
+    }
+
+    @Override
+    public Map<String, Long> countOrdersByStatus(String storeId) throws Exception {
+        Map<String, Long> statusCounts = new HashMap<>();
+
+        long pending = orderRepository.countByStoreIdAndStatus(storeId, Order.OrderStatus.PENDING.name());
+        long confirmed = orderRepository.countByStoreIdAndStatus(storeId, Order.OrderStatus.CONFIRMED.name());
+        long shipping = orderRepository.countByStoreIdAndStatus(storeId, Order.OrderStatus.SHIPPING.name());
+        long delivered = orderRepository.countByStoreIdAndStatus(storeId, Order.OrderStatus.DELIVERED.name());
+        long cancelled = orderRepository.countByStoreIdAndStatus(storeId, Order.OrderStatus.CANCELLED.name());
+
+        long total = pending + confirmed + shipping + delivered + cancelled;
+
+        statusCounts.put("total", total);
+        statusCounts.put("pending", pending);
+        statusCounts.put("confirmed", confirmed);
+        statusCounts.put("shipping", shipping);
+        statusCounts.put("delivered", delivered);
+        statusCounts.put("cancelled", cancelled);
+
+        return statusCounts;
     }
 
 }

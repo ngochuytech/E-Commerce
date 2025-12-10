@@ -11,6 +11,8 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
+import java.util.Map;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -53,6 +55,15 @@ public class B2CShipmentController {
         Page<Shipment> shipments = shipmentService.getStoreShipments(storeId, status, pageable);
         Page<ShipmentResponse> shipmentResponses = shipments.map(ShipmentResponse::fromShipment);
         return ResponseEntity.ok(ApiResponse.ok(shipmentResponses));
+    }
+
+    @GetMapping("/store/{storeId}/count-by-status")
+    @Operation(summary = "Lấy chi tiết shipment", description = "Lấy chi tiết thông tin của một shipment cụ thể")
+    public ResponseEntity<?> getShipmentById(
+            @Parameter(description = "Store ID", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId)
+            throws Exception {
+        Map<String, Long> shipmentCountByStatus = shipmentService.getShipmentCountByStatus(storeId);
+        return ResponseEntity.ok(ApiResponse.ok(shipmentCountByStatus));
     }
 
     /**

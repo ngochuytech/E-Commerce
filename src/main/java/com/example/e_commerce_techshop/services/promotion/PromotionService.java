@@ -21,7 +21,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -591,5 +593,30 @@ public class PromotionService implements IPromotionService {
                 throw new InvalidPromotionException("Khuyến mãi đã đạt giới hạn sử dụng cho người dùng");
             }
         }
+    }
+
+    @Override
+    public Map<String, Long> countPromotionsByStatus(String storeId) throws Exception {
+        Map<String, Long> statusCounts = new HashMap<>();
+        LocalDateTime now = LocalDateTime.now();
+
+        // Tổng tất cả khuyến mãi (không kể DELETED)
+        long total = promotionRepository.countByStoreId(storeId);
+
+        long active = promotionRepository.countActivePromotionsByStoreId(storeId, now);
+
+        long inactive = promotionRepository.countByStoreIdAndStatus(storeId,
+                Promotion.PromotionStatus.INACTIVE.name());
+
+        long upcoming = promotionRepository.countUpcomingPromotionsByStoreId(storeId, now);
+
+        long expired = promotionRepository.countExpiredPromotionsByStoreId(storeId, now);
+
+        statusCounts.put("total", total);
+        statusCounts.put("active", active);
+        statusCounts.put("inactive", inactive);
+        statusCounts.put("upcoming", upcoming);
+        statusCounts.put("expired", expired);
+        return statusCounts;
     }
 }

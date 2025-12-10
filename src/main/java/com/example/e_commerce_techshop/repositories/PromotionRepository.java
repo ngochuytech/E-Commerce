@@ -19,7 +19,7 @@ public interface PromotionRepository extends MongoRepository<Promotion, String> 
 
     @Query("{ 'store.$id': ObjectId(?0), 'status': { '$ne': 'DELETED' } }")
     Page<Promotion> findByStoreId(String storeId, Pageable pageable);
-    
+
     @Query("{ 'type': ?0, 'status': { '$ne': 'DELETED' } }")
     Page<Promotion> findByType(String type, Pageable pageable);
 
@@ -27,7 +27,7 @@ public interface PromotionRepository extends MongoRepository<Promotion, String> 
     Page<Promotion> findExpiredPlatformPromotions(LocalDateTime now, Pageable pageable);
 
     Optional<Promotion> findByCode(String code);
-    
+
     boolean existsByCode(String code);
 
     // Customer
@@ -45,8 +45,8 @@ public interface PromotionRepository extends MongoRepository<Promotion, String> 
 
     @Query("{ 'store.$id': ObjectId(?0), 'endDate': { '$lt': ?1 } }")
     Page<Promotion> findExpiredPromotionsByStoreId(String storeId, LocalDateTime now, Pageable pageable);
-    
-    // Admin 
+
+    // Admin
     @Query("{ 'issuer': 'PLATFORM', 'status': 'DELETED' }")
     Page<Promotion> findDeletedPlatformPromotions(Pageable pageable);
 
@@ -56,10 +56,26 @@ public interface PromotionRepository extends MongoRepository<Promotion, String> 
     @Query("{ 'issuer': 'PLATFORM', 'status': 'ACTIVE' }")
     Page<Promotion> findActivePlatformPromotions(Pageable pageable);
 
+    // Count methods for store promotions
+    @Query(value = "{ 'store.$id': ObjectId(?0), 'status': { '$ne': 'DELETED' } }", count = true)
+    long countByStoreId(String storeId);
+
+    @Query(value = "{ 'store.$id': ObjectId(?0), 'status': ?1 }", count = true)
+    long countByStoreIdAndStatus(String storeId, String status);
+
+    // Đang hoạt động: ACTIVE và trong khoảng thời gian
+    @Query(value = "{ 'store.$id': ObjectId(?0), 'status': 'ACTIVE', 'startDate': { '$lte': ?1 }, 'endDate': { '$gte': ?1 } }", count = true)
+    long countActivePromotionsByStoreId(String storeId, LocalDateTime now);
+
+    // Sắp diễn ra: ACTIVE nhưng startDate > now
+    @Query(value = "{ 'store.$id': ObjectId(?0), 'status': 'ACTIVE', 'startDate': { '$gt': ?1 } }", count = true)
+    long countUpcomingPromotionsByStoreId(String storeId, LocalDateTime now);
+
+    // Hết hạn: endDate < now
+    @Query(value = "{ 'store.$id': ObjectId(?0), 'endDate': { '$lt': ?1 } }", count = true)
+    long countExpiredPromotionsByStoreId(String storeId, LocalDateTime now);
+
     // Admin only - include deleted promotions (all)
     @Query("{ 'status': 'DELETED' }")
     Page<Promotion> findDeletedPromotions(Pageable pageable);
 }
-
-
-

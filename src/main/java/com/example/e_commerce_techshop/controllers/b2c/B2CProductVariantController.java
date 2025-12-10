@@ -1,6 +1,7 @@
 package com.example.e_commerce_techshop.controllers.b2c;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -84,6 +85,15 @@ public class B2CProductVariantController {
         }
         productVariantService.createProductVariant(productVariantDTO, imageFiles, primaryImageIndex);
         return ResponseEntity.ok(ApiResponse.ok("Tạo mẫu sản phẩm mới thành công!"));
+    }
+
+    @GetMapping("/store/{storeId}/count-by-status")
+    @Operation(summary = "Đếm số lượng variant theo trạng thái")
+    public ResponseEntity<?> countProductVariantsByStatus(
+            @Parameter(description = "ID of the store", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable("storeId") String storeId)
+            throws Exception {
+        Map<String, Long> countByStatus = productVariantService.countProductVariantsByStatus(storeId);
+        return ResponseEntity.ok(ApiResponse.ok(countByStatus));
     }
 
     @PostMapping(value = "/create-without-image")

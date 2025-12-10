@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
 
 import com.example.e_commerce_techshop.models.AdminRevenue;
 import com.example.e_commerce_techshop.models.Order;
-import com.example.e_commerce_techshop.models.ProductVariant;
 import com.example.e_commerce_techshop.repositories.AdminRevenueRepository;
 import com.example.e_commerce_techshop.repositories.OrderRepository;
 import com.example.e_commerce_techshop.repositories.ProductRepository;
@@ -536,17 +535,13 @@ public class StatisticsService implements IStatisticsService {
     public Map<String, Object> getVariantCountByStockStatus(String storeId) throws Exception {
         Map<String, Object> variantStats = new HashMap<>();
 
-        List<ProductVariant> variants = productVariantRepository.findByStoreIdAndStatus(storeId, "APPROVED");
+        long totalProducts = productVariantRepository.countByStoreIdAndStatus(storeId, "APPROVED");
 
-        long totalProducts = variants.size();
+        // Sản phẩm sắp hết hàng (0 < stock <= 10)
+        long lowStockProducts = productVariantRepository.countByStoreIdAndStatusAndLowStock(storeId, "APPROVED");
 
-        long lowStockProducts = variants.stream()
-                .filter(v -> v.getStock() > 0 && v.getStock() <= 10)
-                .count();
-
-        long outOfStockProducts = variants.stream()
-                .filter(v -> v.getStock() == 0)
-                .count();
+        // Sản phẩm hết hàng (stock = 0)
+        long outOfStockProducts = productVariantRepository.countByStoreIdAndStatusAndOutOfStock(storeId, "APPROVED");
 
         variantStats.put("totalProducts", totalProducts);
         variantStats.put("lowStockProducts", lowStockProducts);
