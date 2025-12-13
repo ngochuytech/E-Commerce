@@ -1,4 +1,4 @@
-package com.example.e_commerce_techshop.dtos.user;
+package com.example.e_commerce_techshop.dtos.shipper;
 
 import java.time.LocalDate;
 
@@ -14,14 +14,22 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class UpdateUserDTO {
+public class ShipperRegisterDTO {
+    @NotBlank(message = "Email không được để trống")
+    private String email;
+
+    @NotBlank(message = "Mật khẩu không được để trống")
+    private String password;
+
+    private String retypePassword;
+
     @NotBlank(message = "Họ và tên không được để trống")
     private String fullName;
 
     @Size(min = 10, max = 10, message = "The phone number must be exactly 10 digits")
     private String phone;
 
-    @NotNull(message = "Date of birth is required")
+    @NotNull(message = "Ngày sinh không được để trống")
     private LocalDate dateOfBirth;
 
 }

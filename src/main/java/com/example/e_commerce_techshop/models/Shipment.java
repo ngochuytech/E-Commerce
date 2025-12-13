@@ -10,6 +10,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -30,9 +31,16 @@ public class Shipment extends BaseEntity {
     @DBRef
     private Store store;
 
-    private Address address;
+    private Address fromAddress;
+
+    private Address toAddress;
 
     private BigDecimal shippingFee;
+
+    @DBRef
+    private User carrier;
+
+    private boolean isReturnShipment;
 
     private String status;
 
@@ -41,7 +49,19 @@ public class Shipment extends BaseEntity {
     // Ngày dự kiến giao hàng
     private LocalDateTime expectedDeliveryDate;
 
-    public enum ShipmentStatus {
-        PICKING_UP, SHIPPING, DELIVERED, FAILED
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class Address {
+        private String province;
+        private String ward;
+        private String homeAddress;
+        private String suggestedName;
     }
+
+    public enum ShipmentStatus {
+        READY_TO_PICK, PICKING, PICKED, SHIPPING, DELIVERED, DELIVERED_FAIL, RETURNING, RETURNED
+    }
+
 }

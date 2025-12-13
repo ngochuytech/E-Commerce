@@ -1,14 +1,14 @@
 package com.example.e_commerce_techshop.services.shipment;
 
 import com.example.e_commerce_techshop.models.Shipment;
+import com.example.e_commerce_techshop.models.User;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-import java.util.List;
 import java.util.Map;
 
 public interface IShipmentService {
-
     /**
      * Tạo shipment khi người bán xác nhận đơn hàng
      */
@@ -29,10 +29,24 @@ public interface IShipmentService {
     /**
      * Cập nhật trạng thái shipment (dành cho vận chuyển cập nhật)
      */
-    Shipment updateShipmentStatus(String shipmentId, String newStatus) throws Exception;
+    Shipment pickingShipment(String shipmentId, User shipper) throws Exception;
+
+    Shipment pickedShipment(String shipmentId, User shipper) throws Exception;
+
+    Shipment shippingShipment(String shipmentId, User shipper) throws Exception;
+
+    Shipment deliverShipment(String shipmentId, User shipper) throws Exception;
+
+    Shipment deliverFailShipment(String shipmentId, String reason) throws Exception;
+
+    Shipment returningShipment(String shipmentId, User shipper) throws Exception;
+
+    Shipment returnedShipment(String shipmentId, User shipper) throws Exception;
 
     /**
      * Lấy danh sách shipment theo trạng thái
      */
-    List<Shipment> getShipmentsByStatus(String status) throws Exception;
+    Page<Shipment> getShipmentsByStatus(String status, Pageable pageable) throws Exception;
+
+    Page<Shipment> getShipperShipments(User shipper, Pageable pageable) throws Exception;
 }

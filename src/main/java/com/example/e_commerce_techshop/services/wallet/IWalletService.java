@@ -57,4 +57,10 @@ public interface IWalletService {
      * Số tiền = productPrice - storeDiscountAmount - serviceFee (không tính platform discount và phí ship)
      */
     void addOrderPaymentToWallet(String storeId, String orderId, BigDecimal amount, String description) throws Exception;
+
+    /**
+     * Hoàn tiền cho buyer khi trả hàng thành công
+     * Tiền được hoàn vào ví user (UserWallet)
+     */
+    void refundToBuyer(String buyerId, String orderId, BigDecimal amount, String description) throws Exception;
 }

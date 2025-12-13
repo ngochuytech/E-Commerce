@@ -10,7 +10,6 @@ import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,7 +35,6 @@ import com.example.e_commerce_techshop.responses.buyer.OrderResponse;
 import com.example.e_commerce_techshop.services.cart.ICartService;
 import com.example.e_commerce_techshop.services.notification.INotificationService;
 import com.example.e_commerce_techshop.services.promotion.IPromotionService;
-import com.example.e_commerce_techshop.services.shipment.IShipmentService;
 import com.example.e_commerce_techshop.services.userWallet.IUserWalletService;
 
 import lombok.RequiredArgsConstructor;
@@ -55,7 +53,6 @@ public class OrderService implements IOrderService {
     private final PromotionUsageRepository promotionUsageRepository;
     private final IPromotionService promotionService;
     private final INotificationService notificationService;
-    private final IShipmentService shipmentService;
     private final IUserWalletService userWalletService;
 
     @Override
@@ -620,6 +617,38 @@ public class OrderService implements IOrderService {
         }
     }
 
+    @Override
+    @Transactional
+    public Order completeOrder(User user, String orderId) throws Exception {
+        String buyerId = user.getId();
+
+        // Tìm order
+        Order order = orderRepository.findByIdAndBuyerId(orderId, buyerId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy đơn hàng"));
+
+        // Kiểm tra trạng thái - chỉ cho phép complete đơn hàng DELIVERED
+        if (!Order.OrderStatus.DELIVERED.name().equals(order.getStatus())) {
+            throw new IllegalArgumentException("Chỉ có thể xác nhận hoàn tất đơn hàng đã giao");
+        }
+
+        // Cập nhật trạng thái
+        order.setStatus(Order.OrderStatus.COMPLETED.name());
+        
+        Order savedOrder = orderRepository.save(order);
+
+        // Gửi thông báo cho chủ shop
+        try {
+            notificationService.createStoreNotification(order.getStore().getId(),
+                    "Đơn hàng hoàn tất",
+                    String.format("Khách hàng %s đã xác nhận hoàn tất đơn hàng #%s", user.getFullName(), order.getId()),
+                    order.getId());
+        } catch (Exception e) {
+            System.err.println("Error creating notification: " + e.getMessage());
+        }
+
+        return savedOrder;
+    }
+
     /**
      * Validate payment method
      */
@@ -771,13 +800,6 @@ public class OrderService implements IOrderService {
                     order.getId());
         } catch (Exception e) {
             System.err.println("Error creating notification: " + e.getMessage());
-        }
-
-        // Tạo Shipment
-        try {
-            shipmentService.createShipment(order.getId());
-        } catch (Exception e) {
-            System.err.println("Error creating shipment: " + e.getMessage());
         }
 
         return savedOrder;

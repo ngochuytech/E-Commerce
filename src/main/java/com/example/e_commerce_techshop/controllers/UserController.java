@@ -6,6 +6,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.BindingResult;
@@ -188,7 +189,6 @@ public class UserController {
         }
         if (!userDTO.getPassword().equals(userDTO.getRetypePassword()))
             return ResponseEntity.badRequest().body(ApiResponse.error("Password doesn't match"));
-        // CẦN KIỂM TRA USER ĐÃ XÁC MINH EMAIL CHƯA !!
         userService.createUser(userDTO, getSiteURL(request));
         return ResponseEntity.ok(ApiResponse.ok("Đã đăng ký thành công! Cần xác minh email"));
     }
@@ -196,6 +196,7 @@ public class UserController {
     @PutMapping("/avatar")
     @Operation(summary = "Update user avatar", description = "Update the avatar image of the currently authenticated user")
     @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<?> updateAvatar(
             @Parameter(description = "New avatar image file", required = true) @RequestParam("avatarFile") MultipartFile avatarFile,
             @AuthenticationPrincipal User currentUser) throws Exception {

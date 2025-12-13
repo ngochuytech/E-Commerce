@@ -18,4 +18,14 @@ public interface UserRepository extends MongoRepository<User, String>, CustomUse
 
     List<User> findByIsActiveFalseAndBannedUntilNotNull();
 
+    // Shipper Management
+    long countByRolesContaining(String role);
+    
+    long countByRolesContainingAndIsActiveTrue(String role);
+    
+    long countByRolesContainingAndIsActiveFalse(String role);
+    
+    long countByRolesContainingAndEnableTrue(String role);
+    
+    long countByRolesContainingAndEnableFalse(String role);
 }

@@ -2,10 +2,14 @@ package com.example.e_commerce_techshop.services.user;
 
 import com.example.e_commerce_techshop.dtos.UserLoginDTO;
 import com.example.e_commerce_techshop.dtos.admin.user.BanUserDTO;
+import com.example.e_commerce_techshop.dtos.shipper.ShipperRegisterDTO;
+import com.example.e_commerce_techshop.dtos.shipper.ShipperUpdateInfoDTO;
 import com.example.e_commerce_techshop.dtos.user.UpdateUserDTO;
 import com.example.e_commerce_techshop.dtos.user.UserRegisterDTO;
 import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.responses.user.UserResponse;
+
+import java.util.Map;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -48,4 +52,15 @@ public interface IUserService {
     User unbanUser(String adminId, String userId) throws Exception;
 
     boolean isUserBanned(String userId);
+
+    // ADMIN - Shipper Management
+    void createShipperAccount(ShipperRegisterDTO shipperDTO, MultipartFile avatarFile, String siteURL) throws Exception;
+
+    Page<User> getAllShippers(String name, String email, String phone, String status, Pageable pageable);
+
+    void updateShipperInfo(String shipperId, ShipperUpdateInfoDTO updateUserDTO) throws Exception;
+
+    void activateShipper(String shipperId) throws Exception;
+
+    Map<String, Long> getShipperStatistics();
 }

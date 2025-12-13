@@ -38,4 +38,10 @@ public interface OrderRepository extends MongoRepository<Order, String> {
     Page<Order> findByStoreIdAndStatus(String storeId, String status, Pageable pageable);
     
     long countByStoreId(String storeId);
+
+    /**
+     * Tìm các orders theo status và updatedAt trước một thời điểm nhất định
+     * Dùng cho scheduled task tự động chuyển DELIVERED -> COMPLETED sau 7 ngày
+     */
+    List<Order> findByStatusAndUpdatedAtBefore(String status, LocalDateTime dateTime);
 }

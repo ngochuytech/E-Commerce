@@ -43,5 +43,47 @@ public class CustomUserRepositoryImpl implements CustomUserRepository {
         List<User> users = mongoTemplate.find(query, User.class);
         return new PageImpl<>(users, pageable, total);
     }
+
+    @Override
+    public Page<User> findAllShippers(String name, String email, String phone, String status, Pageable pageable) {
+        Query query = new Query();
+        List<Criteria> criteriaList = new ArrayList<>();
+
+        // Lọc theo role SHIPPER
+        criteriaList.add(Criteria.where("roles").in("SHIPPER"));
+
+        // Filter theo name
+        if (name != null && !name.trim().isEmpty()) {
+            criteriaList.add(Criteria.where("fullName").regex(".*" + name + ".*", "i"));
+        }
+
+        // Filter theo email
+        if (email != null && !email.trim().isEmpty()) {
+            criteriaList.add(Criteria.where("email").regex(".*" + email + ".*", "i"));
+        }
+
+        // Filter theo phone
+        if (phone != null && !phone.trim().isEmpty()) {
+            criteriaList.add(Criteria.where("phone").regex(".*" + phone + ".*", "i"));
+        }
+
+        // Filter theo status (active/banned)
+        if (status != null && !status.trim().isEmpty()) {
+            if ("active".equalsIgnoreCase(status)) {
+                criteriaList.add(Criteria.where("isActive").is(true));
+            } else if ("banned".equalsIgnoreCase(status)) {
+                criteriaList.add(Criteria.where("isActive").is(false));
+            }
+        }
+
+        if (!criteriaList.isEmpty()) {
+            query.addCriteria(new Criteria().andOperator(criteriaList.toArray(new Criteria[0])));
+        }
+
+        long total = mongoTemplate.count(query, User.class);
+        query.with(pageable);
+        List<User> shippers = mongoTemplate.find(query, User.class);
+        return new PageImpl<>(shippers, pageable, total);
+    }
     
 }

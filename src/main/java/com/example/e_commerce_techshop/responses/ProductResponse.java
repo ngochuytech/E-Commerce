@@ -8,12 +8,14 @@ import lombok.*;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class ProductResponse {
+public class    ProductResponse {
     private String id;
 
     private String name;
 
     private String category;
+
+    private String categoryName;
 
     private String description;
 
@@ -47,6 +49,7 @@ public class ProductResponse {
                 .id(product.getId())
                 .name(product.getName())
                 .category(product.getCategory().getDescription())
+                .categoryName(product.getCategory().getName())
                 .brand(product.getBrand().getName())
                 .description(product.getDescription())
                 .price(product.getPrice())

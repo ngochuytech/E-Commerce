@@ -20,7 +20,8 @@ public class ShipmentResponse {
     private String id;
     private OrderResponse order;
     private StoreResponse store;
-    private AddressResponse address;
+    private AddressResponse fromAddress;
+    private AddressResponse toAddress;
     private BigDecimal shippingFee;
     private String status;
     private LocalDateTime expectedDeliveryDate;
@@ -45,6 +46,9 @@ public class ShipmentResponse {
         private String id;
         private String name;
         private String logo;
+        private String province;
+        private String ward;
+        private String homeAddress;
     }
 
     @Getter
@@ -71,12 +75,21 @@ public class ShipmentResponse {
                         .id(shipment.getOrder().getStore().getId())
                         .name(shipment.getOrder().getStore().getName())
                         .logo(shipment.getOrder().getStore().getLogoUrl())
+                        .province(shipment.getOrder().getStore().getAddress().getProvince())
+                        .ward(shipment.getOrder().getStore().getAddress().getWard())
+                        .homeAddress(shipment.getOrder().getStore().getAddress().getHomeAddress())
                         .build())
-                .address(AddressResponse.builder()
-                        .province(shipment.getAddress().getProvince())
-                        .ward(shipment.getAddress().getWard())
-                        .homeAddress(shipment.getAddress().getHomeAddress())
-                        .suggestedName(shipment.getAddress().getSuggestedName())
+                .fromAddress(AddressResponse.builder()
+                        .province(shipment.getFromAddress().getProvince())
+                        .ward(shipment.getFromAddress().getWard())
+                        .homeAddress(shipment.getFromAddress().getHomeAddress())
+                        .suggestedName(shipment.getFromAddress().getSuggestedName())
+                        .build())
+                .toAddress(AddressResponse.builder()
+                        .province(shipment.getToAddress().getProvince())
+                        .ward(shipment.getToAddress().getWard())
+                        .homeAddress(shipment.getToAddress().getHomeAddress())
+                        .suggestedName(shipment.getToAddress().getSuggestedName())
                         .build())
                 .shippingFee(shipment.getShippingFee())
                 .status(shipment.getStatus())

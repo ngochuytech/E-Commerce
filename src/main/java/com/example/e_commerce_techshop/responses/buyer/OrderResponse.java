@@ -56,6 +56,7 @@ public class OrderResponse {
     private static class UserResponse {
         private String id;
         private String username;
+        private String fullName;
         private String email;
         private String phone;
     }
@@ -82,6 +83,7 @@ public class OrderResponse {
         private String ward;
         private String homeAddress;
         private String suggestedName;
+        private String phone;
     }
 
     public static OrderResponse fromOrder(Order order) {
@@ -106,6 +108,7 @@ public class OrderResponse {
                 .username(order.getBuyer().getUsername())
                 .email(order.getBuyer().getEmail())
                 .phone(order.getBuyer().getPhone())
+                .fullName(order.getBuyer().getFullName())
                 .build();
 
         StoreResponse store = StoreResponse.builder()
@@ -119,6 +122,7 @@ public class OrderResponse {
                 .ward(order.getAddress().getWard())
                 .homeAddress(order.getAddress().getHomeAddress())
                 .suggestedName(order.getAddress().getSuggestedName())
+                .phone(order.getAddress().getPhone())
                 .build();
 
         return OrderResponse.builder()

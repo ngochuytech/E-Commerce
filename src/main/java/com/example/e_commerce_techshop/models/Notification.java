@@ -45,6 +45,7 @@ public class Notification {
         STORE_APPROVAL,
         PRODUCT_APPROVAL,
         PAYMENT,
+        DISPUTE,
         SYSTEM
     }
 }

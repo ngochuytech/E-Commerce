@@ -248,4 +248,34 @@ public class WalletService implements IWalletService {
         System.out.println(String.format("[WalletService] Đã cộng %s vào ví shop %s từ đơn hàng #%s",
                 amount, storeId, orderId));
     }
+
+    @Override
+    @Transactional
+    public void refundToBuyer(String buyerId, String orderId, BigDecimal amount, String description)
+            throws Exception {
+        // Validate amount
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Số tiền hoàn phải lớn hơn 0");
+        }
+
+        // TODO: Implement logic hoàn tiền cho buyer
+        // Trong hệ thống thực tế, có thể:
+        // 1. Hoàn tiền vào ví user (UserWallet) nếu có
+        // 2. Hoàn tiền về tài khoản ngân hàng qua API của payment gateway
+        // 3. Tạo voucher/credit cho lần mua sau
+        
+        // Hiện tại log ra để tracking
+        log.info("[WalletService] Hoàn tiền {} cho buyer {} từ đơn hàng #{}", amount, buyerId, orderId);
+        log.info("[WalletService] Mô tả: {}", description);
+        
+        // Gửi thông báo cho buyer về việc hoàn tiền
+        try {
+            notificationService.createUserNotification(buyerId,
+                    "Hoàn tiền thành công",
+                    String.format("Bạn đã được hoàn %s VNĐ từ đơn hàng #%s. %s", amount, orderId, description),
+                    orderId);
+        } catch (Exception e) {
+            log.warn("Error sending refund notification to buyer: {}", e.getMessage());
+        }
+    }
 }

@@ -292,4 +292,155 @@ public class CloudinaryService {
             contentType.equals("image/webp")
         );
     }
+
+    /**
+     * Validate video file type
+     */
+    private boolean isValidVideoType(String contentType) {
+        return contentType != null && (
+            contentType.equals("video/mp4") ||
+            contentType.equals("video/mpeg") ||
+            contentType.equals("video/quicktime") ||
+            contentType.equals("video/x-msvideo") ||
+            contentType.equals("video/webm")
+        );
+    }
+
+    /**
+     * Validate image or video file type
+     */
+    public boolean isValidMediaType(String contentType) {
+        return isValidImageType(contentType) || isValidVideoType(contentType);
+    }
+
+    /**
+     * Check if file is video
+     */
+    public boolean isVideo(String contentType) {
+        return isValidVideoType(contentType);
+    }
+
+    /**
+     * Upload single video with category
+     */
+    public String uploadVideo(MultipartFile file, String category) {
+        try {
+            if (file == null || file.isEmpty()) {
+                return null;
+            }
+            
+            // Validate file type
+            String contentType = file.getContentType();
+            if (!isValidVideoType(contentType)) {
+                throw new RuntimeException("Chỉ chấp nhận file video MP4, MPEG, MOV, AVI hoặc WebM");
+            }
+            
+            // Validate file size (100MB for video)
+            if (file.getSize() > 100 * 1024 * 1024) {
+                throw new RuntimeException("Kích thước video không được vượt quá 100MB");
+            }
+            
+            // Tạo map options cho upload
+            Map<String, Object> options = new HashMap<>();
+            options.put("resource_type", "video");
+            
+            // Set folder theo category
+            if (category != null && !category.isEmpty()) {
+                options.put("folder", category);
+            }
+            
+            log.info("Uploading video: {} to category: {}", file.getOriginalFilename(), category);
+            
+            // Upload video
+            @SuppressWarnings("unchecked")
+            Map<String, Object> uploadResult = cloudinary.uploader()
+                .upload(file.getBytes(), options);
+            
+            // Lấy URL public của video
+            String secureUrl = (String) uploadResult.get("secure_url");
+            String publicId = (String) uploadResult.get("public_id");
+            
+            log.info("Upload video thành công: {} - Public ID: {}", secureUrl, publicId);
+            
+            return secureUrl;
+            
+        } catch (IOException e) {
+            log.error("Lỗi upload video: ", e);
+            throw new RuntimeException("Không thể upload video", e);
+        }
+    }
+
+    /**
+     * Upload single media file (image or video) with category
+     */
+    public String uploadMedia(MultipartFile file, String category) {
+        if (file == null || file.isEmpty()) {
+            return null;
+        }
+        
+        String contentType = file.getContentType();
+        if (isValidVideoType(contentType)) {
+            return uploadVideo(file, category);
+        } else if (isValidImageType(contentType)) {
+            return uploadImage(file, category);
+        } else {
+            throw new RuntimeException("Chỉ chấp nhận file ảnh (JPEG, PNG, WebP) hoặc video (MP4, MPEG, MOV, AVI, WebM)");
+        }
+    }
+
+    /**
+     * Upload multiple media files (images or videos) with category
+     */
+    public List<String> uploadMediaFiles(List<MultipartFile> files, String category) {
+        List<String> uploadedUrls = new ArrayList<>();
+        
+        if (files == null || files.isEmpty()) {
+            return uploadedUrls;
+        }
+        
+        for (MultipartFile file : files) {
+            if (file != null && !file.isEmpty()) {
+                String uploadedUrl = uploadMedia(file, category);
+                if (uploadedUrl != null) {
+                    uploadedUrls.add(uploadedUrl);
+                }
+            }
+        }
+        
+        return uploadedUrls;
+    }
+
+    /**
+     * Delete video by URL
+     */
+    public boolean deleteVideoByUrl(String videoUrl) {
+        try {
+            if (videoUrl == null || videoUrl.isEmpty()) {
+                return true;
+            }
+            
+            String publicId = extractPublicIdFromUrl(videoUrl);
+            if (publicId == null) {
+                log.warn("Không thể extract public_id từ video URL: {}", videoUrl);
+                return false;
+            }
+            
+            @SuppressWarnings("unchecked")
+            Map<String, Object> result = cloudinary.uploader().destroy(publicId, 
+                ObjectUtils.asMap("resource_type", "video"));
+            boolean success = "ok".equals(result.get("result"));
+            
+            if (success) {
+                log.info("Xóa video thành công: {}", publicId);
+            } else {
+                log.warn("Xóa video không thành công: {} - Result: {}", publicId, result.get("result"));
+            }
+            
+            return success;
+            
+        } catch (Exception e) {
+            log.error("Lỗi xóa video: {}", videoUrl, e);
+            return false;
+        }
+    }
 }

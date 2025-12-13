@@ -25,6 +25,9 @@ public interface IOrderService {
     // Hủy đơn hàng
     void cancelOrder(User user, String orderId) throws Exception;
     
+    // Xác nhận hoàn tất đơn hàng (buyer)
+    Order completeOrder(User user, String orderId) throws Exception;
+    
     // ===== SELLER METHODS =====
 
     Page<OrderResponse> getStoreOrders(String storeId, String status, Pageable pageable) throws Exception;

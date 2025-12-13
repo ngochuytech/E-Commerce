@@ -66,16 +66,12 @@ public class B2CShipmentController {
         return ResponseEntity.ok(ApiResponse.ok(shipmentCountByStatus));
     }
 
-    /**
-     * Cập nhật trạng thái shipment (dành cho vận chuyển)
-     */
-    @PutMapping("/{shipmentId}/status")
-    @Operation(summary = "Cập nhật trạng thái shipment (chỉ dành cho vận chuyển)", description = "Cập nhật trạng thái shipment để theo dõi tiến trình giao hàng (PICKING_UP -> SHIPPING -> DELIVERED hoặc FAILED)")
-    public ResponseEntity<?> updateShipmentStatus(
-            @Parameter(description = "Shipment ID", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String shipmentId,
-            @Parameter(description = "New status (PICKING_UP, SHIPPING, DELIVERED, FAILED)", required = true, example = "SHIPPING") @RequestBody String newStatus)
+    @PostMapping("/order/{orderId}")
+    @Operation(summary = "Tạo shipment cho đơn hàng", description = "Tạo shipment khi người bán đã chuẩn bị xong đơn hàng và sẵn sàng giao cho shipper")
+    public ResponseEntity<?> createShipment(
+            @Parameter(description = "Order ID", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String orderId)
             throws Exception {
-        shipmentService.updateShipmentStatus(shipmentId, newStatus);
-        return ResponseEntity.ok(ApiResponse.ok("Cập nhật trạng thái vận chuyển thành công!"));
+        Shipment shipment = shipmentService.createShipment(orderId);
+        return ResponseEntity.ok(ApiResponse.ok(ShipmentResponse.fromShipment(shipment)));
     }
 }
