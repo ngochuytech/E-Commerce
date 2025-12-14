@@ -80,7 +80,7 @@ public class BuyerOrderController {
     @GetMapping("")
     @Operation(summary = "Get order history", description = "Retrieve paginated list of user's orders with optional status filtering")
     public ResponseEntity<?> getOrderHistory(
-            @Parameter(description = "Filter by order status (PENDING, CONFIRMED, SHIPPING, DELIVERED, CANCELLED)", example = "PENDING") @RequestParam(required = false) String status,
+            @Parameter(description = "Filter by order status (PENDING, CONFIRMED, SHIPPING, DELIVERED, CANCELLED, COMPLETED)", example = "PENDING") @RequestParam(required = false) String status,
             @Parameter(description = "Page number (0-based)", example = "0") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Number of items per page", example = "10") @RequestParam(defaultValue = "10") int size,
             @Parameter(description = "Sort field", example = "createdAt") @RequestParam(defaultValue = "createdAt") String sortBy,

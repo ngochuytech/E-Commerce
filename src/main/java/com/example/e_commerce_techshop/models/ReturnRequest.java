@@ -84,6 +84,17 @@ public class ReturnRequest extends BaseEntity {
     // Lý do quyết định của admin cho dispute hàng trả về
     private String adminReturnDisputeReason;
 
+    // ========== BANK ACCOUNT FOR COD REFUND ==========
+    
+    // Tên ngân hàng (cho hoàn tiền COD)
+    private String bankName;
+    
+    // Số tài khoản ngân hàng (cho hoàn tiền COD)
+    private String bankAccountNumber;
+    
+    // Tên chủ tài khoản (cho hoàn tiền COD)
+    private String bankAccountName;
+
     /**
      * Các trạng thái của yêu cầu trả hàng:
      * - PENDING: Đang chờ store xem xét

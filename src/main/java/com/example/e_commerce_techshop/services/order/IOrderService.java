@@ -39,4 +39,15 @@ public interface IOrderService {
     Order rejectOrder(String storeId, String orderId, String reason) throws Exception;
 
     Map<String, Long> countOrdersByStatus(String storeId) throws Exception;
+    
+    // ===== PAYMENT METHODS =====
+    
+    /**
+     * Cập nhật trạng thái thanh toán cho đơn hàng
+     * @param orderId Mã đơn hàng
+     * @param paymentStatus Trạng thái thanh toán (PAID, FAILED, UNPAID)
+     * @param momoTransId Mã giao dịch MoMo (nếu có)
+     * @throws Exception
+     */
+    void updatePaymentStatus(String orderId, String paymentStatus, Long momoTransId) throws Exception;
 }

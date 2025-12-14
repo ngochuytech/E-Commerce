@@ -54,7 +54,7 @@ public interface IWalletService {
     
     /**
      * Cộng tiền vào ví shop khi đơn hàng được giao thành công
-     * Số tiền = productPrice - storeDiscountAmount - serviceFee (không tính platform discount và phí ship)
+     * Số tiền = productPrice - storeDiscountAmount - serviceFee (không tính platform discount và phí ship) + shippingFee
      */
     void addOrderPaymentToWallet(String storeId, String orderId, BigDecimal amount, String description) throws Exception;
 

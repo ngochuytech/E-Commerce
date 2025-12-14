@@ -46,6 +46,7 @@ public class Notification {
         PRODUCT_APPROVAL,
         PAYMENT,
         DISPUTE,
+        REFUND_REQUEST,
         SYSTEM
     }
 }

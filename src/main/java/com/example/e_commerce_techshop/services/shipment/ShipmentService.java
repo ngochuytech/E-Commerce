@@ -15,10 +15,12 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
 import com.example.e_commerce_techshop.models.AdminRevenue;
 import com.example.e_commerce_techshop.models.Order;
+import com.example.e_commerce_techshop.models.ReturnRequest;
 import com.example.e_commerce_techshop.models.Shipment;
 import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.repositories.AdminRevenueRepository;
 import com.example.e_commerce_techshop.repositories.OrderRepository;
+import com.example.e_commerce_techshop.repositories.ReturnRequestRepository;
 import com.example.e_commerce_techshop.repositories.ShipmentRepository;
 import com.example.e_commerce_techshop.services.notification.INotificationService;
 import com.example.e_commerce_techshop.services.wallet.IWalletService;
@@ -32,6 +34,7 @@ public class ShipmentService implements IShipmentService {
     private final ShipmentRepository shipmentRepository;
     private final OrderRepository orderRepository;
     private final AdminRevenueRepository adminRevenueRepository;
+    private final ReturnRequestRepository returnRequestRepository;
     private final INotificationService notificationService;
     private final IWalletService walletService;
 
@@ -264,32 +267,12 @@ public class ShipmentService implements IShipmentService {
             System.err.println("Error creating AdminRevenue: " + e.getMessage());
         }
 
-        // Cộng tiền vào ví shop khi đơn hàng được giao thành công
-        try {
-            // Số tiền shop nhận = Giá sản phẩm - Discount của shop - Phí dịch vụ platform
-            BigDecimal shopAmount = order.getProductPrice()
-                    .subtract(order.getStoreDiscountAmount() != null ? order.getStoreDiscountAmount() : BigDecimal.ZERO)
-                    .subtract(order.getServiceFee() != null ? order.getServiceFee() : BigDecimal.ZERO);
-
-            walletService.addOrderPaymentToWallet(
-                    order.getStore().getId(),
-                    order.getId(),
-                    shopAmount,
-                    String.format("Thanh toán từ đơn hàng #%s - Giá: %s, Discount shop: %s, Phí sàn: %s",
-                            order.getId(),
-                            order.getProductPrice(),
-                            order.getStoreDiscountAmount(),
-                            order.getServiceFee()));
-        } catch (Exception e) {
-            System.err.println("Error adding payment to wallet: " + e.getMessage());
-        }
-
         // Thông báo cho khách hàng và shop
         try {
             // Thông báo cho khách hàng
             notificationService.createUserNotification(order.getBuyer().getId(),
                     "Đơn hàng đã được giao thành công",
-                    String.format("Đơn hàng #%s đã được giao đến bạn. Cảm ơn bạn đã mua sắm!", order.getId()),
+                    String.format("Đơn hàng #%s đã được giao đến bạn. Bạn cần kiểm tra và xác nhận!", order.getId()),
                     order.getId());
 
             // Thông báo cho người bán (store)
@@ -494,7 +477,7 @@ public class ShipmentService implements IShipmentService {
                     order.getId());
 
             // Thông báo cho khách hàng
-            if(!shipment.isReturnShipment()){
+            if (!shipment.isReturnShipment()) {
                 notificationService.createUserNotification(order.getBuyer().getId(),
                         "Đơn hàng không giao được",
                         String.format(
@@ -539,6 +522,13 @@ public class ShipmentService implements IShipmentService {
         Order order = shipment.getOrder();
         if (shipment.isReturnShipment()) {
             order.setStatus(Order.OrderStatus.RETURNED.name());
+
+            // Cập nhật trạng thái ReturnRequest sang RETURNED
+            returnRequestRepository.findByOrderId(order.getId()).ifPresent(returnRequest -> {
+                returnRequest.setStatus(ReturnRequest.ReturnStatus.RETURNED.name());
+                returnRequestRepository.save(returnRequest);
+                System.out.println("Updated ReturnRequest status to RETURNED for order: " + order.getId());
+            });
         } else {
             order.setStatus(Order.OrderStatus.CANCELLED.name());
         }

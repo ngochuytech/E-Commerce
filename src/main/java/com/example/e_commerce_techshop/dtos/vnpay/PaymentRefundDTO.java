@@ -17,7 +17,7 @@ import lombok.Setter;
 @Setter
 public class PaymentRefundDTO {
     @JsonProperty("transaction_type")
-    private String transactionType; // Loại giao dịch hoàn tiền (vd: Refund)
+    private String transactionType; // Loại giao dịch hoàn tiền (vd: 02 - Hoàn tiền)
 
     @JsonProperty("order_id")
     private String orderId; // Mã đơn hàng cần hoàn tiền

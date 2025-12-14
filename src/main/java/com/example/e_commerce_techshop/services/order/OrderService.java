@@ -17,6 +17,7 @@ import com.example.e_commerce_techshop.dtos.buyer.OrderDTO;
 import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
 import com.example.e_commerce_techshop.exceptions.InvalidPromotionException;
 import com.example.e_commerce_techshop.models.Address;
+import com.example.e_commerce_techshop.models.Notification;
 import com.example.e_commerce_techshop.models.Order;
 import com.example.e_commerce_techshop.models.OrderItem;
 import com.example.e_commerce_techshop.models.ProductVariant;
@@ -35,7 +36,8 @@ import com.example.e_commerce_techshop.responses.buyer.OrderResponse;
 import com.example.e_commerce_techshop.services.cart.ICartService;
 import com.example.e_commerce_techshop.services.notification.INotificationService;
 import com.example.e_commerce_techshop.services.promotion.IPromotionService;
-import com.example.e_commerce_techshop.services.userWallet.IUserWalletService;
+import com.example.e_commerce_techshop.services.refund.IRefundService;
+import com.example.e_commerce_techshop.services.wallet.IWalletService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -53,7 +55,8 @@ public class OrderService implements IOrderService {
     private final PromotionUsageRepository promotionUsageRepository;
     private final IPromotionService promotionService;
     private final INotificationService notificationService;
-    private final IUserWalletService userWalletService;
+    private final IRefundService refundService;
+    private final IWalletService walletService;
 
     @Override
     @Transactional
@@ -63,16 +66,6 @@ public class OrderService implements IOrderService {
         // 2. Validate payment method
         if (!isValidPaymentMethod(orderDTO.getPaymentMethod())) {
             throw new IllegalArgumentException("Phương thức thanh toán không hợp lệ: " + orderDTO.getPaymentMethod());
-        }
-
-        // 2.1. Nếu thanh toán bằng ví điện tử, kiểm tra số dư trước
-        if ("E_WALLET".equalsIgnoreCase(orderDTO.getPaymentMethod())) {
-            BigDecimal walletBalance = userWalletService.getWalletBalance(user.getId());
-            if (walletBalance == null || walletBalance.compareTo(BigDecimal.ZERO) <= 0) {
-                throw new IllegalArgumentException(
-                        "Số dư ví không đủ để thanh toán. Vui lòng chọn phương thức thanh toán khác.");
-            }
-            // Lưu ý: Sẽ kiểm tra lại với tổng tiền cuối cùng sau khi tính toán
         }
 
         // 3. Validate danh sách sản phẩm được chọn
@@ -442,34 +435,6 @@ public class OrderService implements IOrderService {
             orders.add(order);
         }
 
-        // 11. Nếu thanh toán bằng ví điện tử, kiểm tra và trừ tiền
-        if ("E_WALLET".equalsIgnoreCase(orderDTO.getPaymentMethod())) {
-            BigDecimal walletBalance = userWalletService.getWalletBalance(user.getId());
-
-            if (totalPaymentAmount.compareTo(walletBalance) > 0) {
-                throw new IllegalArgumentException(
-                        String.format(
-                                "Số dư ví không đủ để thanh toán. Số dư hiện tại: %s VNĐ, Tổng tiền cần thanh toán: %s VNĐ",
-                                walletBalance, totalPaymentAmount));
-            }
-
-            // Trừ tiền từ ví cho từng đơn hàng
-            for (Order order : orders) {
-                try {
-                    userWalletService.paymentFromWallet(
-                            user.getId(),
-                            order.getId(),
-                            order.getTotalPrice());
-                    System.out.println(String.format("[OrderService] Đã trừ %s VNĐ từ ví cho đơn hàng #%s",
-                            order.getTotalPrice(), order.getId()));
-                } catch (Exception e) {
-                    System.err.println(String.format("[OrderService] Lỗi khi trừ tiền từ ví cho đơn hàng #%s: %s",
-                            order.getId(), e.getMessage()));
-                    throw new RuntimeException("Không thể thanh toán bằng ví: " + e.getMessage());
-                }
-            }
-        }
-
         List<String> selectedCartItemIds = orderDTO.getSelectedItems().stream()
                 .map(OrderDTO.SelectedCartItem::getId)
                 .collect(Collectors.toList());
@@ -567,10 +532,15 @@ public class OrderService implements IOrderService {
 
         order.setStatus(Order.OrderStatus.CANCELLED.name());
 
-        // Hoàn tiền nếu đã thanh toán (chuyển tiền về ví người dùng)
-        if (!Order.PaymentMethod.COD.name().equalsIgnoreCase(order.getPaymentMethod())) {
-            userWalletService.refundToWallet(user.getId(), order.getId(), order.getTotalPrice(),
-                    String.format("Hoàn tiền cho đơn hàng bị hủy #%s", order.getId()));
+        // Hoàn tiền nếu đã thanh toán
+        if (order.getPaymentStatus().equals(Order.PaymentStatus.PAID.name())) {
+            try {
+                refundService.createRefundRequest(order);
+            } catch (Exception e) {
+                System.err.println("Error creating refund request: " + e.getMessage());
+                // Vẫn cho phép hủy đơn nhưng ghi log lỗi
+                // Admin sẽ xử lý hoàn tiền thủ công
+            }
         }
 
         // 4. Hoàn trả stock
@@ -636,6 +606,32 @@ public class OrderService implements IOrderService {
         
         Order savedOrder = orderRepository.save(order);
 
+        // Cộng tiền vào ví shop
+        try {
+            // Tính số tiền shop nhận = productPrice - storeDiscountAmount - serviceFee + shippingFee
+            BigDecimal storeRevenue = order.getProductPrice()
+                    .subtract(order.getStoreDiscountAmount() != null ? order.getStoreDiscountAmount() : BigDecimal.ZERO)
+                    .subtract(order.getServiceFee() != null ? order.getServiceFee() : BigDecimal.ZERO)
+                    .add(order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO);
+            
+            walletService.addOrderPaymentToWallet(
+                    order.getStore().getId(),
+                    order.getId(),
+                    storeRevenue,
+                    String.format("Thanh toán đơn hàng #%s", order.getId())
+            );
+        } catch (Exception e) {
+            System.err.println("Error adding payment to wallet: " + e.getMessage());
+            notificationService.createAdminNotification(
+                    "Lỗi cộng tiền vào ví shop",
+                    String.format("Đơn hàng #%s của shop %s đã hoàn tất nhưng không thể cộng tiền vào ví. Vui lòng kiểm tra hệ thống.",
+                            order.getId(), order.getStore().getName()),
+                    Notification.NotificationType.SYSTEM.name(),
+                    order.getId()
+            );
+            // Vẫn tiếp tục xử lý đơn hàng ngay cả khi có lỗi cộng tiền vào ví
+        }
+
         // Gửi thông báo cho chủ shop
         try {
             notificationService.createStoreNotification(order.getStore().getId(),
@@ -653,7 +649,7 @@ public class OrderService implements IOrderService {
      * Validate payment method
      */
     private boolean isValidPaymentMethod(String paymentMethod) {
-        List<String> validMethods = List.of("COD", "BANK_TRANSFER", "E_WALLET");
+        List<String> validMethods = List.of("COD", "VNPAY", "MOMO");
         return validMethods.contains(paymentMethod.toUpperCase());
     }
 
@@ -878,6 +874,53 @@ public class OrderService implements IOrderService {
         statusCounts.put("cancelled", cancelled);
 
         return statusCounts;
+    }
+
+    @Override
+    @Transactional
+    public void updatePaymentStatus(String orderId, String paymentStatus, Long momoTransId) throws Exception {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new DataNotFoundException("Đơn hàng không tồn tại: " + orderId));
+
+        // Cập nhật trạng thái thanh toán
+        order.setPaymentStatus(paymentStatus);
+
+        // Lưu mã giao dịch MoMo nếu có
+        if (momoTransId != null && momoTransId > 0) {
+            order.setMomoTransId(String.valueOf(momoTransId));
+        }
+
+        // Nếu thanh toán thành công và đơn hàng đang PENDING
+        if ("PAID".equals(paymentStatus) && Order.OrderStatus.PENDING.name().equals(order.getStatus())) {
+            order.setPaymentStatus(Order.PaymentStatus.PAID.name());
+            // Gửi thông báo cho cửa hàng
+            try {
+                notificationService.createStoreNotification(
+                        order.getStore().getId(),
+                        "Đơn hàng mới",
+                        "Bạn có đơn hàng mới #" + order.getId() + " đã thanh toán thành công",
+                        order.getId());
+            } catch (Exception e) {
+                System.err.println("Failed to send notification: " + e.getMessage());
+            }
+        }
+
+        // Nếu thanh toán thất bại, có thể tự động hủy đơn
+        if ("FAILED".equals(paymentStatus) && Order.OrderStatus.PENDING.name().equals(order.getStatus())) {
+            order.setStatus(Order.OrderStatus.CANCELLED.name());
+            try {
+                notificationService.createUserNotification(
+                        order.getBuyer().getId(),
+                        "Thanh toán thất bại",
+                        "Thanh toán cho đơn hàng #" + order.getId() + " đã thất bại. Đơn hàng bị hủy.",
+                        order.getId());
+            } catch (Exception e) {
+                System.out.println("Failed to send notification: " + e.getMessage());
+            }
+            System.out.println("Payment failed for order: " + orderId + ". Order status remains PENDING.");
+        }
+
+        orderRepository.save(order);
     }
 
 }

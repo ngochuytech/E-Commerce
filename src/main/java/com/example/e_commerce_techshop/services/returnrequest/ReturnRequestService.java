@@ -25,6 +25,7 @@ import com.example.e_commerce_techshop.models.Shipment;
 import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.repositories.DisputeRepository;
 import com.example.e_commerce_techshop.repositories.OrderRepository;
+import com.example.e_commerce_techshop.repositories.RefundRequestRepository;
 import com.example.e_commerce_techshop.repositories.ReturnRequestRepository;
 import com.example.e_commerce_techshop.repositories.ShipmentRepository;
 import com.example.e_commerce_techshop.services.CloudinaryService;
@@ -46,6 +47,8 @@ public class ReturnRequestService implements IReturnRequestService {
     private final INotificationService notificationService;
     private final IWalletService walletService;
     private final CloudinaryService cloudinaryService;
+    private final RefundRequestRepository refundRequestRepository;
+    private final com.example.e_commerce_techshop.services.refund.IRefundService refundService;
 
     // ==================== BUYER APIs ====================
 
@@ -77,6 +80,19 @@ public class ReturnRequestService implements IReturnRequestService {
         }
         List<String> evidenceUrls = cloudinaryService.uploadMediaFiles(evidenceFiles, "return-request-evidence");
 
+        // Validate thông tin tài khoản ngân hàng nếu thanh toán COD
+        if ("COD".equals(order.getPaymentMethod())) {
+            if (dto.getBankName() == null || dto.getBankName().trim().isEmpty()) {
+                throw new IllegalArgumentException("Vui lòng cung cấp tên ngân hàng để nhận tiền hoàn");
+            }
+            if (dto.getBankAccountNumber() == null || dto.getBankAccountNumber().trim().isEmpty()) {
+                throw new IllegalArgumentException("Vui lòng cung cấp số tài khoản ngân hàng để nhận tiền hoàn");
+            }
+            if (dto.getBankAccountName() == null || dto.getBankAccountName().trim().isEmpty()) {
+                throw new IllegalArgumentException("Vui lòng cung cấp tên chủ tài khoản để nhận tiền hoàn");
+            }
+        }
+
         // Tạo return request
         ReturnRequest returnRequest = ReturnRequest.builder()
                 .order(order)
@@ -85,8 +101,11 @@ public class ReturnRequestService implements IReturnRequestService {
                 .reason(dto.getReason())
                 .description(dto.getDescription())
                 .evidenceMedia(evidenceUrls)
-                .refundAmount(order.getTotalPrice()) // Hoàn toàn bộ số tiền
+                .refundAmount(order.getTotalPrice())
                 .status(ReturnRequest.ReturnStatus.PENDING.name())
+                .bankName(dto.getBankName())
+                .bankAccountNumber(dto.getBankAccountNumber())
+                .bankAccountName(dto.getBankAccountName())
                 .build();
 
         ReturnRequest savedRequest = returnRequestRepository.save(returnRequest);
@@ -236,7 +255,7 @@ public class ReturnRequestService implements IReturnRequestService {
             throw new IllegalArgumentException("Số lượng hình ảnh/video đính kèm tối đa là 5");
         }
         List<String> attachmentUrls = null;
-        if( attachmentFiles != null && !attachmentFiles.isEmpty())
+        if (attachmentFiles != null && !attachmentFiles.isEmpty())
             attachmentUrls = cloudinaryService.uploadMediaFiles(attachmentFiles, "dispute-evidence");
 
         // Thêm message
@@ -369,7 +388,8 @@ public class ReturnRequestService implements IReturnRequestService {
 
     @Override
     @Transactional
-    public Dispute addStoreDisputeMessage(String storeId, String disputeId, DisputeRequestDTO dto, List<MultipartFile> evidenceFiles) throws Exception {
+    public Dispute addStoreDisputeMessage(String storeId, String disputeId, DisputeRequestDTO dto,
+            List<MultipartFile> evidenceFiles) throws Exception {
         Dispute dispute = disputeRepository.findById(disputeId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy khiếu nại với ID: " + disputeId));
 
@@ -385,11 +405,11 @@ public class ReturnRequestService implements IReturnRequestService {
         }
 
         // Upload attachment files to Cloudinary
-        if( evidenceFiles != null && evidenceFiles.size() > 5) {
+        if (evidenceFiles != null && evidenceFiles.size() > 5) {
             throw new IllegalArgumentException("Số lượng hình ảnh/video đính kèm tối đa là 5");
         }
         List<String> attachmentUrls = null;
-        if( evidenceFiles != null && !evidenceFiles.isEmpty())
+        if (evidenceFiles != null && !evidenceFiles.isEmpty())
             attachmentUrls = cloudinaryService.uploadMediaFiles(evidenceFiles, "dispute-evidence");
 
         // Thêm message
@@ -482,8 +502,8 @@ public class ReturnRequestService implements IReturnRequestService {
         Order order = dispute.getOrder();
 
         // Validate decision
-        if (!"APPROVE_RETURN".equalsIgnoreCase(dto.getDecision()) && 
-            !"REJECT_RETURN".equalsIgnoreCase(dto.getDecision())) {
+        if (!"APPROVE_RETURN".equalsIgnoreCase(dto.getDecision()) &&
+                !"REJECT_RETURN".equalsIgnoreCase(dto.getDecision())) {
             throw new IllegalArgumentException("Decision phải là APPROVE_RETURN hoặc REJECT_RETURN");
         }
 
@@ -812,35 +832,73 @@ public class ReturnRequestService implements IReturnRequestService {
 
         Order order = returnRequest.getOrder();
 
-        // Store xác nhận hàng OK -> Hoàn tiền cho buyer
+        // Store xác nhận hàng OK
         returnRequest.setStatus(ReturnRequest.ReturnStatus.REFUNDED.name());
         returnRequest.setStoreResponse("Xác nhận hàng trả về đạt yêu cầu, đồng ý hoàn tiền");
 
-        // Hoàn tiền cho buyer
-        try {
-            // Hoàn tiền vào tài khoản ngân hàng của buyer (trong hệ thống này hoàn vào ví
-            // user)
-            walletService.refundToBuyer(
-                    returnRequest.getBuyer().getId(),
-                    order.getId(),
-                    returnRequest.getRefundAmount(),
-                    String.format("Hoàn tiền trả hàng đơn #%s", order.getId()));
-            log.info("Refunded {} to buyer {} for order {}", returnRequest.getRefundAmount(),
-                    returnRequest.getBuyer().getId(), order.getId());
-        } catch (Exception e) {
-            log.error("Error refunding to buyer: {}", e.getMessage());
-            throw new RuntimeException("Lỗi khi hoàn tiền cho khách hàng: " + e.getMessage());
-        }
+        // Xử lý hoàn tiền theo phương thức thanh toán
+        if ("COD".equals(order.getPaymentMethod())) {
+            // Tạo RefundRequest cho admin xử lý chuyển khoản thủ công
+            try {
+                com.example.e_commerce_techshop.models.RefundRequest refundRequest = com.example.e_commerce_techshop.models.RefundRequest.builder()
+                        .order(order)
+                        .buyer(order.getBuyer())
+                        .refundAmount(returnRequest.getRefundAmount())
+                        .paymentMethod("BANK_TRANSFER") // Hoàn qua ngân hàng
+                        .status(com.example.e_commerce_techshop.models.RefundRequest.RefundStatus.PENDING.name())
+                        .build();
+                refundRequestRepository.save(refundRequest);
 
-        // Thông báo cho buyer
-        try {
-            notificationService.createUserNotification(returnRequest.getBuyer().getId(),
-                    "Hoàn tiền thành công",
-                    String.format("Cửa hàng %s đã xác nhận hàng trả về và đồng ý hoàn tiền %s cho đơn #%s.",
-                            returnRequest.getStore().getName(), returnRequest.getRefundAmount(), order.getId()),
-                    order.getId());
-        } catch (Exception e) {
-            log.warn("Error sending notification to buyer: {}", e.getMessage());
+                // Thông báo cho admin với thông tin tài khoản
+                String bankInfo = String.format(
+                        "Thông tin chuyển khoản:\n- Ngân hàng: %s\n- Số TK: %s\n- Tên TK: %s",
+                        returnRequest.getBankName(),
+                        returnRequest.getBankAccountNumber(),
+                        returnRequest.getBankAccountName());
+
+                notificationService.createAdminNotification(
+                        "Yêu cầu hoàn tiền COD",
+                        String.format(
+                                "Đơn hàng #%s: Cần chuyển khoản hoàn tiền %,.0f đ cho khách hàng %s.\n%s",
+                                order.getId(),
+                                returnRequest.getRefundAmount().doubleValue(),
+                                returnRequest.getBuyer().getFullName(),
+                                bankInfo),
+                        Notification.NotificationType.REFUND_REQUEST.name(),
+                        order.getId());
+
+                log.info("Created manual refund request for COD order {}, bank: {}, account: {}",
+                        order.getId(), returnRequest.getBankName(), returnRequest.getBankAccountNumber());
+            } catch (Exception e) {
+                log.error("Error creating refund request: {}", e.getMessage());
+                throw new RuntimeException("Lỗi khi tạo yêu cầu hoàn tiền: " + e.getMessage());
+            }
+        } else {
+            // Tự động hoàn tiền qua MoMo 
+            try {
+                refundService.createRefundRequest(order);
+                log.info("Auto refund initiated for return request {}, amount: {}",
+                        returnRequestId, returnRequest.getRefundAmount());
+            } catch (Exception e) {
+                log.error("Error processing auto refund: {}", e.getMessage());
+                
+                // Nếu hoàn tiền tự động thất bại, thông báo admin xử lý thủ công
+                try {
+                    notificationService.createAdminNotification(
+                            "Lỗi hoàn tiền tự động",
+                            String.format(
+                                    "Đơn hàng #%s: Không thể hoàn tiền tự động %,.0f đ cho khách hàng %s. Lỗi: %s. Vui lòng xử lý thủ công.",
+                                    order.getId(),
+                                    returnRequest.getRefundAmount().doubleValue(),
+                                    returnRequest.getBuyer().getFullName(),
+                                    e.getMessage()),
+                            Notification.NotificationType.REFUND_REQUEST.name(),
+                            order.getId());
+                } catch (Exception notifEx) {
+                    log.warn("Error sending admin notification: {}", notifEx.getMessage());
+                }
+                throw new RuntimeException("Lỗi khi hoàn tiền: " + e.getMessage());
+            }
         }
 
         log.info("Store {} confirmed returned goods OK for return request {}, refund processed", storeId,
@@ -870,8 +928,8 @@ public class ReturnRequestService implements IReturnRequestService {
         Order order = dispute.getOrder();
 
         // Validate decision
-        if (!"APPROVE_STORE".equalsIgnoreCase(dto.getDecision()) && 
-            !"REJECT_STORE".equalsIgnoreCase(dto.getDecision())) {
+        if (!"APPROVE_STORE".equalsIgnoreCase(dto.getDecision()) &&
+                !"REJECT_STORE".equalsIgnoreCase(dto.getDecision())) {
             throw new IllegalArgumentException("Decision phải là APPROVE_STORE hoặc REJECT_STORE");
         }
 
@@ -892,20 +950,15 @@ public class ReturnRequestService implements IReturnRequestService {
             returnRequest.setAdminReturnDisputeReason(dto.getReason());
             returnRequestRepository.save(returnRequest);
 
-            // Hoàn tiền cho store (trả lại số tiền đã bị trừ khi buyer yêu cầu trả hàng)
-            // try {
-            // walletService.addOrderPaymentToWallet(
-            // returnRequest.getStore().getId(),
-            // order.getId(),
-            // returnRequest.getRefundAmount(),
-            // String.format("Hoàn tiền từ tranh chấp hàng trả về đơn #%s - Store thắng
-            // kiện", order.getId()));
-            // log.info("Refunded {} to store {} for order {}",
-            // returnRequest.getRefundAmount(),
-            // returnRequest.getStore().getId(), order.getId());
-            // } catch (Exception e) {
-            // log.error("Error refunding to store: {}", e.getMessage());
-            // }
+            // Hoàn tiền cho store - cộng vào ví của store
+            walletService.addOrderPaymentToWallet(
+                    returnRequest.getStore().getId(),
+                    order.getId(),
+                    returnRequest.getRefundAmount(),
+                    String.format("Hoàn tiền từ tranh chấp hàng trả về đơn #%s - Store thắng kiện", order.getId()));
+            log.info("Refunded {} to store {} for order {}",
+                    returnRequest.getRefundAmount(),
+                    returnRequest.getStore().getId(), order.getId());
 
             // Thông báo cho store
             try {
@@ -934,7 +987,8 @@ public class ReturnRequestService implements IReturnRequestService {
             log.info("Admin {} approved return quality dispute {} - store wins, refund to store", admin.getId(),
                     disputeId);
         } else {
-            // Admin từ chối khiếu nại của store -> Buyer thắng, hoàn tiền cho buyer
+            // Admin từ chối khiếu nại của store -> Buyer thắng, tạo yêu cầu hoàn tiền cho
+            // admin xử lý
             dispute.setFinalDecision("REJECT_STORE");
             dispute.setWinner(Dispute.DisputeWinner.BUYER.name());
             dispute.setStatus(Dispute.DisputeStatus.RESOLVED.name());
@@ -945,31 +999,69 @@ public class ReturnRequestService implements IReturnRequestService {
             returnRequest.setAdminReturnDisputeReason(dto.getReason());
             returnRequestRepository.save(returnRequest);
 
-            // Hoàn tiền cho buyer
-            // try {
-            // walletService.refundToBuyer(
-            // returnRequest.getBuyer().getId(),
-            // order.getId(),
-            // returnRequest.getRefundAmount(),
-            // String.format("Hoàn tiền trả hàng đơn #%s - Admin quyết định",
-            // order.getId()));
-            // log.info("Refunded {} to buyer {} for order {}",
-            // returnRequest.getRefundAmount(),
-            // returnRequest.getBuyer().getId(), order.getId());
-            // } catch (Exception e) {
-            // log.error("Error refunding to buyer: {}", e.getMessage());
-            // }
+            // Xử lý hoàn tiền theo phương thức thanh toán
+            if ("COD".equals(order.getPaymentMethod())) {
+                // Tạo RefundRequest cho admin xử lý chuyển khoản thủ công
+                try {
+                    com.example.e_commerce_techshop.models.RefundRequest refundRequest = com.example.e_commerce_techshop.models.RefundRequest.builder()
+                            .order(order)
+                            .buyer(order.getBuyer())
+                            .refundAmount(returnRequest.getRefundAmount())
+                            .paymentMethod("BANK_TRANSFER")
+                            .status(com.example.e_commerce_techshop.models.RefundRequest.RefundStatus.PENDING.name())
+                            .build();
+                    refundRequestRepository.save(refundRequest);
 
-            // Thông báo cho buyer
-            try {
-                notificationService.createUserNotification(dispute.getBuyer().getId(),
-                        "Hoàn tiền thành công",
-                        String.format(
-                                "Admin đã từ chối khiếu nại của cửa hàng. Tiền đã được hoàn lại cho bạn từ đơn #%s.",
-                                order.getId()),
-                        order.getId());
-            } catch (Exception e) {
-                log.warn("Error sending notification to buyer: {}", e.getMessage());
+                    // Thông báo cho admin với thông tin tài khoản
+                    String bankInfo = String.format(
+                            "Thông tin chuyển khoản:\n- Ngân hàng: %s\n- Số TK: %s\n- Tên TK: %s",
+                            returnRequest.getBankName(),
+                            returnRequest.getBankAccountNumber(),
+                            returnRequest.getBankAccountName());
+
+                    notificationService.createAdminNotification(
+                            "Yêu cầu hoàn tiền COD (Tranh chấp)",
+                            String.format(
+                                    "Đơn hàng #%s: Buyer thắng tranh chấp. Cần chuyển khoản hoàn tiền %,.0f đ cho khách hàng %s.\n%s",
+                                    order.getId(),
+                                    returnRequest.getRefundAmount().doubleValue(),
+                                    returnRequest.getBuyer().getFullName(),
+                                    bankInfo),
+                            Notification.NotificationType.REFUND_REQUEST.name(),
+                            order.getId());
+
+                    log.info("Created manual refund request for COD order {} after dispute, buyer wins",
+                            order.getId());
+                } catch (Exception e) {
+                    log.error("Error creating refund request: {}", e.getMessage());
+                    throw new RuntimeException("Lỗi khi tạo yêu cầu hoàn tiền: " + e.getMessage());
+                }
+            } else {
+                // Tự động hoàn tiền cho buyer qua MoMo/VNPAY
+                try {
+                    refundService.createRefundRequest(order);
+                    log.info("Auto refund initiated for return quality dispute {}, buyer wins, amount: {}",
+                            disputeId, returnRequest.getRefundAmount());
+                } catch (Exception e) {
+                    log.error("Error processing auto refund: {}", e.getMessage());
+                    
+                    // Nếu hoàn tiền tự động thất bại, thông báo admin xử lý thủ công
+                    try {
+                        notificationService.createAdminNotification(
+                                "Lỗi hoàn tiền tự động",
+                                String.format(
+                                        "Đơn hàng #%s: Không thể hoàn tiền tự động %,.0f đ cho khách hàng %s sau tranh chấp. Lỗi: %s. Vui lòng xử lý thủ công.",
+                                        order.getId(),
+                                        returnRequest.getRefundAmount().doubleValue(),
+                                        returnRequest.getBuyer().getFullName(),
+                                        e.getMessage()),
+                                Notification.NotificationType.REFUND_REQUEST.name(),
+                                order.getId());
+                    } catch (Exception notifEx) {
+                        log.warn("Error sending admin notification: {}", notifEx.getMessage());
+                    }
+                    throw new RuntimeException("Lỗi khi hoàn tiền: " + e.getMessage());
+                }
             }
 
             // Thông báo cho store
@@ -977,14 +1069,14 @@ public class ReturnRequestService implements IReturnRequestService {
                 notificationService.createStoreNotification(dispute.getStore().getId(),
                         "Khiếu nại bị từ chối",
                         String.format(
-                                "Admin đã từ chối khiếu nại của bạn về hàng trả về từ đơn #%s. Tiền đã được hoàn cho khách hàng. Lý do: %s",
+                                "Admin đã từ chối khiếu nại của bạn về hàng trả về từ đơn #%s. Tiền sẽ được hoàn cho khách hàng. Lý do: %s",
                                 order.getId(), dto.getReason()),
                         order.getId());
             } catch (Exception e) {
                 log.warn("Error sending notification to store: {}", e.getMessage());
             }
 
-            log.info("Admin {} rejected return quality dispute {} - buyer wins, refund to buyer", admin.getId(),
+            log.info("Admin {} rejected return quality dispute {} - buyer wins, refund request created", admin.getId(),
                     disputeId);
         }
 

@@ -6,6 +6,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.DBRef;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Document(collection = "orders")
@@ -25,9 +26,9 @@ public class Order extends BaseEntity {
     private BigDecimal shippingFee; // Phí ship
 
     private BigDecimal serviceFee; // Phí dịch vụ (cố định: 5000đ)
-    
+
     private BigDecimal storeDiscountAmount; // Tiền giảm từ shop (shop chịu)
-    
+
     private BigDecimal platformDiscountAmount; // Tiền giảm từ sàn (sàn chịu)
 
     private BigDecimal totalDiscountAmount; // Tổng tiền giảm giá
@@ -35,12 +36,16 @@ public class Order extends BaseEntity {
     private String paymentMethod;
 
     private String status;
-    
+
     private String note;
 
     private boolean isRated;
 
     private String vnpTnxRef; // Mã tham chiếu giao dịch VNPAY (nếu có)
+
+    private String momoOrderId; // Mã đơn hàng MoMo (requestId)
+    private String momoTransId; // Mã giao dịch MoMo (transId khi thanh toán thành công)
+    private String paymentStatus; // Trạng thái thanh toán: UNPAID, PAID, FAILED, REFUNDED
 
     private String rejectReason; // Lý do từ chối đơn hàng (nếu có)
 
@@ -53,19 +58,33 @@ public class Order extends BaseEntity {
     @DBRef
     private Store store;
 
-    private String phone; 
+    private String phone;
 
     @DBRef
     private List<Promotion> promotions;
 
     private Address address;
 
+    private String refundStatus; // Trạng thái hoàn tiền: PENDING, PROCESSING, COMPLETED, FAILED
+    private String refundTransactionId; // Mã giao dịch hoàn tiền
+    private LocalDateTime refundRequestedAt; // Thời điểm yêu cầu hoàn tiền
+    private LocalDateTime refundCompletedAt; // Thời điểm hoàn tiền thành công
+
+    public enum RefundStatus {
+        PENDING, PROCESSING, COMPLETED, FAILED
+    }
+
     public enum OrderStatus {
         PENDING, CONFIRMED, SHIPPING, DELIVERED, CANCELLED, COMPLETED, RETURNING, RETURNED
     }
 
     public enum PaymentMethod {
-        COD, BANK_TRANSFER, E_WALLET
+        COD, MOMO, VNPAY
+    }
+
+    public enum PaymentStatus {
+        UNPAID,    // Chưa thanh toán
+        PAID,      // Đã thanh toán
+        FAILED     // Thanh toán thất bại
     }
 }
-

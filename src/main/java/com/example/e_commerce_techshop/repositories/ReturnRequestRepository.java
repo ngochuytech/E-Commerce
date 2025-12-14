@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -47,4 +48,7 @@ public interface ReturnRequestRepository extends MongoRepository<ReturnRequest, 
 
     // Kiểm tra đã có yêu cầu trả hàng cho order chưa
     boolean existsByOrderIdAndStatusNot(String orderId, String status);
+    
+    // Tìm các return request theo status và thời gian cập nhật (cho scheduled task)
+    List<ReturnRequest> findByStatusAndUpdatedAtBefore(String status, LocalDateTime dateTime);
 }

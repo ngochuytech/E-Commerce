@@ -26,4 +26,11 @@ public class ReturnRequestDTO {
     @NotEmpty(message = "Vui lòng cung cấp ít nhất 1 hình ảnh minh chứng")
     @Size(min = 1, max = 5, message = "Số lượng hình ảnh minh chứng từ 1 đến 5")
     private List<String> evidenceImages;
+
+    // Thông tin tài khoản ngân hàng để nhận tiền hoàn (bắt buộc nếu thanh toán COD)
+    private String bankName;
+    
+    private String bankAccountNumber;
+    
+    private String bankAccountName;
 }

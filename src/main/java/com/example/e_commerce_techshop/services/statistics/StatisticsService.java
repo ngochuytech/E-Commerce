@@ -669,13 +669,13 @@ public class StatisticsService implements IStatisticsService {
                         .withHour(0).withMinute(0).withSecond(0).withNano(0);
                 break;
             case "ALL":
-                return orderRepository.findByStoreIdAndStatus(storeId, "DELIVERED");
+                return orderRepository.findByStoreIdAndStatus(storeId, "COMPLETED");
             default:
                 // Default: 30 ngày gần nhất
                 startDate = now.minusDays(30)
                         .withHour(0).withMinute(0).withSecond(0).withNano(0);
         }
 
-        return orderRepository.findByStoreIdAndStatusAndDateRange(storeId, "DELIVERED", startDate, now);
+        return orderRepository.findByStoreIdAndStatusAndDateRange(storeId, "COMPLETED", startDate, now);
     }
 }
