@@ -26,4 +26,6 @@ public interface IStatisticsService {
     Map<String, Object> getOrderCountByStatus(String storeId) throws Exception;
 
     Map<String, Object> getVariantCountByStockStatus(String storeId) throws Exception;
+
+    Map<String, Object> getBestSellingVariants(String storeId, Integer limit, String period) throws Exception;
 }

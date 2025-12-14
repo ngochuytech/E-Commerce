@@ -1,6 +1,7 @@
 package com.example.e_commerce_techshop.controllers.b2c;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -89,5 +90,17 @@ public class B2CStatisticsController {
         validateUserStore(currentUser, storeId);
 
         return ResponseEntity.ok(ApiResponse.ok(statisticsService.getVariantCountByStockStatus(storeId)));
+    }
+
+    @GetMapping("/variants/best-selling")
+    public ResponseEntity<?> getBestSellingVariants(
+            @Parameter(description = "ID của shop", required = true, example = "shop_001") @RequestParam String storeId,
+            @Parameter(description = "Số lượng variant muốn lấy", required = false, example = "10") @RequestParam(defaultValue = "10") Integer limit,
+            @Parameter(description = "Kỳ thời gian (WEEK, MONTH, YEAR, ALL)", required = false, example = "MONTH") @RequestParam(defaultValue = "MONTH") String period,
+            @AuthenticationPrincipal User currentUser)
+            throws Exception {
+        validateUserStore(currentUser, storeId);
+        Map<String, Object> result = statisticsService.getBestSellingVariants(storeId, limit, period);
+        return ResponseEntity.ok(ApiResponse.ok(result));
     }
 }

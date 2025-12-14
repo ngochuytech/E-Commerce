@@ -97,6 +97,7 @@ public class ProductService implements IProductService {
                 .brand(brand)
                 .store(store)
                 .status(Product.ProductStatus.PENDING.name())
+                .description(productDTO.getDescription())
                 .build();
         Product savedProduct = productRepository.save(product);
         

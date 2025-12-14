@@ -16,7 +16,10 @@ import org.springframework.stereotype.Service;
 
 import com.example.e_commerce_techshop.models.AdminRevenue;
 import com.example.e_commerce_techshop.models.Order;
+import com.example.e_commerce_techshop.models.OrderItem;
+import com.example.e_commerce_techshop.models.ProductVariant;
 import com.example.e_commerce_techshop.repositories.AdminRevenueRepository;
+import com.example.e_commerce_techshop.repositories.OrderItemRepository;
 import com.example.e_commerce_techshop.repositories.OrderRepository;
 import com.example.e_commerce_techshop.repositories.ProductRepository;
 import com.example.e_commerce_techshop.repositories.ProductVariantRepository;
@@ -37,6 +40,7 @@ public class StatisticsService implements IStatisticsService {
     private final PromotionRepository promotionRepository;
     private final AdminRevenueRepository adminRevenueRepository;
     private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
 
     @Override
     public Map<String, Object> getAdminOverviewStatistics() throws Exception {
@@ -548,5 +552,130 @@ public class StatisticsService implements IStatisticsService {
         variantStats.put("outOfStockProducts", outOfStockProducts);
 
         return variantStats;
+    }
+    
+    @Override
+    public Map<String, Object> getBestSellingVariants(String storeId, Integer limit, String period) throws Exception {
+        Map<String, Object> result = new HashMap<>();
+
+        // Lấy các đơn hàng đã giao trong khoảng thời gian
+        List<Order> orders = getOrdersByPeriod(storeId, period);
+
+        if (orders.isEmpty()) {
+            result.put("variants", new ArrayList<>());
+            result.put("period", period);
+            result.put("limit", limit);
+            return result;
+        }
+
+        // Lấy tất cả order IDs một lần
+        List<String> orderIds = orders.stream()
+                .map(Order::getId)
+                .collect(Collectors.toList());
+
+        // Lấy tất cả order items
+        List<OrderItem> orderItems = orderItemRepository.findByOrderIdIn(orderIds);
+
+        // Nhóm theo variant + color và tính tổng số lượng bằng Stream API
+        Map<String, Integer> salesQuantityMap = orderItems.stream()
+                .filter(item -> item.getProductVariant() != null)
+                .collect(Collectors.groupingBy(
+                        item -> {
+                            String variantId = item.getProductVariant().getId();
+                            String colorId = item.getColorId() != null ? item.getColorId() : "default";
+                            return variantId + "_" + colorId;
+                        },
+                        Collectors.summingInt(OrderItem::getQuantity)
+                ));
+
+        // Tạo map chi tiết với thông tin variant (chỉ tạo cho những variant có bán)
+        Map<String, Map<String, Object>> variantDetailsMap = orderItems.stream()
+                .filter(item -> item.getProductVariant() != null)
+                .collect(Collectors.toMap(
+                        item -> {
+                            String variantId = item.getProductVariant().getId();
+                            String colorId = item.getColorId() != null ? item.getColorId() : "default";
+                            return variantId + "_" + colorId;
+                        },
+                        item -> {
+                            Map<String, Object> variantData = new HashMap<>();
+                            ProductVariant variant = item.getProductVariant();
+                            String colorId = item.getColorId() != null ? item.getColorId() : "default";
+                            
+                            variantData.put("variantId", variant.getId());
+                            variantData.put("variantName", variant.getName());
+                            variantData.put("primaryImageUrl", variant.getPrimaryImageUrl());
+                            variantData.put("price", variant.getPrice());
+                            variantData.put("currentStock", variant.getStock());
+                            
+                            // Thông tin màu sắc nếu có
+                            if (!colorId.equals("default") && variant.getColors() != null) {
+                                ProductVariant.ColorOption color = ProductVariant.getColor(variant, colorId);
+                                if (color != null) {
+                                    Map<String, Object> colorInfo = new HashMap<>();
+                                    colorInfo.put("colorId", color.getId());
+                                    colorInfo.put("colorName", color.getColorName());
+                                    colorInfo.put("colorImage", color.getImage());
+                                    colorInfo.put("colorPrice", color.getPrice());
+                                    colorInfo.put("colorStock", color.getStock());
+                                    variantData.put("color", colorInfo);
+                                }
+                            }
+                            
+                            return variantData;
+                        },
+                        (existing, replacement) -> existing
+                ));
+
+        // Kết hợp số lượng với thông tin chi tiết, sắp xếp và lấy top limit
+        List<Map<String, Object>> bestSellingVariants = salesQuantityMap.entrySet().stream()
+                .map(entry -> {
+                    Map<String, Object> variantData = variantDetailsMap.get(entry.getKey());
+                    if (variantData != null) {
+                        variantData.put("totalQuantity", entry.getValue());
+                    }
+                    return variantData;
+                })
+                .filter(data -> data != null)
+                .sorted((v1, v2) -> Integer.compare((Integer) v2.get("totalQuantity"), (Integer) v1.get("totalQuantity")))
+                .limit(limit)
+                .collect(Collectors.toList());
+
+        result.put("variants", bestSellingVariants);
+        result.put("period", period);
+        result.put("limit", limit);
+
+        return result;
+    }
+
+    private List<Order> getOrdersByPeriod(String storeId, String period) {
+        LocalDateTime startDate;
+        LocalDateTime now = LocalDateTime.now();
+
+        switch (period.toUpperCase()) {
+            case "WEEK":
+                // 7 ngày gần nhất
+                startDate = now.minusDays(7)
+                        .withHour(0).withMinute(0).withSecond(0).withNano(0);
+                break;
+            case "MONTH":
+                // 30 ngày gần nhất
+                startDate = now.minusDays(30)
+                        .withHour(0).withMinute(0).withSecond(0).withNano(0);
+                break;
+            case "YEAR":
+                // 365 ngày gần nhất
+                startDate = now.minusDays(365)
+                        .withHour(0).withMinute(0).withSecond(0).withNano(0);
+                break;
+            case "ALL":
+                return orderRepository.findByStoreIdAndStatus(storeId, "DELIVERED");
+            default:
+                // Default: 30 ngày gần nhất
+                startDate = now.minusDays(30)
+                        .withHour(0).withMinute(0).withSecond(0).withNano(0);
+        }
+
+        return orderRepository.findByStoreIdAndStatusAndDateRange(storeId, "DELIVERED", startDate, now);
     }
 }
