@@ -59,24 +59,24 @@ public class ShipperController {
                 return ResponseEntity.ok(ApiResponse.ok(responsePage));
         }
 
-        @GetMapping("/shipments/{orderId}")
+        @GetMapping("/shipment/{shipmentId}")
         @Operation(summary = "Lấy chi tiết shipment", description = "Lấy chi tiết thông tin của một shipment cụ thể")
         public ResponseEntity<?> getShipmentDetail(
-                        @Parameter(description = "Shipment ID", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String orderId)
+                        @Parameter(description = "Shipment ID", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String shipmentId)
                         throws Exception {
 
-                Shipment shipment = shipmentService.getShipmentByOrderId(orderId);
+                Shipment shipment = shipmentService.getShipmentById(shipmentId);
                 return ResponseEntity.ok(ApiResponse.ok(ShipmentResponse.fromShipment(shipment)));
         }
 
-        @PutMapping("/order/{orderId}/picking")
+        @PutMapping("/shipment/{shipmentId}/picking")
         @Operation(summary = "Shipper tới lấy hàng", description = "Shipper đang tới lấy đơn hàng từ shop")
         public ResponseEntity<?> confirmPickup(
-                        @Parameter(description = "Order ID", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String orderId,
+                        @Parameter(description = "Shipment ID", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String shipmentId,
                         @AuthenticationPrincipal User shipper)
                         throws Exception {
 
-                shipmentService.pickingShipment(orderId, shipper);
+                shipmentService.pickingShipment(shipmentId, shipper);
                 return ResponseEntity.ok(ApiResponse.ok(
                                 "Đã xác nhận tới lấy hàng thành công"));
         }

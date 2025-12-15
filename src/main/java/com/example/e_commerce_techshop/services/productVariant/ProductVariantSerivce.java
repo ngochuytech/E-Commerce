@@ -50,7 +50,7 @@ public class ProductVariantSerivce implements IProductVariantService {
     @Override
     @Transactional
     public void createProductVariant(ProductVariantDTO productVariantDTO, List<MultipartFile> imageFiles,
-            Integer primaryImageIndex) throws Exception {
+            String primaryImageIndex) throws Exception {
         Product product = productRepository.findById(productVariantDTO.getProductId())
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy product này"));
 
@@ -64,8 +64,20 @@ public class ProductVariantSerivce implements IProductVariantService {
 
         if (imageFiles != null && !imageFiles.isEmpty()) {
             imageUrls = fileUploadService.uploadFiles(imageFiles, "product-variants");
-            if (primaryImageIndex != null && primaryImageIndex >= 0 && primaryImageIndex < imageUrls.size()) {
-                primaryImageUrl = imageUrls.get(primaryImageIndex);
+            
+            // Convert String sang Integer
+            if (primaryImageIndex != null && !primaryImageIndex.trim().isEmpty()) {
+                try {
+                    int index = Integer.parseInt(primaryImageIndex);
+                    if (index >= 0 && index < imageUrls.size()) {
+                        primaryImageUrl = imageUrls.get(index);
+                    } else {
+                        throw new IllegalArgumentException(
+                                "Chỉ số ảnh chính không hợp lệ. Phải từ 0 đến " + (imageUrls.size() - 1));
+                    }
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException("Chỉ số ảnh chính phải là số nguyên");
+                }
             } else {
                 throw new IllegalArgumentException(
                         "Chỉ số ảnh chính không hợp lệ. Phải từ 0 đến " + (imageUrls.size() - 1));

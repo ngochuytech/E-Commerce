@@ -74,7 +74,7 @@ public class B2CProductVariantController {
     public ResponseEntity<?> createProductVariant(
             @Parameter(description = "Product variant information including product ID, size, color, price, stock quantity", required = true, content = @Content(schema = @Schema(implementation = ProductVariantDTO.class))) @RequestPart("dto") @Valid ProductVariantDTO productVariantDTO,
             @Parameter(description = "Product variant images (multiple files supported)", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE)) @RequestPart(value = "images", required = false) List<MultipartFile> imageFiles,
-            @Parameter(description = "Index of the primary image in the images list", required = false) @RequestPart(value = "primaryImageIndex", required = false) Integer primaryImageIndex,
+            @Parameter(description = "Index of the primary image in the images list", required = false) @RequestPart(value = "primaryImageIndex", required = false) String primaryImageIndex,
             @Parameter(hidden = true) BindingResult result) throws Exception {
         if (result.hasErrors()) {
             List<String> errorMessages = result.getFieldErrors()

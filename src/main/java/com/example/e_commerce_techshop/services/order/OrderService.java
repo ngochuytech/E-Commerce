@@ -360,6 +360,7 @@ public class OrderService implements IOrderService {
                             .phone(orderDTO.getAddress().getPhone())
                             .build())
                     .paymentMethod(orderDTO.getPaymentMethod())
+                    .paymentStatus(Order.PaymentStatus.UNPAID.name())
                     .status(Order.OrderStatus.PENDING.name())
                     .note(orderDTO.getNote())
                     .build();
@@ -783,6 +784,17 @@ public class OrderService implements IOrderService {
     public Order confirmOrder(String storeId, String orderId) throws Exception {
         Order order = getStoreOrderDetail(storeId, orderId);
 
+        // Kiểm tra nếu phương thức thanh toán online thì phải đã thanh toán
+        if ("VNPAY".equalsIgnoreCase(order.getPaymentMethod()) || 
+            "MOMO".equalsIgnoreCase(order.getPaymentMethod())) {
+            if (!Order.PaymentStatus.PAID.name().equals(order.getPaymentStatus())) {
+                throw new IllegalArgumentException(
+                    "Không thể xác nhận đơn hàng. Khách hàng chưa thanh toán thành công. " +
+                    "Vui lòng chờ khách hàng hoàn tất thanh toán trước khi xác nhận đơn hàng."
+                );
+            }
+        }
+
         order.setStatus(Order.OrderStatus.CONFIRMED.name());
         Order savedOrder = orderRepository.save(order);
 
@@ -921,6 +933,12 @@ public class OrderService implements IOrderService {
         }
 
         orderRepository.save(order);
+    }
+
+    @Override
+    public Order getOrderById(String orderId) throws Exception {
+        return orderRepository.findById(orderId)
+                .orElseThrow(() -> new DataNotFoundException("Đơn hàng không tồn tại: " + orderId));
     }
 
 }

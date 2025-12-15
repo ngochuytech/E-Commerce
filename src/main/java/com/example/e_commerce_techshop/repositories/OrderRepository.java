@@ -44,4 +44,11 @@ public interface OrderRepository extends MongoRepository<Order, String> {
      * Dùng cho scheduled task tự động chuyển DELIVERED -> COMPLETED sau 7 ngày
      */
     List<Order> findByStatusAndUpdatedAtBefore(String status, LocalDateTime dateTime);
+
+    /**
+     * Tìm các orders thanh toán online chưa thanh toán và quá thời hạn
+     * Dùng cho scheduled task tự động hủy đơn hàng chưa thanh toán quá 1 giờ
+     */
+    List<Order> findByPaymentStatusAndStatusAndPaymentMethodInAndCreatedAtBefore(
+            String paymentStatus, String status, List<String> paymentMethods, LocalDateTime dateTime);
 }

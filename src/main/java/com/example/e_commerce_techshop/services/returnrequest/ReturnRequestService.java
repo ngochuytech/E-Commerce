@@ -20,6 +20,7 @@ import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
 import com.example.e_commerce_techshop.models.Dispute;
 import com.example.e_commerce_techshop.models.Notification;
 import com.example.e_commerce_techshop.models.Order;
+import com.example.e_commerce_techshop.models.RefundRequest;
 import com.example.e_commerce_techshop.models.ReturnRequest;
 import com.example.e_commerce_techshop.models.Shipment;
 import com.example.e_commerce_techshop.models.User;
@@ -840,12 +841,12 @@ public class ReturnRequestService implements IReturnRequestService {
         if ("COD".equals(order.getPaymentMethod())) {
             // Tạo RefundRequest cho admin xử lý chuyển khoản thủ công
             try {
-                com.example.e_commerce_techshop.models.RefundRequest refundRequest = com.example.e_commerce_techshop.models.RefundRequest.builder()
+                RefundRequest refundRequest = RefundRequest.builder()
                         .order(order)
                         .buyer(order.getBuyer())
                         .refundAmount(returnRequest.getRefundAmount())
-                        .paymentMethod("BANK_TRANSFER") // Hoàn qua ngân hàng
-                        .status(com.example.e_commerce_techshop.models.RefundRequest.RefundStatus.PENDING.name())
+                        .paymentMethod(RefundRequest.PaymentMethod.BANK_TRANSFER.name()) // Hoàn qua ngân hàng
+                        .status(RefundRequest.RefundStatus.PENDING.name())
                         .build();
                 refundRequestRepository.save(refundRequest);
 

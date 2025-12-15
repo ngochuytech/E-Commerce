@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.e_commerce_techshop.models.Order;
+import com.example.e_commerce_techshop.models.OrderItem;
+import com.example.e_commerce_techshop.models.ProductVariant;
 import com.example.e_commerce_techshop.models.ReturnRequest;
 import com.example.e_commerce_techshop.repositories.OrderRepository;
 import com.example.e_commerce_techshop.repositories.ReturnRequestRepository;
@@ -29,6 +31,8 @@ public class OrderScheduledService {
     private final INotificationService notificationService;
     private final IWalletService walletService;
     private final IRefundService refundService;
+    private final com.example.e_commerce_techshop.repositories.OrderItemRepository orderItemRepository;
+    private final com.example.e_commerce_techshop.repositories.ProductVariantRepository productVariantRepository;
 
     /**
      * Tự động xác nhận hoàn thành đơn hàng sau 7 ngày kể từ khi giao hàng thành công
@@ -221,6 +225,136 @@ public class OrderScheduledService {
 
         } catch (Exception e) {
             log.error("[OrderScheduledService] Lỗi khi chạy auto refund scheduled task: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Tự động hủy đơn hàng thanh toán online chưa thanh toán quá 1 giờ và hoàn trả tồn kho
+     * Chạy mỗi 15 phút
+     * 
+     * Flow: PENDING + PaymentStatus.UNPAID + (VNPAY/MOMO) + createdAt > 1h -> CANCELLED + hoàn trả stock
+     */
+    @Scheduled(cron = "0 */15 * * * *") // Chạy mỗi 15 phút
+    @Transactional
+    public void autoCancelUnpaidOnlineOrders() {
+        log.info("=== [OrderScheduledService] Bắt đầu kiểm tra đơn hàng online chưa thanh toán quá 1 giờ ===");
+
+        try {
+            // Tìm các đơn hàng PENDING + UNPAID + (VNPAY/MOMO) được tạo quá 1 giờ
+            LocalDateTime oneHourAgo = LocalDateTime.now().minusHours(1);
+            List<String> onlinePaymentMethods = List.of("VNPAY", "MOMO");
+            
+            List<Order> onlineUnpaidOrders = orderRepository
+                    .findByPaymentStatusAndStatusAndPaymentMethodInAndCreatedAtBefore(
+                            Order.PaymentStatus.UNPAID.name(), 
+                            Order.OrderStatus.PENDING.name(),
+                            onlinePaymentMethods,
+                            oneHourAgo);
+
+            if (onlineUnpaidOrders.isEmpty()) {
+                log.info("[OrderScheduledService] Không có đơn hàng online nào cần tự động hủy");
+                return;
+            }
+
+            log.info("[OrderScheduledService] Tìm thấy {} đơn hàng online chưa thanh toán cần hủy", 
+                    onlineUnpaidOrders.size());
+
+            int successCount = 0;
+            int failCount = 0;
+
+            for (Order order : onlineUnpaidOrders) {
+                try {
+                    // Hoàn trả tồn kho trước khi hủy đơn
+                    List<OrderItem> orderItems = 
+                            orderItemRepository.findByOrderId(order.getId());
+                    
+                    for (OrderItem item : orderItems) {
+                        ProductVariant productVariant = 
+                                productVariantRepository.findById(item.getProductVariant().getId())
+                                        .orElse(null);
+
+                        if (productVariant == null) {
+                            log.warn("[OrderScheduledService] Không tìm thấy product variant {}", 
+                                    item.getProductVariant().getId());
+                            continue;
+                        }
+
+                        // Hoàn trả stock đúng cách (tổng stock hoặc stock theo màu)
+                        if (item.getColorId() != null && productVariant.getColors() != null
+                                && !productVariant.getColors().isEmpty()) {
+                            // Có màu sắc -> hoàn trả stock cho màu đó và cập nhật tổng stock
+                            ProductVariant.ColorOption color = 
+                                    productVariant.getColors().stream()
+                                            .filter(c -> c.getId().equals(item.getColorId()))
+                                            .findFirst()
+                                            .orElse(null);
+
+                            if (color != null) {
+                                int oldStock = color.getStock();
+                                color.setStock(color.getStock() + item.getQuantity());
+                                log.info("[OrderScheduledService] Hoàn trả stock màu {}: {} -> {} (+{})",
+                                        item.getColorId(), oldStock, color.getStock(), item.getQuantity());
+
+                                // Cập nhật tổng stock = tổng stock của tất cả màu
+                                int totalStock = productVariant.getColors().stream()
+                                        .mapToInt(ProductVariant.ColorOption::getStock)
+                                        .sum();
+                                productVariant.setStock(totalStock);
+                            }
+                        } else {
+                            // Không có màu sắc -> hoàn trả stock tổng
+                            int oldStock = productVariant.getStock();
+                            productVariant.setStock(productVariant.getStock() + item.getQuantity());
+                            log.info("[OrderScheduledService] Hoàn trả stock: {} -> {} (+{})",
+                                    oldStock, productVariant.getStock(), item.getQuantity());
+                        }
+
+                        productVariantRepository.save(productVariant);
+                    }
+
+                    // Cập nhật trạng thái đơn hàng sang CANCELLED
+                    order.setStatus(Order.OrderStatus.CANCELLED.name());
+                    order.setRejectReason("Tự động hủy do không thanh toán trong vòng 1 giờ");
+                    orderRepository.save(order);
+
+                    // Thông báo cho khách hàng
+                    try {
+                        notificationService.createUserNotification(order.getBuyer().getId(),
+                                "Đơn hàng đã bị hủy",
+                                String.format("Đơn hàng #%s đã bị hủy tự động do bạn chưa thanh toán trong vòng 1 giờ. " +
+                                        "Vui lòng đặt hàng lại nếu bạn vẫn muốn mua.", 
+                                        order.getId()),
+                                order.getId());
+                    } catch (Exception e) {
+                        log.warn("[OrderScheduledService] Lỗi gửi thông báo cho buyer: {}", e.getMessage());
+                    }
+
+                    // Thông báo cho shop
+                    try {
+                        notificationService.createStoreNotification(order.getStore().getId(),
+                                "Đơn hàng đã bị hủy",
+                                String.format("Đơn hàng #%s đã bị hệ thống tự động hủy do khách hàng chưa thanh toán trong vòng 1 giờ.",
+                                        order.getId()),
+                                order.getId());
+                    } catch (Exception e) {
+                        log.warn("[OrderScheduledService] Lỗi gửi thông báo cho store: {}", e.getMessage());
+                    }
+
+                    successCount++;
+                    log.info("[OrderScheduledService] Đã hủy đơn hàng #{} và hoàn trả stock", order.getId());
+
+                } catch (Exception e) {
+                    failCount++;
+                    log.error("[OrderScheduledService] Lỗi khi hủy đơn hàng #{}: {}", 
+                            order.getId(), e.getMessage());
+                }
+            }
+
+            log.info("=== [OrderScheduledService] Kết thúc auto cancel: {} thành công, {} thất bại ===", 
+                    successCount, failCount);
+
+        } catch (Exception e) {
+            log.error("[OrderScheduledService] Lỗi khi chạy auto cancel scheduled task: {}", e.getMessage(), e);
         }
     }
 }

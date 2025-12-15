@@ -32,6 +32,10 @@ public class OrderResponse {
 
     private String paymentMethod;
 
+    private String momoTransId; // Mã giao dịch MoMo (transId khi thanh toán thành công)
+
+    private String paymentStatus; // Trạng thái thanh toán: UNPAID, PAID, FAILED
+
     private String status; // PENDING, CONFIRMED, SHIPPING, DELIVERED, CANCELLED
 
     private boolean isRated;
@@ -135,6 +139,8 @@ public class OrderResponse {
                 .platformDiscountAmount(order.getPlatformDiscountAmount() != null ? order.getPlatformDiscountAmount() : BigDecimal.ZERO)
                 .totalDiscountAmount(order.getTotalDiscountAmount() != null ? order.getTotalDiscountAmount() : BigDecimal.ZERO)
                 .paymentMethod(order.getPaymentMethod())
+                .paymentStatus(order.getPaymentStatus())
+                .momoTransId(order.getMomoTransId())
                 .status(order.getStatus())
                 .isRated(order.isRated())
                 .orderItems(orderItems)

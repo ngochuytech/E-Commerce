@@ -23,7 +23,6 @@ import com.example.e_commerce_techshop.repositories.OrderRepository;
 import com.example.e_commerce_techshop.repositories.ReturnRequestRepository;
 import com.example.e_commerce_techshop.repositories.ShipmentRepository;
 import com.example.e_commerce_techshop.services.notification.INotificationService;
-import com.example.e_commerce_techshop.services.wallet.IWalletService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -36,7 +35,6 @@ public class ShipmentService implements IShipmentService {
     private final AdminRevenueRepository adminRevenueRepository;
     private final ReturnRequestRepository returnRequestRepository;
     private final INotificationService notificationService;
-    private final IWalletService walletService;
 
     /**
      * Tạo shipment khi người bán xác nhận đơn hàng
@@ -142,15 +140,24 @@ public class ShipmentService implements IShipmentService {
     public Map<String, Long> getShipmentCountByStatus(String storeId) throws Exception {
         Map<String, Long> statusCounts = new HashMap<>();
 
-        long ready_to_pick = shipmentRepository.countByStatus(
-                Shipment.ShipmentStatus.READY_TO_PICK.name());
-        long delivered = shipmentRepository.countByStatus(
-                Shipment.ShipmentStatus.DELIVERED.name());
-        long returned = shipmentRepository.countByStatus(
-                Shipment.ShipmentStatus.RETURNED.name());
+        long ready_to_pick = shipmentRepository.countByStoreIdAndStatus(
+                storeId, Shipment.ShipmentStatus.READY_TO_PICK.name());
+        long picking = shipmentRepository.countByStoreIdAndStatus(
+                storeId, Shipment.ShipmentStatus.PICKING.name());
+        long shipping = shipmentRepository.countByStoreIdAndStatus(
+                storeId, Shipment.ShipmentStatus.SHIPPING.name());
+        long delivered = shipmentRepository.countByStoreIdAndStatus(
+                storeId, Shipment.ShipmentStatus.DELIVERED.name());
+        long deliveredFail = shipmentRepository.countByStoreIdAndStatus(
+                storeId, Shipment.ShipmentStatus.DELIVERED_FAIL.name());
+        long returned = shipmentRepository.countByStoreIdAndStatus(
+                storeId, Shipment.ShipmentStatus.RETURNED.name());
 
         statusCounts.put("readyToPick", ready_to_pick);
+        statusCounts.put("picking", picking);
+        statusCounts.put("shipping", shipping);
         statusCounts.put("delivered", delivered);
+        statusCounts.put("deliveredFail", deliveredFail);
         statusCounts.put("returned", returned);
         return statusCounts;
     }
@@ -345,14 +352,14 @@ public class ShipmentService implements IShipmentService {
     @Transactional
     public Shipment pickingShipment(String shipmentId, User shipper) throws Exception {
         Shipment shipment = shipmentRepository.findById(shipmentId)
-                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy shipment với ID: " + shipmentId));
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy order với ID: " + shipmentId));
 
         // Kiểm tra trạng thái hiện tại phải là READY_TO_PICK
         if (!Shipment.ShipmentStatus.READY_TO_PICK.name().equals(shipment.getStatus())) {
             throw new IllegalStateException(
                     String.format("Không thể chuyển sang PICKING. Trạng thái hiện tại: %s", shipment.getStatus()));
         }
-
+        
         shipment.setStatus(Shipment.ShipmentStatus.PICKING.name());
         shipment.setCarrier(shipper);
 
@@ -401,6 +408,12 @@ public class ShipmentService implements IShipmentService {
         Shipment shipment = shipmentRepository.findById(shipmentId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy shipment với ID: " + shipmentId));
 
+        // Kiểm tra nếu đây là đơn trả hàng thì không cho chuyển sang SHIPPING
+        if (shipment.isReturnShipment()) {
+            throw new IllegalStateException(
+                    "Đơn trả hàng không thể chuyển sang trạng thái SHIPPING. Vui lòng sử dụng chức năng trả hàng về shop.");
+        }
+
         // Kiểm tra trạng thái hiện tại phải là PICKED
         if (!Shipment.ShipmentStatus.PICKED.name().equals(shipment.getStatus())) {
             throw new IllegalStateException(
@@ -439,8 +452,9 @@ public class ShipmentService implements IShipmentService {
     }
 
     /**
-     * Shipper báo đang trả hàng về cho shop sau khi giao thất bại (DELIVERED_FAIL
-     * -> RETURNING)
+     * Shipper báo đang trả hàng về cho shop
+     * - Đơn trả hàng: PICKED -> RETURNING
+     * - Đơn giao thất bại: DELIVERED_FAIL -> RETURNING
      */
     @Override
     @Transactional
@@ -448,10 +462,23 @@ public class ShipmentService implements IShipmentService {
         Shipment shipment = shipmentRepository.findById(shipmentId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy shipment với ID: " + shipmentId));
 
-        // Kiểm tra trạng thái hiện tại phải là DELIVERED_FAIL
-        if (!Shipment.ShipmentStatus.DELIVERED_FAIL.name().equals(shipment.getStatus())) {
+        // Kiểm tra trạng thái hợp lệ
+        boolean isValidTransition = false;
+        
+        // Nếu là đơn trả hàng: cho phép chuyển từ PICKED -> RETURNING
+        if (shipment.isReturnShipment() && Shipment.ShipmentStatus.PICKED.name().equals(shipment.getStatus())) {
+            isValidTransition = true;
+        }
+        
+        // Nếu là đơn giao thất bại: cho phép chuyển từ DELIVERED_FAIL -> RETURNING
+        if (Shipment.ShipmentStatus.DELIVERED_FAIL.name().equals(shipment.getStatus())) {
+            isValidTransition = true;
+        }
+        
+        if (!isValidTransition) {
             throw new IllegalStateException(
-                    String.format("Không thể chuyển sang RETURNING. Trạng thái hiện tại: %s", shipment.getStatus()));
+                    String.format("Không thể chuyển sang RETURNING. Trạng thái hiện tại: %s, isReturnShipment: %s", 
+                            shipment.getStatus(), shipment.isReturnShipment()));
         }
 
         shipment.setStatus(Shipment.ShipmentStatus.RETURNING.name());
@@ -553,5 +580,11 @@ public class ShipmentService implements IShipmentService {
         }
 
         return savedShipment;
+    }
+
+    @Override
+    public Shipment getShipmentById(String shipmentId) throws Exception {
+        return shipmentRepository.findById(shipmentId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy shipment với ID: " + shipmentId));
     }
 }

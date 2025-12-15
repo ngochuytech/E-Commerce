@@ -18,6 +18,7 @@ import lombok.Setter;
 @Builder
 public class ShipmentResponse {
     private String id;
+    private String shipperName;
     private OrderResponse order;
     private StoreResponse store;
     private AddressResponse fromAddress;
@@ -35,6 +36,7 @@ public class ShipmentResponse {
         private String id;
         private String totalPrice;
         private String paymentMethod;
+        private String paymentStatus;
     }
 
     @Getter
@@ -66,10 +68,12 @@ public class ShipmentResponse {
     public static ShipmentResponse fromShipment(Shipment shipment) {
         return ShipmentResponse.builder()
                 .id(shipment.getId())
+                .shipperName(shipment.getCarrier() != null && shipment.getCarrier().getFullName() != null ? shipment.getCarrier().getFullName() : null)
                 .order(OrderResponse.builder()
                         .id(shipment.getOrder().getId())
                         .totalPrice(shipment.getOrder().getTotalPrice().toString())
                         .paymentMethod(shipment.getOrder().getPaymentMethod())
+                        .paymentStatus(shipment.getOrder().getPaymentStatus())
                         .build())
                 .store(StoreResponse.builder()
                         .id(shipment.getOrder().getStore().getId())

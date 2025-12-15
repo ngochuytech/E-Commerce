@@ -33,7 +33,7 @@ public interface IProductVariantService {
 
     Map<String, Long> countProductVariantsByStatus(String storeId) throws Exception;
 
-    void createProductVariant(ProductVariantDTO productVariantDTO, List<MultipartFile> imageFiles, Integer primaryImageIndex) throws Exception;
+    void createProductVariant(ProductVariantDTO productVariantDTO, List<MultipartFile> imageFiles, String primaryImageIndex) throws Exception;
 
     void createProductVariant(ProductVariantDTO productVariantDTO) throws Exception;
 

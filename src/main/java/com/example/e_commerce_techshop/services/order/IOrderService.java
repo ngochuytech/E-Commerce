@@ -22,6 +22,8 @@ public interface IOrderService {
     // Lấy chi tiết đơn hàng
     Order getOrderDetail(User user, String orderId) throws Exception;
 
+    Order getOrderById(String orderId) throws Exception;
+
     // Hủy đơn hàng
     void cancelOrder(User user, String orderId) throws Exception;
     

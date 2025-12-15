@@ -38,6 +38,11 @@ public class RefundRequest extends BaseEntity {
     @DBRef
     private User processedBy; // Admin xử lý
 
+    public enum PaymentMethod {
+        BANK_TRANSFER, // Hoàn tiền qua chuyển khoản ngân hàng
+        E_WALLET      // Hoàn tiền qua ví điện tử (MoMo, ZaloPay, ...)
+    }
+
     public enum RefundStatus {
         PENDING,     // Chờ xử lý
         COMPLETED,   // Đã hoàn tiền

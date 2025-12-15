@@ -14,6 +14,8 @@ public interface IShipmentService {
      */
     Shipment createShipment(String orderId) throws Exception;
 
+    Shipment getShipmentById(String shipmentId) throws Exception;
+
     /**
      * Lấy thông tin shipment theo order ID
      */
