@@ -25,7 +25,7 @@ public class Order extends BaseEntity {
 
     private BigDecimal shippingFee; // Phí ship
 
-    private BigDecimal serviceFee; // Phí dịch vụ (cố định: 5000đ)
+    private BigDecimal platformCommission; // Hoa hồng sàn lấy (5% doanh thu shop tối đa 500k)
 
     private BigDecimal storeDiscountAmount; // Tiền giảm từ shop (shop chịu)
 

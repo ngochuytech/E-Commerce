@@ -8,10 +8,12 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.e_commerce_techshop.models.AdminRevenue;
 import com.example.e_commerce_techshop.models.Order;
 import com.example.e_commerce_techshop.models.OrderItem;
 import com.example.e_commerce_techshop.models.ProductVariant;
 import com.example.e_commerce_techshop.models.ReturnRequest;
+import com.example.e_commerce_techshop.repositories.AdminRevenueRepository;
 import com.example.e_commerce_techshop.repositories.OrderRepository;
 import com.example.e_commerce_techshop.repositories.ReturnRequestRepository;
 import com.example.e_commerce_techshop.services.notification.INotificationService;
@@ -33,6 +35,7 @@ public class OrderScheduledService {
     private final IRefundService refundService;
     private final com.example.e_commerce_techshop.repositories.OrderItemRepository orderItemRepository;
     private final com.example.e_commerce_techshop.repositories.ProductVariantRepository productVariantRepository;
+    private final AdminRevenueRepository adminRevenueRepository;
 
     /**
      * Tự động xác nhận hoàn thành đơn hàng sau 7 ngày kể từ khi giao hàng thành công
@@ -69,19 +72,42 @@ public class OrderScheduledService {
 
                     // Cộng tiền vào ví shop
                     try {
-                        BigDecimal storeRevenue = order.getProductPrice()
-                                .subtract(order.getStoreDiscountAmount() != null ? order.getStoreDiscountAmount() : BigDecimal.ZERO)
-                                .subtract(order.getServiceFee() != null ? order.getServiceFee() : BigDecimal.ZERO)
+                        // Tính doanh thu từ sản phẩm (sau khi trừ discount shop chịu)
+                        BigDecimal productRevenue = order.getProductPrice()
+                                .subtract(order.getStoreDiscountAmount() != null ? order.getStoreDiscountAmount() : BigDecimal.ZERO);
+                        
+                        // Sàn lấy 5% hoa hồng từ doanh thu sản phẩm, tối đa 500,000đ
+                        BigDecimal platformCommission = productRevenue.multiply(BigDecimal.valueOf(0.05));
+                        BigDecimal maxCommission = BigDecimal.valueOf(500000);
+                        platformCommission = platformCommission.min(maxCommission);
+                        
+                        // Shop nhận doanh thu trừ đi hoa hồng + phí ship đầy đủ
+                        BigDecimal storeRevenue = productRevenue.subtract(platformCommission)
                                 .add(order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO);
                         
                         walletService.addOrderPaymentToWallet(
                                 order.getStore().getId(),
                                 order.getId(),
                                 storeRevenue,
-                                String.format("Thanh toán đơn hàng #%s (tự động hoàn thành)", order.getId())
+                                String.format("Thanh toán đơn hàng #%s (tự động hoàn thành sau 7 ngày)", order.getId())
                         );
-                        log.info("[OrderScheduledService] Đã cộng {} vào ví shop {} cho đơn #{}", 
+                        log.info("[OrderScheduledService] Đã cộng {} vào ví shop {} cho đơn #{} (95% doanh thu + phí ship)", 
                                 storeRevenue, order.getStore().getId(), order.getId());
+                        
+                        // Lưu hoa hồng sàn vào AdminRevenue để thống kê
+                        try {
+                            AdminRevenue platformCommissionRevenue = AdminRevenue.builder()
+                                    .order(order)
+                                    .amount(platformCommission)
+                                    .revenueType(AdminRevenue.RevenueType.PLATFORM_COMMISSION.name())
+                                    .description(String.format("Hoa hồng 5%% từ đơn hàng #%s (tự động)", order.getId()))
+                                    .build();
+                            adminRevenueRepository.save(platformCommissionRevenue);
+                            log.info("[OrderScheduledService] Đã lưu hoa hồng {} vào AdminRevenue cho đơn #{}", 
+                                    platformCommission, order.getId());
+                        } catch (Exception ex) {
+                            log.error("[OrderScheduledService] Lỗi lưu hoa hồng vào AdminRevenue: {}", ex.getMessage());
+                        }
                     } catch (Exception e) {
                         log.error("[OrderScheduledService] Lỗi cộng tiền vào ví shop: {}", e.getMessage());
                     }

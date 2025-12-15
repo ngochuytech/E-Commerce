@@ -22,8 +22,6 @@ public class OrderResponse {
 
     private BigDecimal shippingFee; // Phí ship
 
-    private BigDecimal serviceFee; // Phí dịch vụ (cố định)
-
     private BigDecimal storeDiscountAmount; // Tiền giảm từ shop (shop chịu)
 
     private BigDecimal platformDiscountAmount; // Tiền giảm từ sàn (sàn chịu)
@@ -134,7 +132,6 @@ public class OrderResponse {
                 .totalPrice(order.getTotalPrice())
                 .productPrice(order.getProductPrice() != null ? order.getProductPrice() : BigDecimal.ZERO)
                 .shippingFee(order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO)
-                .serviceFee(order.getServiceFee() != null ? order.getServiceFee() : BigDecimal.ZERO)
                 .storeDiscountAmount(order.getStoreDiscountAmount() != null ? order.getStoreDiscountAmount() : BigDecimal.ZERO)
                 .platformDiscountAmount(order.getPlatformDiscountAmount() != null ? order.getPlatformDiscountAmount() : BigDecimal.ZERO)
                 .totalDiscountAmount(order.getTotalDiscountAmount() != null ? order.getTotalDiscountAmount() : BigDecimal.ZERO)

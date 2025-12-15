@@ -34,7 +34,7 @@ public class AdminRevenueResponse {
         private BigDecimal totalPrice;
         private BigDecimal productPrice;
         private BigDecimal shippingFee;
-        private BigDecimal serviceFee;
+        private BigDecimal platformCommission;
         private BigDecimal totalDiscountAmount;
         private String status;
     }
@@ -59,7 +59,7 @@ public class AdminRevenueResponse {
                     .totalPrice(adminRevenue.getOrder().getTotalPrice())
                     .productPrice(adminRevenue.getOrder().getProductPrice())
                     .shippingFee(adminRevenue.getOrder().getShippingFee())
-                    .serviceFee(adminRevenue.getOrder().getServiceFee())
+                    .platformCommission(adminRevenue.getOrder().getPlatformCommission())
                     .totalDiscountAmount(adminRevenue.getOrder().getTotalDiscountAmount())
                     .status(adminRevenue.getOrder().getStatus())
                     .build();

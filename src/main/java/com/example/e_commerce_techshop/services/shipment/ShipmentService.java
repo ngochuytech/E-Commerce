@@ -1,6 +1,5 @@
 package com.example.e_commerce_techshop.services.shipment;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,12 +12,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
-import com.example.e_commerce_techshop.models.AdminRevenue;
 import com.example.e_commerce_techshop.models.Order;
 import com.example.e_commerce_techshop.models.ReturnRequest;
 import com.example.e_commerce_techshop.models.Shipment;
 import com.example.e_commerce_techshop.models.User;
-import com.example.e_commerce_techshop.repositories.AdminRevenueRepository;
 import com.example.e_commerce_techshop.repositories.OrderRepository;
 import com.example.e_commerce_techshop.repositories.ReturnRequestRepository;
 import com.example.e_commerce_techshop.repositories.ShipmentRepository;
@@ -32,7 +29,6 @@ public class ShipmentService implements IShipmentService {
 
     private final ShipmentRepository shipmentRepository;
     private final OrderRepository orderRepository;
-    private final AdminRevenueRepository adminRevenueRepository;
     private final ReturnRequestRepository returnRequestRepository;
     private final INotificationService notificationService;
 
@@ -247,32 +243,6 @@ public class ShipmentService implements IShipmentService {
         Order order = shipment.getOrder();
         order.setStatus(Order.OrderStatus.DELIVERED.name());
         orderRepository.save(order);
-
-        // Tạo AdminRevenue để lưu phí dịch vụ khi đơn được giao
-        try {
-            AdminRevenue adminRevenue = AdminRevenue.builder()
-                    .order(order)
-                    .amount(order.getServiceFee())
-                    .revenueType("SERVICE_FEE")
-                    .description(
-                            String.format("Phí dịch vụ từ đơn hàng #%s - Trạng thái DELIVERED", order.getId()))
-                    .build();
-            adminRevenueRepository.save(adminRevenue);
-
-            // Tạo AdminRevenue cho discount loss từ platform (sàn chịu)
-            if (order.getPlatformDiscountAmount() != null
-                    && order.getPlatformDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
-                AdminRevenue platformDiscountLoss = AdminRevenue.builder()
-                        .order(order)
-                        .amount(order.getPlatformDiscountAmount())
-                        .revenueType("PLATFORM_DISCOUNT_LOSS")
-                        .description(String.format("Tiền giảm giá sàn chịu từ đơn hàng #%s", order.getId()))
-                        .build();
-                adminRevenueRepository.save(platformDiscountLoss);
-            }
-        } catch (Exception e) {
-            System.err.println("Error creating AdminRevenue: " + e.getMessage());
-        }
 
         // Thông báo cho khách hàng và shop
         try {

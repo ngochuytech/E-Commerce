@@ -39,8 +39,8 @@ public class AdminStatisticsController {
         return ResponseEntity.ok(ApiResponse.ok(statisticsService.getAdminRevenueStatistics()));
     }
 
-    @Operation(summary = "Get service fees", description = "Retrieve all service fee records")
-    @GetMapping("/service-fees")
+    @Operation(summary = "Lấy phí hoa hồng", description = "Lấy tất cả các bản ghi phí hoa hồng")
+    @GetMapping("/platform-commissions")
     public ResponseEntity<?> getServiceFees(
             @Parameter(description = "Page number (0-indexed)", required = false, example = "0") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size", required = false, example = "10") @RequestParam(defaultValue = "10") int size,
@@ -52,7 +52,7 @@ public class AdminStatisticsController {
                 : Sort.by(sortBy).ascending();
 
         Pageable pageable = PageRequest.of(page, size, sort);
-        return ResponseEntity.ok(ApiResponse.ok(statisticsService.getAdminServiceFees(pageable)));
+        return ResponseEntity.ok(ApiResponse.ok(statisticsService.getAdminPlatformCommissions(pageable)));
     }
 
     @Operation(summary = "Get platform discount losses", description = "Retrieve all platform discount loss records")

@@ -97,8 +97,8 @@ public class StatisticsService implements IStatisticsService {
     }
 
     @Override
-    public Map<String, Object> getAdminServiceFees(Pageable pageable) {
-        List<AdminRevenue> allServiceFees = adminRevenueRepository.findByRevenueType("SERVICE_FEE", pageable)
+    public Map<String, Object> getAdminPlatformCommissions(Pageable pageable) {
+        List<AdminRevenue> allServiceFees = adminRevenueRepository.findByRevenueType(AdminRevenue.RevenueType.PLATFORM_COMMISSION.name(), pageable)
                 .getContent();
 
         BigDecimal total = allServiceFees.stream()
@@ -120,7 +120,7 @@ public class StatisticsService implements IStatisticsService {
 
     @Override
     public Map<String, Object> getAdminPlatformDiscountLosses(Pageable pageable) {
-        List<AdminRevenue> allLosses = adminRevenueRepository.findByRevenueType("PLATFORM_DISCOUNT_LOSS", pageable)
+        List<AdminRevenue> allLosses = adminRevenueRepository.findByRevenueType(AdminRevenue.RevenueType.PLATFORM_DISCOUNT_LOSS.name(), pageable)
                 .getContent();
         BigDecimal total = allLosses.stream()
                 .map(AdminRevenue::getAmount)

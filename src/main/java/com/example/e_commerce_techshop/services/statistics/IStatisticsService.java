@@ -9,7 +9,7 @@ public interface IStatisticsService {
 
     Map<String, Object> getAdminRevenueStatistics();
 
-    Map<String, Object> getAdminServiceFees(Pageable pageable);
+    Map<String, Object> getAdminPlatformCommissions(Pageable pageable);
 
     Map<String, Object> getAdminPlatformDiscountLosses(Pageable pageable);
 
