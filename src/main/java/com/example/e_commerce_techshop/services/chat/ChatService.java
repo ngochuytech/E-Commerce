@@ -40,22 +40,10 @@ public class ChatService implements IChatService {
         userRepository.findById(currentUserId)
                 .orElseThrow(() -> new DataNotFoundException("User not found"));
 
-        String recipientId;
+        String recipientId = request.getRecipientId();
 
-        // For BUYER_SELLER: get seller from store
-        if (request.getType() == Conversation.ConversationType.BUYER_SELLER) {
-
-            Store store = storeRepository.findById(request.getStoreId())
-                    .orElseThrow(() -> new DataNotFoundException("Store not found"));
-
-            // Get store owner as recipient
-            recipientId = store.getOwner().getId();
-        } else {
-            // For other types, use provided recipientId
-            if (request.getRecipientId() == null) {
-                throw new IllegalArgumentException("Recipient ID is required");
-            }
-            recipientId = request.getRecipientId();
+        if (recipientId == null || recipientId.isEmpty()) {
+            throw new IllegalArgumentException("Recipient ID is required to create a conversation");
         }
 
         // Validate recipient exists
@@ -137,26 +125,27 @@ public class ChatService implements IChatService {
 
     @Override
     @Transactional
-    public ConversationDTO getOrCreateConversation(String userId1, String userId2, String storeId) {
+    public ConversationDTO getOrCreateConversation(String sender, String recipient, String storeId) {
+        if(sender.equals(recipient))
+            throw new IllegalArgumentException("Người gửi và người nhận không thể giống nhau");
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new DataNotFoundException("Store not found"));
 
-        List<String> participantIds = Arrays.asList(userId1, userId2);
-
+        List<String> participantIds = Arrays.asList(sender, recipient);
         Optional<Conversation> existingConv = conversationRepository.findByParticipantIdsAndStoreId(participantIds, storeId);
 
         if (existingConv.isPresent()) {
-            return convertToDTO(existingConv.get(), userId1);
+            return convertToDTO(existingConv.get(), sender);
         }
 
         // Create new conversation
         CreateConversationRequest request = CreateConversationRequest.builder()
-                .recipientId(store.getOwner().getId())
+                .recipientId(recipient)
                 .type(Conversation.ConversationType.BUYER_SELLER)
                 .storeId(storeId)
                 .build();
 
-        return createConversation(request, userId1);
+        return createConversation(request, sender);
     }
 
     @Override
