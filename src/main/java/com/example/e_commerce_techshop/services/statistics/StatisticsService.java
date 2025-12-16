@@ -74,24 +74,32 @@ public class StatisticsService implements IStatisticsService {
 
     @Override
     public Map<String, Object> getAdminRevenueStatistics() {
-        // Tổng phí dịch vụ từ tất cả orders
-        List<AdminRevenue> allServiceFees = adminRevenueRepository.findByRevenueType("SERVICE_FEE");
-        BigDecimal totalServiceFee = allServiceFees.stream()
+        // Tổng hoa hồng nền tảng
+        List<AdminRevenue> platformCommissions = adminRevenueRepository.findByRevenueType(AdminRevenue.RevenueType.PLATFORM_COMMISSION.name());
+        BigDecimal totalPlatformCommission = platformCommissions.stream()
                 .map(AdminRevenue::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         // Tổng tiền lỗ từ platform discount
-        List<AdminRevenue> platformDiscountLoss = adminRevenueRepository.findByRevenueType("PLATFORM_DISCOUNT_LOSS");
+        List<AdminRevenue> platformDiscountLoss = adminRevenueRepository.findByRevenueType(AdminRevenue.RevenueType.PLATFORM_DISCOUNT_LOSS.name());
         BigDecimal totalPlatformDiscountLoss = platformDiscountLoss.stream()
                 .map(AdminRevenue::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        // Tổng phí vận chuyển
+        List<AdminRevenue> shippingFees = adminRevenueRepository.findByRevenueType(AdminRevenue.RevenueType.SHIPPING_FEE.name());
+        BigDecimal totalShippingFee = shippingFees.stream()
+                .map(AdminRevenue::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         Map<String, Object> stats = new HashMap<>();
-        stats.put("totalServiceFee", totalServiceFee);
+        stats.put("totalPlatformCommission", totalPlatformCommission);
         stats.put("totalPlatformDiscountLoss", totalPlatformDiscountLoss);
-        stats.put("netRevenue", totalServiceFee.subtract(totalPlatformDiscountLoss));
-        stats.put("serviceFeeCount", allServiceFees.size());
+        stats.put("totalShippingFee", totalShippingFee);
+        stats.put("netRevenue", totalPlatformCommission.add(totalShippingFee).subtract(totalPlatformDiscountLoss));
+        stats.put("platformCommissionCount", platformCommissions.size());
         stats.put("platformDiscountLossCount", platformDiscountLoss.size());
+        stats.put("shippingFeeCount", shippingFees.size());
 
         return stats;
     }
@@ -133,6 +141,28 @@ public class StatisticsService implements IStatisticsService {
         Map<String, Object> response = new HashMap<>();
         response.put("revenues", responseList);
         response.put("total", allLosses.size());
+        response.put("page", pageable.getPageNumber());
+        response.put("size", pageable.getPageSize());
+        response.put("totalAmount", total);
+
+        return response;
+    }
+
+    @Override
+    public Map<String, Object> getAdminShippingFees(Pageable pageable) {
+        List<AdminRevenue> allShippingFees = adminRevenueRepository.findByRevenueType(AdminRevenue.RevenueType.SHIPPING_FEE.name(), pageable)
+                .getContent();
+        BigDecimal total = allShippingFees.stream()
+                .map(AdminRevenue::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        List<AdminRevenueResponse> responseList = allShippingFees.stream()
+                .map(AdminRevenueResponse::fromAdminRevenue)
+                .toList();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("revenues", responseList);
+        response.put("total", allShippingFees.size());
         response.put("page", pageable.getPageNumber());
         response.put("size", pageable.getPageSize());
         response.put("totalAmount", total);

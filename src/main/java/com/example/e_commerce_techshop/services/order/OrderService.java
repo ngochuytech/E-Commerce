@@ -758,11 +758,97 @@ public class OrderService implements IOrderService {
     }
 
     @Override
+    @Transactional
     public Order rejectOrder(String storeId, String orderId, String reason) throws Exception {
         Order order = getStoreOrderDetail(storeId, orderId);
+        
+        // Chỉ cho phép từ chối đơn hàng PENDING hoặc CONFIRMED
+        if (!Order.OrderStatus.PENDING.name().equals(order.getStatus()) && 
+            !Order.OrderStatus.CONFIRMED.name().equals(order.getStatus())) {
+            throw new IllegalArgumentException("Chỉ có thể từ chối đơn hàng ở trạng thái PENDING hoặc CONFIRMED");
+        }
+        
         order.setStatus(Order.OrderStatus.CANCELLED.name());
         order.setRejectReason(reason);
-        return orderRepository.save(order);
+        
+        // Hoàn trả stock
+        List<OrderItem> orderItems = orderItemRepository.findByOrderId(order.getId());
+        for (OrderItem item : orderItems) {
+            ProductVariant productVariant = productVariantRepository.findById(item.getProductVariant().getId())
+                    .orElseThrow(() -> new DataNotFoundException("Không tìm thấy sản phẩm"));
+
+            // Hoàn trả stock đúng cách (tổng stock hoặc stock theo màu)
+            if (item.getColorId() != null && productVariant.getColors() != null
+                    && !productVariant.getColors().isEmpty()) {
+                // Có màu sắc -> hoàn trả stock cho màu đó và cập nhật tổng stock
+                ProductVariant.ColorOption color = productVariant.getColors().stream()
+                        .filter(c -> c.getId().equals(item.getColorId()))
+                        .findFirst()
+                        .orElse(null);
+
+                if (color != null) {
+                    color.setStock(color.getStock() + item.getQuantity());
+                    // Cập nhật tổng stock = tổng stock của tất cả màu
+                    int totalStock = productVariant.getColors().stream()
+                            .mapToInt(ProductVariant.ColorOption::getStock)
+                            .sum();
+                    productVariant.setStock(totalStock);
+                }
+            } else {
+                // Không có màu sắc -> hoàn trả stock tổng
+                productVariant.setStock(productVariant.getStock() + item.getQuantity());
+            }
+
+            productVariantRepository.save(productVariant);
+        }
+        
+        // Hoàn tiền nếu đã thanh toán (MoMo/VNPay)
+        if (Order.PaymentStatus.PAID.name().equals(order.getPaymentStatus())) {
+            try {
+                // Tạo yêu cầu hoàn tiền
+                refundService.createRefundRequest(order);
+                
+                // Trừ pendingAmount vì đơn hàng thanh toán online đã được cộng pending trước đó
+                try {
+                    BigDecimal productRevenue = order.getProductPrice()
+                            .subtract(order.getStoreDiscountAmount() != null ? order.getStoreDiscountAmount() : BigDecimal.ZERO);
+                    BigDecimal platformCommission = productRevenue.multiply(BigDecimal.valueOf(0.05));
+                    BigDecimal maxCommission = BigDecimal.valueOf(500000);
+                    platformCommission = platformCommission.min(maxCommission);
+                    BigDecimal storeRevenue = productRevenue.subtract(platformCommission)
+                            .add(order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO);
+                    
+                    walletService.deductFromPendingAmount(
+                            order.getStore().getId(),
+                            order.getId(),
+                            storeRevenue,
+                            String.format("Shop từ chối đơn hàng #%s - trừ tiền chờ", order.getId())
+                    );  
+                } catch (Exception ex) {
+                    System.err.println("Error deducting from pending amount: " + ex.getMessage());
+                }
+            } catch (Exception e) {
+                System.err.println("Error creating refund request: " + e.getMessage());
+                // Vẫn cho phép từ chối đơn nhưng ghi log lỗi
+                // Admin sẽ xử lý hoàn tiền thủ công
+            }
+        }
+        
+        Order savedOrder = orderRepository.save(order);
+        
+        // Thông báo cho khách hàng về việc từ chối đơn
+        try {
+            notificationService.createUserNotification(
+                    order.getBuyer().getId(),
+                    "Đơn hàng bị từ chối",
+                    String.format("Cửa hàng %s đã từ chối đơn hàng #%s. Lý do: %s", 
+                            order.getStore().getName(), order.getId(), reason),
+                    order.getId());
+        } catch (Exception e) {
+            System.err.println("Error creating notification: " + e.getMessage());
+        }
+        
+        return savedOrder;
     }
 
     // Lấy giá của sản phẩm (có thể theo màu)
@@ -989,6 +1075,32 @@ public class OrderService implements IOrderService {
         // Nếu thanh toán thành công và đơn hàng đang PENDING
         if ("PAID".equals(paymentStatus) && Order.OrderStatus.PENDING.name().equals(order.getStatus())) {
             order.setPaymentStatus(Order.PaymentStatus.PAID.name());
+            
+            // Cộng tiền vào pendingAmount của ví shop (thanh toán online đã nhận tiền)
+            try {
+                // Tính doanh thu shop sẽ nhận
+                BigDecimal productRevenue = order.getProductPrice()
+                        .subtract(order.getStoreDiscountAmount() != null ? order.getStoreDiscountAmount() : BigDecimal.ZERO);
+                
+                // Sàn lấy 5% hoa hồng, tối đa 500,000đ
+                BigDecimal platformCommission = productRevenue.multiply(BigDecimal.valueOf(0.05));
+                BigDecimal maxCommission = BigDecimal.valueOf(500000);
+                platformCommission = platformCommission.min(maxCommission);
+                
+                // Shop nhận 95% doanh thu + phí ship
+                BigDecimal storeRevenue = productRevenue.subtract(platformCommission)
+                        .add(order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO);
+                
+                walletService.addToPendingAmount(
+                        order.getStore().getId(),
+                        order.getId(),
+                        storeRevenue,
+                        String.format("Tiền chờ từ đơn hàng #%s (thanh toán online)", order.getId())
+                );
+            } catch (Exception e) {
+                System.err.println("Error adding to pending amount: " + e.getMessage());
+            }
+            
             // Gửi thông báo cho cửa hàng
             try {
                 notificationService.createStoreNotification(

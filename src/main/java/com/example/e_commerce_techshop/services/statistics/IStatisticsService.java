@@ -13,6 +13,8 @@ public interface IStatisticsService {
 
     Map<String, Object> getAdminPlatformDiscountLosses(Pageable pageable);
 
+    Map<String, Object> getAdminShippingFees(Pageable pageable);
+
     Map<String, Object> getAdminRevenueByDateRange(String startDate, String endDate, Pageable pageable);
     // Chart data methods
     Map<String, Object> getRevenueChartData(String period);

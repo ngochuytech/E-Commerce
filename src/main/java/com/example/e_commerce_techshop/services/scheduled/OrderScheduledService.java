@@ -70,7 +70,7 @@ public class OrderScheduledService {
                     order.setStatus(Order.OrderStatus.COMPLETED.name());
                     orderRepository.save(order);
 
-                    // Cộng tiền vào ví shop
+                    // Chuyển tiền từ pendingAmount sang balance
                     try {
                         // Tính doanh thu từ sản phẩm (sau khi trừ discount shop chịu)
                         BigDecimal productRevenue = order.getProductPrice()
@@ -81,17 +81,18 @@ public class OrderScheduledService {
                         BigDecimal maxCommission = BigDecimal.valueOf(500000);
                         platformCommission = platformCommission.min(maxCommission);
                         
-                        // Shop nhận doanh thu trừ đi hoa hồng + phí ship đầy đủ
+                        // Shop nhận doanh thu trừ đi hoa hồng + phí ship
                         BigDecimal storeRevenue = productRevenue.subtract(platformCommission)
                                 .add(order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO);
                         
-                        walletService.addOrderPaymentToWallet(
+                        // Chuyển từ pending sang balance (thay vì cộng thẳng)
+                        walletService.transferPendingToBalance(
                                 order.getStore().getId(),
                                 order.getId(),
                                 storeRevenue,
                                 String.format("Thanh toán đơn hàng #%s (tự động hoàn thành sau 7 ngày)", order.getId())
                         );
-                        log.info("[OrderScheduledService] Đã cộng {} vào ví shop {} cho đơn #{} (95% doanh thu + phí ship)", 
+                        log.info("[OrderScheduledService] Đã chuyển {} từ pending sang balance cho shop {} đơn #{}", 
                                 storeRevenue, order.getStore().getId(), order.getId());
                         
                         // Lưu hoa hồng sàn vào AdminRevenue để thống kê
@@ -109,7 +110,7 @@ public class OrderScheduledService {
                             log.error("[OrderScheduledService] Lỗi lưu hoa hồng vào AdminRevenue: {}", ex.getMessage());
                         }
                     } catch (Exception e) {
-                        log.error("[OrderScheduledService] Lỗi cộng tiền vào ví shop: {}", e.getMessage());
+                        log.error("[OrderScheduledService] Lỗi chuyển pending sang balance: {}", e.getMessage());
                     }
 
                     // Thông báo cho khách hàng

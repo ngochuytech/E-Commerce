@@ -12,15 +12,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
+import com.example.e_commerce_techshop.models.AdminRevenue;
 import com.example.e_commerce_techshop.models.Order;
 import com.example.e_commerce_techshop.models.ReturnRequest;
 import com.example.e_commerce_techshop.models.Shipment;
 import com.example.e_commerce_techshop.models.User;
+import com.example.e_commerce_techshop.repositories.AdminRevenueRepository;
 import com.example.e_commerce_techshop.repositories.OrderRepository;
 import com.example.e_commerce_techshop.repositories.ReturnRequestRepository;
 import com.example.e_commerce_techshop.repositories.ShipmentRepository;
 import com.example.e_commerce_techshop.services.notification.INotificationService;
+import com.example.e_commerce_techshop.services.wallet.IWalletService;
 
+import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -31,6 +35,8 @@ public class ShipmentService implements IShipmentService {
     private final OrderRepository orderRepository;
     private final ReturnRequestRepository returnRequestRepository;
     private final INotificationService notificationService;
+    private final IWalletService walletService;
+    private final AdminRevenueRepository adminRevenueRepository;
 
     /**
      * Tạo shipment khi người bán xác nhận đơn hàng
@@ -242,7 +248,53 @@ public class ShipmentService implements IShipmentService {
         // Cập nhật trạng thái order sang DELIVERED
         Order order = shipment.getOrder();
         order.setStatus(Order.OrderStatus.DELIVERED.name());
+        
+        // Nếu là COD, cập nhật payment status thành PAID và cộng pendingAmount
+        if ("COD".equalsIgnoreCase(order.getPaymentMethod())) {
+            order.setPaymentStatus(Order.PaymentStatus.PAID.name());
+            
+            // Cộng tiền vào pendingAmount (COD - tiền thu từ khách hàng)
+            try {
+                // Tính doanh thu shop sẽ nhận
+                BigDecimal productRevenue = order.getProductPrice()
+                        .subtract(order.getStoreDiscountAmount() != null ? order.getStoreDiscountAmount() : BigDecimal.ZERO);
+                
+                // Sàn lấy 5% hoa hồng, tối đa 500,000đ
+                BigDecimal platformCommission = productRevenue.multiply(BigDecimal.valueOf(0.05));
+                BigDecimal maxCommission = BigDecimal.valueOf(500000);
+                platformCommission = platformCommission.min(maxCommission);
+                
+                // Shop nhận 95% doanh thu + phí ship
+                BigDecimal storeRevenue = productRevenue.subtract(platformCommission)
+                        .add(order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO);
+                
+                walletService.addToPendingAmount(
+                        order.getStore().getId(),
+                        order.getId(),
+                        storeRevenue,
+                        String.format("Tiền chờ từ đơn hàng #%s (COD - đã giao hàng)", order.getId())
+                );
+            } catch (Exception e) {
+                System.err.println("Error adding to pending amount for COD: " + e.getMessage());
+            }
+        }
+        
         orderRepository.save(order);
+
+        // Lưu phí ship vào AdminRevenue để thống kê (khi giao hàng thành công)
+        try {
+            if (order.getShippingFee() != null && order.getShippingFee().compareTo(BigDecimal.ZERO) > 0) {
+                AdminRevenue shippingFeeRevenue = AdminRevenue.builder()
+                        .order(order)
+                        .amount(order.getShippingFee())
+                        .revenueType(AdminRevenue.RevenueType.SHIPPING_FEE.name())
+                        .description(String.format("Phí vận chuyển từ đơn hàng #%s", order.getId()))
+                        .build();
+                adminRevenueRepository.save(shippingFeeRevenue);
+            }
+        } catch (Exception ex) {
+            System.err.println("Error saving shipping fee to admin revenue: " + ex.getMessage());
+        }
 
         // Thông báo cho khách hàng và shop
         try {

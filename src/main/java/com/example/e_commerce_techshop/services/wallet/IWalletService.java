@@ -63,4 +63,35 @@ public interface IWalletService {
      * Tiền được hoàn vào ví user (UserWallet)
      */
     void refundToBuyer(String buyerId, String orderId, BigDecimal amount, String description) throws Exception;
+
+    /**
+     * Cộng tiền vào pendingAmount khi đơn hàng được thanh toán (MoMo/VNPay) hoặc giao thành công (COD)
+     * Tiền này sẽ được chuyển sang balance khi đơn hàng COMPLETED
+     * 
+     * @param storeId ID của store
+     * @param orderId ID của đơn hàng
+     * @param amount Số tiền shop sẽ nhận (đã trừ hoa hồng)
+     * @param description Mô tả giao dịch
+     */
+    void addToPendingAmount(String storeId, String orderId, BigDecimal amount, String description) throws Exception;
+
+    /**
+     * Chuyển tiền từ pendingAmount sang balance khi đơn hàng COMPLETED
+     * 
+     * @param storeId ID của store
+     * @param orderId ID của đơn hàng
+     * @param amount Số tiền chuyển từ pending sang balance
+     * @param description Mô tả giao dịch
+     */
+    void transferPendingToBalance(String storeId, String orderId, BigDecimal amount, String description) throws Exception;
+
+    /**
+     * Trừ tiền từ pendingAmount khi đơn hàng bị hủy/hoàn tiền
+     * 
+     * @param storeId ID của store
+     * @param orderId ID của đơn hàng
+     * @param amount Số tiền cần trừ
+     * @param description Mô tả giao dịch
+     */
+    void deductFromPendingAmount(String storeId, String orderId, BigDecimal amount, String description) throws Exception;
 }

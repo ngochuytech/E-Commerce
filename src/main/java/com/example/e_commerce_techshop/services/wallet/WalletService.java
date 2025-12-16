@@ -278,4 +278,132 @@ public class WalletService implements IWalletService {
             log.warn("Error sending refund notification to buyer: {}", e.getMessage());
         }
     }
+
+    @Override
+    @Transactional
+    public void addToPendingAmount(String storeId, String orderId, BigDecimal amount, String description)
+            throws Exception {
+        // Validate amount
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Số tiền phải lớn hơn 0");
+        }
+
+        // Lấy wallet của store (hoặc tạo mới nếu chưa có)
+        Wallet wallet = getStoreWallet(storeId);
+
+        // Cộng tiền vào pendingAmount
+        wallet.setPendingAmount(wallet.getPendingAmount().add(amount));
+        walletRepository.save(wallet);
+
+        // Tạo transaction ghi nhận (loại PENDING)
+        Transaction transaction = Transaction.builder()
+                .wallet(wallet)
+                .type(Transaction.TransactionType.ORDER_PENDING)
+                .amount(amount)
+                .balanceBefore(wallet.getBalance())
+                .balanceAfter(wallet.getBalance()) // Balance không thay đổi
+                .description(description != null ? description : String.format("Tiền chờ từ đơn hàng #%s", orderId))
+                .status("PENDING")
+                .build();
+        transactionRepository.save(transaction);
+
+        log.info("[WalletService] Đã cộng {} vào pendingAmount ví shop {} từ đơn hàng #{}", 
+                amount, storeId, orderId);
+    }
+
+    @Override
+    @Transactional
+    public void transferPendingToBalance(String storeId, String orderId, BigDecimal amount, String description)
+            throws Exception {
+        // Validate amount
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Số tiền phải lớn hơn 0");
+        }
+
+        // Lấy wallet của store
+        Wallet wallet = getStoreWallet(storeId);
+
+        // Kiểm tra pendingAmount có đủ không
+        if (wallet.getPendingAmount().compareTo(amount) < 0) {
+            log.warn("[WalletService] PendingAmount không đủ. Hiện tại: {}, Cần: {}. Sẽ cộng thẳng vào balance.",
+                    wallet.getPendingAmount(), amount);
+            // Trường hợp pendingAmount không đủ (có thể do chưa được cộng trước đó)
+            // Cộng thẳng vào balance
+            BigDecimal balanceBefore = wallet.getBalance();
+            wallet.setBalance(wallet.getBalance().add(amount));
+            wallet.setTotalEarned(wallet.getTotalEarned().add(amount));
+            walletRepository.save(wallet);
+
+            // Tạo transaction
+            Transaction transaction = Transaction.builder()
+                    .wallet(wallet)
+                    .type(Transaction.TransactionType.ORDER_COMPLETED)
+                    .amount(amount)
+                    .balanceBefore(balanceBefore)
+                    .balanceAfter(wallet.getBalance())
+                    .description(description != null ? description : String.format("Thanh toán từ đơn hàng #%s", orderId))
+                    .status("COMPLETED")
+                    .build();
+            transactionRepository.save(transaction);
+        } else {
+            // Chuyển từ pending sang balance
+            BigDecimal balanceBefore = wallet.getBalance();
+            wallet.setPendingAmount(wallet.getPendingAmount().subtract(amount));
+            wallet.setBalance(wallet.getBalance().add(amount));
+            wallet.setTotalEarned(wallet.getTotalEarned().add(amount));
+            walletRepository.save(wallet);
+
+            // Tạo transaction ghi nhận
+            Transaction transaction = Transaction.builder()
+                    .wallet(wallet)
+                    .type(Transaction.TransactionType.ORDER_COMPLETED)
+                    .amount(amount)
+                    .balanceBefore(balanceBefore)
+                    .balanceAfter(wallet.getBalance())
+                    .description(description != null ? description : String.format("Thanh toán từ đơn hàng #%s (chuyển từ pending)", orderId))
+                    .status("COMPLETED")
+                    .build();
+            transactionRepository.save(transaction);
+        }
+
+        log.info("[WalletService] Đã chuyển {} từ pending sang balance cho shop {} từ đơn hàng #{}", 
+                amount, storeId, orderId);
+    }
+
+    @Override
+    @Transactional
+    public void deductFromPendingAmount(String storeId, String orderId, BigDecimal amount, String description)
+            throws Exception {
+        // Validate amount
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Số tiền phải lớn hơn 0");
+        }
+
+        // Lấy wallet của store
+        Wallet wallet = getStoreWallet(storeId);
+
+        // Trừ pendingAmount (nếu có đủ)
+        if (wallet.getPendingAmount().compareTo(amount) >= 0) {
+            wallet.setPendingAmount(wallet.getPendingAmount().subtract(amount));
+            walletRepository.save(wallet);
+
+            // Tạo transaction ghi nhận
+            Transaction transaction = Transaction.builder()
+                    .wallet(wallet)
+                    .type(Transaction.TransactionType.ORDER_CANCELLED)
+                    .amount(amount)
+                    .balanceBefore(wallet.getBalance())
+                    .balanceAfter(wallet.getBalance()) // Balance không thay đổi
+                    .description(description != null ? description : String.format("Hủy đơn hàng #%s - trừ pending", orderId))
+                    .status("COMPLETED")
+                    .build();
+            transactionRepository.save(transaction);
+
+            log.info("[WalletService] Đã trừ {} từ pendingAmount ví shop {} do hủy đơn #{}", 
+                    amount, storeId, orderId);
+        } else {
+            log.warn("[WalletService] PendingAmount không đủ để trừ. Hiện tại: {}, Cần trừ: {}. Bỏ qua.",
+                    wallet.getPendingAmount(), amount);
+        }
+    }
 }

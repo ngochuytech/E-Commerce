@@ -150,11 +150,11 @@ public class BuyerPaymentController {
                         // Cập nhật trạng thái thanh toán của đơn hàng
                         if (resultCode == 0) {
                                 // Thanh toán thành công
-                                orderService.updatePaymentStatus(orderId, "PAID", transId);
+                                orderService.updatePaymentStatus(orderId, Order.PaymentStatus.PAID.name(), transId);
                                 System.out.println("✓ Payment successful for order: " + orderId);
                         } else {
                                 // Thanh toán thất bại
-                                orderService.updatePaymentStatus(orderId, "FAILED", null);
+                                orderService.updatePaymentStatus(orderId, Order.PaymentStatus.FAILED.name(), null);
                                 System.out.println("✗ Payment failed for order: " + orderId + " - " + message);
                         }
 

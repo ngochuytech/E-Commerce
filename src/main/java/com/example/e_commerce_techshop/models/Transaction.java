@@ -37,7 +37,9 @@ public class Transaction extends BaseEntity {
     private String status; // PENDING, COMPLETED, FAILED
     
     public enum TransactionType {
+        ORDER_PENDING,   // Tiền chờ từ đơn hàng (chưa hoàn thành)
         ORDER_COMPLETED, // Tiền từ đơn hàng hoàn thành
+        ORDER_CANCELLED, // Đơn hàng bị hủy - trừ pending
         WITHDRAWAL, // Rút tiền
         REFUND, // Hoàn tiền
         ADJUSTMENT // Điều chỉnh (admin)

@@ -71,6 +71,22 @@ public class AdminStatisticsController {
         return ResponseEntity.ok(ApiResponse.ok(statisticsService.getAdminPlatformDiscountLosses(pageable)));
     }
 
+    @Operation(summary = "Lấy phí vận chuyển", description = "Retrieve all shipping fee records collected from completed orders")
+    @GetMapping("/shipping-fees")
+    public ResponseEntity<?> getShippingFees(
+            @Parameter(description = "Page number (0-indexed)", required = false, example = "0") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Page size", required = false, example = "10") @RequestParam(defaultValue = "10") int size,
+            @Parameter(description = "Sort by field") @RequestParam(defaultValue = "createdAt") String sortBy,
+            @Parameter(description = "Sort direction: asc or desc") @RequestParam(defaultValue = "desc") String sortDir) {
+
+        Sort sort = sortDir.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+        return ResponseEntity.ok(ApiResponse.ok(statisticsService.getAdminShippingFees(pageable)));
+    }
+
     @Operation(summary = "Get revenue by date range", description = "Get service fees collected in a specific date range")
     @GetMapping("/date-range")
     public ResponseEntity<?> getRevenueByDateRange(
