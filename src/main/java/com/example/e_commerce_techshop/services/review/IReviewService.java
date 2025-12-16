@@ -4,8 +4,10 @@ import com.example.e_commerce_techshop.dtos.ReviewDTO;
 import com.example.e_commerce_techshop.models.Review;
 import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.responses.ReviewResponse;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -13,7 +15,7 @@ import java.util.Map;
 public interface IReviewService {
     
     // CRUD operations
-    void createReview(ReviewDTO reviewDTO, User currentUser);
+    void createReview(ReviewDTO reviewDTO, List<MultipartFile> images, User currentUser) throws Exception;
     void updateReview(String reviewId, ReviewDTO reviewDTO, User currentUser);
     void deleteReview(String reviewId, User currentUser);
     
@@ -23,14 +25,8 @@ public interface IReviewService {
     // Get reviews by product with pagination
     Page<Review> getReviewsByProduct(String productId, Pageable pageable);
     
-    // Get reviews by product (simple version for B2C)
-    List<ReviewResponse> getReviewsByProduct(String productId);
-    
     // Get reviews by product variant with pagination
     Page<Review> getReviewsByProductVariant(String productVariantId, Pageable pageable);
-    
-    // Get reviews by product variant (simple version)
-    List<ReviewResponse> getReviewsByProductVariant(String productVariantId);
     
     // Get reviews by user
     List<Review> getReviewsByUser(String userId);
@@ -40,12 +36,6 @@ public interface IReviewService {
     
     // Get product rating statistics
     Map<String, Object> getProductRatingStats(String productVariantId);
-    
-    // Respond to review
-    ReviewResponse respondToReview(String reviewId, String response);
-    
-    // Get pending reviews (without seller response)
-    List<ReviewResponse> getPendingReviewsByStore(String storeId);
     
     // Get review statistics
     Double getAverageRatingByStore(String storeId);

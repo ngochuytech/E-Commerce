@@ -22,14 +22,31 @@ public class Notification {
     @DBRef
     private User user;
 
+    @DBRef
+    private Store store;
+
     private String title;
 
     private String message;
+
+    private NotificationType type; // ORDER_UPDATE, STORE_APPROVAL, PRODUCT_APPROVAL, PAYMENT, SYSTEM
+
+    private String relatedId; // Order ID, Store ID, Product ID, etc.
+
+    private Boolean isAdmin; // true if this notification is for admin
 
     private Boolean isRead;
 
     @CreatedDate
     private LocalDateTime createdAt;
 
-
+    public enum NotificationType {
+        ORDER_UPDATE,
+        STORE_APPROVAL,
+        PRODUCT_APPROVAL,
+        PAYMENT,
+        DISPUTE,
+        REFUND_REQUEST,
+        SYSTEM
+    }
 }

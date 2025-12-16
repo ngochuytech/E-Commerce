@@ -1,6 +1,6 @@
 package com.example.e_commerce_techshop.responses.user;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,9 +22,13 @@ public class UserResponse {
 
     private String fullName;
 
-    private LocalDateTime dateOfBirth;
+    private LocalDate dateOfBirth;
 
     private String avatar;
+
+    private boolean isActive;
+
+    private boolean enable;
 
     private List<AddressResponse> address;
 
@@ -76,6 +80,8 @@ public class UserResponse {
                 .dateOfBirth(user.getDateOfBirth())
                 .avatar(user.getAvatar())
                 .address(addressResponses)
+                .isActive(user.getIsActive())
+                .enable(user.getEnable())
                 .roles(roleNames)
                 .build();
     }

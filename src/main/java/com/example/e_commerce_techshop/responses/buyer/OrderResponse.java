@@ -22,9 +22,17 @@ public class OrderResponse {
 
     private BigDecimal shippingFee; // Phí ship
 
-    private BigDecimal serviceFee; // Phí dịch vụ (cố định)
+    private BigDecimal storeDiscountAmount; // Tiền giảm từ shop (shop chịu)
+
+    private BigDecimal platformDiscountAmount; // Tiền giảm từ sàn (sàn chịu)
+
+    private BigDecimal totalDiscountAmount; // Tổng tiền giảm giá
 
     private String paymentMethod;
+
+    private String momoTransId; // Mã giao dịch MoMo (transId khi thanh toán thành công)
+
+    private String paymentStatus; // Trạng thái thanh toán: UNPAID, PAID, FAILED
 
     private String status; // PENDING, CONFIRMED, SHIPPING, DELIVERED, CANCELLED
 
@@ -47,9 +55,10 @@ public class OrderResponse {
     @AllArgsConstructor
     @NoArgsConstructor
     @Builder
-    public static class UserResponse {
+    private static class UserResponse {
         private String id;
         private String username;
+        private String fullName;
         private String email;
         private String phone;
     }
@@ -59,7 +68,7 @@ public class OrderResponse {
     @AllArgsConstructor
     @NoArgsConstructor
     @Builder
-    public static class StoreResponse {
+    private static class StoreResponse {
         private String id;
         private String name;
         private String logo;
@@ -70,19 +79,20 @@ public class OrderResponse {
     @AllArgsConstructor
     @NoArgsConstructor
     @Builder
-    public static class AddressResponse {
+    private static class AddressResponse {
         private String province;
         private String district;
         private String ward;
         private String homeAddress;
         private String suggestedName;
+        private String phone;
     }
 
     public static OrderResponse fromOrder(Order order) {
         List<OrderItemResponse> orderItems = order.getOrderItems().stream()
                 .map(orderItem -> {
                     String primaryImageUrl = orderItem.getProductVariant().getPrimaryImageUrl();
-                    
+
                     return OrderItemResponse.builder()
                             .id(orderItem.getId())
                             .productVariantId(orderItem.getProductVariant().getId())
@@ -100,8 +110,9 @@ public class OrderResponse {
                 .username(order.getBuyer().getUsername())
                 .email(order.getBuyer().getEmail())
                 .phone(order.getBuyer().getPhone())
+                .fullName(order.getBuyer().getFullName())
                 .build();
-    
+
         StoreResponse store = StoreResponse.builder()
                 .id(order.getStore().getId())
                 .name(order.getStore().getName())
@@ -113,6 +124,7 @@ public class OrderResponse {
                 .ward(order.getAddress().getWard())
                 .homeAddress(order.getAddress().getHomeAddress())
                 .suggestedName(order.getAddress().getSuggestedName())
+                .phone(order.getAddress().getPhone())
                 .build();
 
         return OrderResponse.builder()
@@ -120,8 +132,12 @@ public class OrderResponse {
                 .totalPrice(order.getTotalPrice())
                 .productPrice(order.getProductPrice() != null ? order.getProductPrice() : BigDecimal.ZERO)
                 .shippingFee(order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO)
-                .serviceFee(order.getServiceFee() != null ? order.getServiceFee() : BigDecimal.ZERO)
+                .storeDiscountAmount(order.getStoreDiscountAmount() != null ? order.getStoreDiscountAmount() : BigDecimal.ZERO)
+                .platformDiscountAmount(order.getPlatformDiscountAmount() != null ? order.getPlatformDiscountAmount() : BigDecimal.ZERO)
+                .totalDiscountAmount(order.getTotalDiscountAmount() != null ? order.getTotalDiscountAmount() : BigDecimal.ZERO)
                 .paymentMethod(order.getPaymentMethod())
+                .paymentStatus(order.getPaymentStatus())
+                .momoTransId(order.getMomoTransId())
                 .status(order.getStatus())
                 .isRated(order.isRated())
                 .orderItems(orderItems)
@@ -150,7 +166,7 @@ public class OrderResponse {
         private Integer quantity;
 
         private BigDecimal price;
-        
+
         private String colorId;
     }
 }

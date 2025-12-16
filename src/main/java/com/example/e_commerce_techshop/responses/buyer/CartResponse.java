@@ -32,8 +32,8 @@ public class CartResponse {
         List<CartItemResponse> cartItems = cart.getCartItems().stream()
             .map(cartItem -> CartItemResponse.builder()
                     .id(cartItem.getId())
-                    .productId(cartItem.getProductVariant() != null ? cartItem.getProductVariant().getId() : null)
-                    .productName(cartItem.getProductVariant() != null ? cartItem.getProductVariant().getName() : null)
+                    .productVariantId(cartItem.getProductVariant() != null ? cartItem.getProductVariant().getId() : null)
+                    .productVariantName(cartItem.getProductVariant() != null ? cartItem.getProductVariant().getName() : null)
                     .imageUrl(cartItem.getProductVariant() != null ? cartItem.getProductVariant().getPrimaryImageUrl() : null)
                     .quantity(cartItem.getQuantity())
                     .price(cartItem.getProductVariant() != null ? BigDecimal.valueOf(cartItem.getProductVariant().getPrice()) : null)
@@ -84,9 +84,9 @@ class CartItemResponse {
 
     private String id;
 
-    private String productId;
+    private String productVariantId;
 
-    private String productName;
+    private String productVariantName;
 
     private String imageUrl;
 

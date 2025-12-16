@@ -17,6 +17,12 @@ spring:
       server-selection-timeout-ms: 30000
       connect-timeout-ms: 10000
       socket-timeout-ms: 30000
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
+      username: ${REDIS_USERNAME}
+      
   servlet:
     multipart:
       max-file-size: 30MB
@@ -78,7 +84,7 @@ springdoc:
 
 jwt:
   secret: EQOIAUgMdB/GxPmYT+uew/HLvOkYDOrAo3ihcFynD+Y=
-  expiration: 2592000000
+  expiration: 2592000
   expiration-refresh-token: 5184000 #60 days = 60 * 24 * 60 * 60
 
 vnpay:

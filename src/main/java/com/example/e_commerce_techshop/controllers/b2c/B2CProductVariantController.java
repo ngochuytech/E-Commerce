@@ -1,6 +1,7 @@
 package com.example.e_commerce_techshop.controllers.b2c;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -61,8 +62,10 @@ public class B2CProductVariantController {
                 : Sort.by(sortBy).ascending();
 
         Pageable pageable = PageRequest.of(page, size, sort);
-        Page<ProductVariant> productVariants = productVariantService.getAllProductVariantsB2C(storeId, status, pageable);
-        Page<ProductVariantResponse> productVariantResponses = productVariants.map(ProductVariantResponse::fromProductVariant);
+        Page<ProductVariant> productVariants = productVariantService.getAllProductVariantsB2C(storeId, status,
+                pageable);
+        Page<ProductVariantResponse> productVariantResponses = productVariants
+                .map(ProductVariantResponse::fromProductVariant);
         return ResponseEntity.ok(ApiResponse.ok(productVariantResponses));
     }
 
@@ -71,6 +74,7 @@ public class B2CProductVariantController {
     public ResponseEntity<?> createProductVariant(
             @Parameter(description = "Product variant information including product ID, size, color, price, stock quantity", required = true, content = @Content(schema = @Schema(implementation = ProductVariantDTO.class))) @RequestPart("dto") @Valid ProductVariantDTO productVariantDTO,
             @Parameter(description = "Product variant images (multiple files supported)", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE)) @RequestPart(value = "images", required = false) List<MultipartFile> imageFiles,
+            @Parameter(description = "Index of the primary image in the images list", required = false) @RequestPart(value = "primaryImageIndex", required = false) String primaryImageIndex,
             @Parameter(hidden = true) BindingResult result) throws Exception {
         if (result.hasErrors()) {
             List<String> errorMessages = result.getFieldErrors()
@@ -79,8 +83,17 @@ public class B2CProductVariantController {
                     .toList();
             return ResponseEntity.badRequest().body(ApiResponse.error(String.join(",", errorMessages)));
         }
-        productVariantService.createProductVariant(productVariantDTO, imageFiles);
+        productVariantService.createProductVariant(productVariantDTO, imageFiles, primaryImageIndex);
         return ResponseEntity.ok(ApiResponse.ok("Tạo mẫu sản phẩm mới thành công!"));
+    }
+
+    @GetMapping("/store/{storeId}/count-by-status")
+    @Operation(summary = "Đếm số lượng variant theo trạng thái")
+    public ResponseEntity<?> countProductVariantsByStatus(
+            @Parameter(description = "ID of the store", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable("storeId") String storeId)
+            throws Exception {
+        Map<String, Long> countByStatus = productVariantService.countProductVariantsByStatus(storeId);
+        return ResponseEntity.ok(ApiResponse.ok(countByStatus));
     }
 
     @PostMapping(value = "/create-without-image")
@@ -115,14 +128,17 @@ public class B2CProductVariantController {
         return ResponseEntity.ok(ApiResponse.ok("Cập nhật màu sắc mẫu sản phẩm thành công!"));
     }
 
-    @DeleteMapping("/delete/{id}")
-    @Operation(summary = "Delete product variant", description = "Soft delete a product variant by disabling it (sets status to inactive)")
-    public ResponseEntity<?> deleteProductVariant(
-            @Parameter(description = "ID of the product variant to delete", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable("id") String productVariantId)
+    @PutMapping(value = "/update-images/{variantId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Update product variant images", description = "Update the images of a product variant by replacing existing images with new ones and select which image should be the primary image")
+    public ResponseEntity<?> updateProductVariantImages(
+            @Parameter(description = "Id của product variant", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable("variantId") String productVariantId,
+            @Parameter(description = "File ảnh mới để cập nhật ảnh cho variant", required = true, content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE)) @RequestPart("images") List<MultipartFile> imageFiles,
+            @Parameter(description = "Vị trí của ảnh chính bắt đầu từ 0(0-based, e.g., 0 for first image, 1 for second)", required = true, example = "0") @RequestParam(defaultValue = "0") int indexPrimary)
             throws Exception {
-        productVariantService.disableProduct(productVariantId);
-        return ResponseEntity.ok(ApiResponse.ok("Xóa mẫu sản phẩm thành công!"));
+        productVariantService.updateProductVariantImages(productVariantId, imageFiles, indexPrimary);
+        return ResponseEntity.ok(ApiResponse.ok("Cập nhật hình ảnh mẫu sản phẩm thành công!"));
     }
+
 
     @PutMapping("/update-stock/{id}")
     @Operation(summary = "Update product variant stock", description = "Update the stock quantity of a product variant. Only affects inventory quantity, price remains unchanged.")
@@ -144,4 +160,22 @@ public class B2CProductVariantController {
         return ResponseEntity.ok(ApiResponse.ok("Cập nhật giá bán thành công!"));
     }
 
+    @DeleteMapping("/delete/{id}")
+    @Operation(summary = "Delete product variant", description = "Soft delete a product variant by disabling it (sets status to inactive)")
+    public ResponseEntity<?> deleteProductVariant(
+            @Parameter(description = "ID of the product variant to delete", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable("id") String productVariantId)
+            throws Exception {
+        productVariantService.disableProduct(productVariantId);
+        return ResponseEntity.ok(ApiResponse.ok("Xóa mẫu sản phẩm thành công!"));
+    }
+
+    @DeleteMapping("/delete-color/{variantId}/color/{colorId}")
+    @Operation(summary = "Delete color option from product variant", description = "Remove a specific color option from a product variant and automatically update the variant's total stock and price based on remaining colors")
+    public ResponseEntity<?> deleteProductVariantColor(
+            @Parameter(description = "ID of the product variant", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable("variantId") String productVariantId,
+            @Parameter(description = "ID of the color option to delete", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d2") @PathVariable("colorId") String colorId)
+            throws Exception {
+        productVariantService.removeProductVariantColor(productVariantId, colorId);
+        return ResponseEntity.ok(ApiResponse.ok("Xóa màu sắc mẫu sản phẩm thành công!"));
+    }
 }

@@ -1,6 +1,7 @@
 package com.example.e_commerce_techshop.services.productVariant;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -21,14 +22,18 @@ public interface IProductVariantService {
 
     Page<ProductVariantResponse> getByCategoryAndBrand(String category, String brand, Pageable pageable);
 
-    Page<ProductVariantResponse> getLatestProductVariants(int page, int size, String sortBy, String sortDir) throws Exception;
+    Page<ProductVariantResponse> getLatestProductVariants(Pageable pageable) throws Exception;
 
-    Page<ProductVariantResponse> getByStore(String storeId, int page, int size, String sortBy, String sortDir) throws Exception;
+    Page<ProductVariantResponse> getByStore(String storeId, Pageable pageable) throws Exception;
 
     Page<ProductVariantResponse> searchByName(String name, int page, int size, String sortBy, String sortDir) throws Exception;
 
     // Shop (B2C) methods
-    void createProductVariant(ProductVariantDTO productVariantDTO, List<MultipartFile> imageFiles) throws Exception;
+    Page<ProductVariant> getAllProductVariantsB2C(String storeId, String status, Pageable pageable) throws Exception;
+
+    Map<String, Long> countProductVariantsByStatus(String storeId) throws Exception;
+
+    void createProductVariant(ProductVariantDTO productVariantDTO, List<MultipartFile> imageFiles, String primaryImageIndex) throws Exception;
 
     void createProductVariant(ProductVariantDTO productVariantDTO) throws Exception;
 
@@ -38,6 +43,8 @@ public interface IProductVariantService {
 
     void removeProductVariantColor(String productVariantId, String colorId) throws Exception;
 
+    void updateProductVariantImages(String productVariantId, List<MultipartFile> imageFiles, int indexPrimary) throws Exception;
+
     void updateStock(String productVariantId, int newStock) throws Exception;
 
     void updatePrice(String productVariantId, Long newPrice) throws Exception;
@@ -45,10 +52,6 @@ public interface IProductVariantService {
     void updatePriceAndStock(String productVariantId, Long newPrice, int newStock) throws Exception;
 
     void disableProduct(String productVariantId) throws Exception;
-
-    // B2C methods
-
-    Page<ProductVariant> getAllProductVariantsB2C(String storeId, String status, Pageable pageable) throws Exception;
 
     // Admin methods
     Page<ProductVariantResponse> getVariantsByStatus(String status, Pageable pageable);

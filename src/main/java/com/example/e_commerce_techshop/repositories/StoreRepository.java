@@ -18,4 +18,6 @@ public interface StoreRepository extends MongoRepository<Store, String> {
     Page<Store> findByStatus(String status, Pageable pageable);
     Page<Store> findByOwnerId(String ownerId, Pageable pageable);
 
+    long countByStatus(String status);
+
 }

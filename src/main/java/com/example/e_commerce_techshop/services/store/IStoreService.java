@@ -13,7 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface IStoreService {
-    Store getStoreByIdAndOwnerId(String storeId, String ownerId) throws Exception;
+    Store getStoreByIdAndOwnerId(String storeId, String ownerId) throws Exception;  
     // Shop (B2C)
     StoreResponse createStore(StoreDTO storeDTO, User owner, MultipartFile logo) throws Exception;
     StoreResponse updateStore(String storeId, UpdateStoreDTO storeDTO) throws Exception;

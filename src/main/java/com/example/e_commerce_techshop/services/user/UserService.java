@@ -1,19 +1,12 @@
 package com.example.e_commerce_techshop.services.user;
 
-import com.example.e_commerce_techshop.components.JwtTokenProvider;
-import com.example.e_commerce_techshop.dtos.UserLoginDTO;
-import com.example.e_commerce_techshop.dtos.admin.user.BanUserDTO;
-import com.example.e_commerce_techshop.dtos.user.UserRegisterDTO;
-import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
-import com.example.e_commerce_techshop.exceptions.ExpiredTokenException;
-import com.example.e_commerce_techshop.exceptions.JwtAuthenticationException;
-import com.example.e_commerce_techshop.models.User;
-import com.example.e_commerce_techshop.repositories.user.UserRepository;
-import com.example.e_commerce_techshop.responses.user.UserResponse;
-import com.example.e_commerce_techshop.services.FileUploadService;
-import com.example.e_commerce_techshop.services.SendGridEmailService;
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -26,10 +19,23 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
+import com.example.e_commerce_techshop.components.JwtTokenProvider;
+import com.example.e_commerce_techshop.dtos.UserLoginDTO;
+import com.example.e_commerce_techshop.dtos.admin.user.BanUserDTO;
+import com.example.e_commerce_techshop.dtos.shipper.ShipperRegisterDTO;
+import com.example.e_commerce_techshop.dtos.shipper.ShipperUpdateInfoDTO;
+import com.example.e_commerce_techshop.dtos.user.UpdateUserDTO;
+import com.example.e_commerce_techshop.dtos.user.UserRegisterDTO;
+import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
+import com.example.e_commerce_techshop.exceptions.ExpiredTokenException;
+import com.example.e_commerce_techshop.exceptions.JwtAuthenticationException;
+import com.example.e_commerce_techshop.models.User;
+import com.example.e_commerce_techshop.repositories.user.UserRepository;
+import com.example.e_commerce_techshop.responses.user.UserResponse;
+import com.example.e_commerce_techshop.services.FileUploadService;
+import com.example.e_commerce_techshop.services.SendGridEmailService;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -87,6 +93,13 @@ public class UserService implements IUserService {
                 .enable(false)
                 .verificationCode(verificationCode)
                 .build();
+
+        if (userDTO.getPhone() != null) {
+            newUser.setPhone(userDTO.getPhone());
+        }
+        if (userDTO.getDateOfBirth() != null) {
+            newUser.setDateOfBirth(userDTO.getDateOfBirth());
+        }
         userRepository.save(newUser);
         sendVerificationEmail(newUser, siteURL);
     }
@@ -270,11 +283,11 @@ public class UserService implements IUserService {
 
     @Override
     public boolean isUserBanned(String userId) {
-                User user = userRepository.findById(userId).orElse(null);
+        User user = userRepository.findById(userId).orElse(null);
         if (user == null) {
             return false;
         }
-        
+
         // Kiểm tra isActive
         if (user.getIsActive() == null || !user.getIsActive()) {
             // Kiểm tra chặn tạm thời đã hết hạn chưa
@@ -290,7 +303,7 @@ public class UserService implements IUserService {
             }
             return true;
         }
-        
+
         return false;
     }
 
@@ -299,12 +312,107 @@ public class UserService implements IUserService {
     public void sendVerificationEmailAgain(String email, String siteURL) throws Exception {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy user với Email này"));
-        if(user.isEnabled()) {
+        if (user.isEnabled()) {
             throw new IllegalArgumentException("Tài khoản đã được xác minh.");
         }
         String verificationCode = UUID.randomUUID().toString();
         user.setVerificationCode(verificationCode);
         userRepository.save(user);
         sendVerificationEmail(user, siteURL);
+    }
+
+    @Override
+    public User getUserById(String userId) throws Exception {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy user với ID này"));
+    }
+
+    @Override
+    public void updateUserProfile(User currentUser, UpdateUserDTO userUpdateDTO) throws Exception {
+        if (userUpdateDTO.getFullName() != null && !userUpdateDTO.getFullName().isBlank()) {
+            currentUser.setFullName(userUpdateDTO.getFullName());
+        }
+        if (userUpdateDTO.getPhone() != null) {
+            currentUser.setPhone(userUpdateDTO.getPhone());
+        }
+        if (userUpdateDTO.getDateOfBirth() != null) {
+            currentUser.setDateOfBirth(userUpdateDTO.getDateOfBirth());
+        }
+        userRepository.save(currentUser);
+    }
+
+    // ADMIN - Shipper Management
+    @Override
+    public Page<User> getAllShippers(String name, String email, String phone, String status, Pageable pageable) {
+        return userRepository.findAllShippers(name, email, phone, status, pageable);
+    }
+
+    @Override
+    @Transactional
+    public void updateShipperInfo(String shipperId, ShipperUpdateInfoDTO updateUserDTO) {
+        User shipper = userRepository.findById(shipperId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy shipper với ID này"));
+        shipper.setFullName(updateUserDTO.getFullName());
+        shipper.setPhone(updateUserDTO.getPhone());
+        shipper.setDateOfBirth(updateUserDTO.getDateOfBirth());
+        userRepository.save(shipper);
+    }
+
+    @Override
+    public Map<String, Long> getShipperStatistics() {
+        Map<String, Long> stats = new HashMap<>();
+
+        long activate = userRepository.countByRolesContainingAndIsActiveTrue("SHIPPER");
+        long banned = userRepository.countByRolesContainingAndIsActiveFalse("SHIPPER");
+        long total = activate + banned;
+
+        stats.put("total", total);
+        stats.put("activate", activate);
+        stats.put("banned", banned);
+        return stats;
+    }
+
+    @Override
+    public void createShipperAccount(ShipperRegisterDTO shipperDTO, MultipartFile avatarFile, String siteURL) throws Exception {
+        String email = shipperDTO.getEmail();
+        if (userRepository.existsByEmail(email)) {
+            throw new Exception("Email đã tồn tại");
+        }
+        String verificationCode = UUID.randomUUID().toString();
+
+        User newUser = User.builder()
+                .email(email)
+                .password(passwordEncoder.encode(shipperDTO.getPassword()))
+                .fullName(shipperDTO.getFullName())
+                .roles(List.of("SHIPPER"))
+                .isActive(true)
+                .enable(false)
+                .verificationCode(verificationCode)
+                .phone(shipperDTO.getPhone())
+                .dateOfBirth(shipperDTO.getDateOfBirth())
+                .build();
+
+        // Upload avatar nếu có
+        if (avatarFile != null && !avatarFile.isEmpty()) {
+            String avatarUrl = fileUploadService.uploadFile(avatarFile);
+            newUser.setAvatar(avatarUrl);
+        }
+
+        sendVerificationEmail(newUser, siteURL);
+        userRepository.save(newUser);
+    }
+
+    @Override
+    public void activateShipper(String shipperId) throws Exception {
+        User shipper = userRepository.findById(shipperId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy shipper với ID này"));
+
+        if (!shipper.getRoles().contains("SHIPPER")) {
+            throw new IllegalArgumentException("Người dùng này không phải là shipper");
+        }
+
+        shipper.setEnable(true);
+        shipper.setIsActive(true);
+        userRepository.save(shipper);
     }
 }

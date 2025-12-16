@@ -5,6 +5,7 @@ import com.example.e_commerce_techshop.models.Review;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -16,6 +17,7 @@ public class ReviewResponse {
     private String productVariantId;
     private Integer rating;
     private String comment;
+    private List<String> imageUrls;
     private UserResponse user;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -45,7 +47,7 @@ public class ReviewResponse {
                     .avatar(review.getUser().getAvatar())
                     .build();
         }
-
+        
         return ReviewResponse.builder()
                 .id(review.getId())
                 .orderId(review.getOrder() != null ? review.getOrder().getId() : null)
@@ -53,6 +55,7 @@ public class ReviewResponse {
                 .user(userResponse)
                 .rating(review.getRating())
                 .comment(review.getComment())
+                .imageUrls(review.getImageUrls())
                 .createdAt(review.getCreatedAt())
                 .updatedAt(review.getUpdatedAt())
                 .build();

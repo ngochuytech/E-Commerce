@@ -32,7 +32,7 @@ public class WithdrawalRequest extends BaseEntity {
     
     private String bankAccountName; // Tên chủ tài khoản
     
-    private String status; // PENDING, APPROVED, REJECTED, COMPLETED
+    private WithdrawalStatus status; 
     
     private String note; // Ghi chú của store
     
@@ -42,4 +42,10 @@ public class WithdrawalRequest extends BaseEntity {
     
     @DBRef
     private Transaction transaction; // Liên kết với giao dịch (sau khi hoàn thành)
+
+    public enum WithdrawalStatus {
+        PENDING,
+        REJECTED,
+        COMPLETED
+    }
 }

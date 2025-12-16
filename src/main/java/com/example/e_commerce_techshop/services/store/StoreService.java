@@ -9,7 +9,9 @@ import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.repositories.StoreRepository;
 import com.example.e_commerce_techshop.responses.StoreResponse;
 import com.example.e_commerce_techshop.services.FileUploadService;
+import com.example.e_commerce_techshop.services.notification.INotificationService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,10 +22,12 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class StoreService implements IStoreService {
     
     private final StoreRepository storeRepository;
     private final FileUploadService fileUploadService;
+    private final INotificationService notificationService;
 
     @Override
     public StoreResponse createStore(StoreDTO storeDTO, User owner, MultipartFile logo) throws Exception {
@@ -51,6 +55,19 @@ public class StoreService implements IStoreService {
                 .build();
 
         Store savedStore = storeRepository.save(store);
+        
+        // Tạo notification cho admin
+        try {
+            notificationService.createAdminNotification(
+                "Cửa hàng mới đăng ký: " + savedStore.getName(),
+                "Cửa hàng " + savedStore.getName() + " tại địa chỉ " + savedStore.getAddress().getHomeAddress() + " chờ phê duyệt",
+                "STORE_APPROVAL",
+                savedStore.getId()
+            );
+        } catch (Exception e) {
+            log.error("Error creating admin notification for store: {}", e.getMessage());
+        }
+        
         return StoreResponse.fromStore(savedStore);
     }
 
@@ -191,6 +208,6 @@ public class StoreService implements IStoreService {
     @Override
     public Store getStoreByIdAndOwnerId(String storeId, String ownerId) throws Exception {
         return storeRepository.findByIdAndOwnerId(storeId, ownerId)
-                .orElse(null);
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy cửa hàng hoặc bạn không phải chủ sở hữu"));
     }
 }

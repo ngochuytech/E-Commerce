@@ -13,7 +13,7 @@ public interface OrderItemRepository extends MongoRepository<OrderItem, String> 
     
     List<OrderItem> findByOrderId(String orderId);
 
-    @Query("{'order.$id': {$in: ?0}}")
+    @Query("{ 'order' : { $in: ?0 } }")
     List<OrderItem> findByOrderIdIn(List<String> orderIds);
 
 }

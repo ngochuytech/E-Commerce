@@ -1,23 +1,5 @@
 package com.example.e_commerce_techshop.services.order;
 
-import com.example.e_commerce_techshop.dtos.buyer.OrderDTO;
-import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
-import com.example.e_commerce_techshop.exceptions.InvalidPromotionException;
-import com.example.e_commerce_techshop.models.*;
-import com.example.e_commerce_techshop.models.ProductVariant.ColorOption;
-import com.example.e_commerce_techshop.repositories.*;
-import com.example.e_commerce_techshop.services.cart.ICartService;
-import com.example.e_commerce_techshop.services.promotion.IPromotionService;
-
-import lombok.RequiredArgsConstructor;
-
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -25,6 +7,42 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.example.e_commerce_techshop.dtos.buyer.OrderDTO;
+import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
+import com.example.e_commerce_techshop.exceptions.InvalidPromotionException;
+import com.example.e_commerce_techshop.models.Address;
+import com.example.e_commerce_techshop.models.AdminRevenue;
+import com.example.e_commerce_techshop.models.Notification;
+import com.example.e_commerce_techshop.models.Order;
+import com.example.e_commerce_techshop.models.OrderItem;
+import com.example.e_commerce_techshop.models.ProductVariant;
+import com.example.e_commerce_techshop.models.ProductVariant.ColorOption;
+import com.example.e_commerce_techshop.models.Promotion;
+import com.example.e_commerce_techshop.models.Store;
+import com.example.e_commerce_techshop.models.User;
+import com.example.e_commerce_techshop.models.Static.OrderFinancials;
+import com.example.e_commerce_techshop.repositories.AdminRevenueRepository;
+import com.example.e_commerce_techshop.repositories.CartRepository;
+import com.example.e_commerce_techshop.repositories.OrderItemRepository;
+import com.example.e_commerce_techshop.repositories.OrderRepository;
+import com.example.e_commerce_techshop.repositories.ProductVariantRepository;
+import com.example.e_commerce_techshop.repositories.PromotionRepository;
+import com.example.e_commerce_techshop.repositories.PromotionUsageRepository;
+import com.example.e_commerce_techshop.repositories.StoreRepository;
+import com.example.e_commerce_techshop.responses.buyer.OrderResponse;
+import com.example.e_commerce_techshop.services.cart.ICartService;
+import com.example.e_commerce_techshop.services.notification.INotificationService;
+import com.example.e_commerce_techshop.services.promotion.IPromotionService;
+import com.example.e_commerce_techshop.services.refund.IRefundService;
+import com.example.e_commerce_techshop.services.wallet.IWalletService;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -39,8 +57,9 @@ public class OrderService implements IOrderService {
     private final ICartService cartService;
     private final PromotionUsageRepository promotionUsageRepository;
     private final IPromotionService promotionService;
-    private final WalletRepository walletRepository;
-    private final TransactionRepository transactionRepository;
+    private final INotificationService notificationService;
+    private final IRefundService refundService;
+    private final IWalletService walletService;
     private final AdminRevenueRepository adminRevenueRepository;
 
     @Override
@@ -215,6 +234,7 @@ public class OrderService implements IOrderService {
 
         List<Order> orders = new ArrayList<>();
         int platformOrderPromotionUsed = 0; // Đếm số lần đã dùng platform order voucher
+        BigDecimal totalPaymentAmount = BigDecimal.ZERO; // Tổng tiền cần thanh toán cho tất cả đơn hàng
 
         // 10. Tạo 1 đơn hàng cho mỗi store (theo thứ tự đã sắp xếp)
         for (Map.Entry<String, List<OrderDTO.SelectedCartItem>> storeEntry : sortedStores) {
@@ -225,98 +245,28 @@ public class OrderService implements IOrderService {
             Store store = storeRepository.findById(storeId)
                     .orElseThrow(() -> new DataNotFoundException("Không tìm thấy cửa hàng với ID: " + storeId));
 
-            // 10.2. Tính tổng tiền cho store này
-            BigDecimal storeTotal = BigDecimal.ZERO;
-            for (OrderDTO.SelectedCartItem item : storeItems) {
-                ProductVariant productVariant = productVariantRepository.findById(item.getProductVariantId()).get();
-                Long itemPrice = getProductPrice(productVariant, item.getColorId());
-                BigDecimal itemTotal = BigDecimal.valueOf(itemPrice)
-                        .multiply(BigDecimal.valueOf(item.getQuantity()));
-                storeTotal = storeTotal.add(itemTotal);
+            // 10.2. Tính toán các khoản tiền cho store này
+            OrderFinancials financials = calculateOrderFinancials(
+                    storeItems, storeId, store, user, orderDTO,
+                    platformOrderPromotion, platformShippingPromotion,
+                    platformOrderPromotionUsed, applyShippingToStores
+            );
+
+            // Cập nhật số lần đã dùng platform order promotion
+            if (financials.isPlatformOrderPromotionApplied()) {
+                platformOrderPromotionUsed++;
             }
 
-            // 10.3. Xử lý promotion - Thứ tự: Store ORDER -> Platform ORDER -> Platform
-            // Shipping
-            List<Promotion> appliedPromotions = new ArrayList<>();
-            BigDecimal orderDiscount = BigDecimal.ZERO;
-            BigDecimal shippingDiscount = BigDecimal.ZERO;
+            BigDecimal storeTotal = financials.getStoreTotal();
+            BigDecimal storeDiscountAmount = financials.getStoreDiscountAmount();
+            BigDecimal platformDiscountAmount = financials.getPlatformDiscountAmount();
+            BigDecimal finalShippingFee = financials.getFinalShippingFee();
+            BigDecimal platformCommission = financials.getPlatformCommission();
+            BigDecimal finalTotal = financials.getFinalTotal();
+            List<Promotion> appliedPromotions = financials.getAppliedPromotions();
 
-            BigDecimal currentTotal = storeTotal; // Track giá trị sau mỗi lần discount
-
-            // 10.3.1. Store ORDER Promotion (Áp dụng TRƯỚC)
-            if (orderDTO.getStorePromotions() != null && orderDTO.getStorePromotions().containsKey(storeId)) {
-                String storePromo = orderDTO.getStorePromotions().get(storeId);
-
-                if (storePromo != null && !storePromo.trim().isEmpty()) {
-                    Promotion storeOrderPromotion = promotionRepository.findByCode(storePromo)
-                            .orElseThrow(() -> new IllegalArgumentException(
-                                    "Mã giảm giá đơn hàng không tồn tại: " + storePromo));
-
-                    // Validate: Phải là mã ORDER
-                    if (!Promotion.ApplicableFor.ORDER.name().equals(storeOrderPromotion.getApplicableFor())) {
-                        throw new IllegalArgumentException("Mã " + storePromo + " không phải là mã giảm giá đơn hàng");
-                    }
-
-                    // Validate điều kiện áp dụng
-                    if (isPromotionValid(storeOrderPromotion, currentTotal, user, store)) {
-                        BigDecimal storeDiscount = calculateDiscount(currentTotal, storeOrderPromotion);
-                        orderDiscount = orderDiscount.add(storeDiscount);
-                        currentTotal = currentTotal.subtract(storeDiscount);
-                        appliedPromotions.add(storeOrderPromotion);
-                    } else {
-                        throw new IllegalArgumentException(
-                                "Mã giảm giá đơn hàng không hợp lệ hoặc không đủ điều kiện cho cửa hàng: "
-                                        + store.getName());
-                    }
-                }
-            }
-
-            // 10.3.2. Platform ORDER Promotion (Áp dụng SAU store voucher)
-            // Ưu tiên áp dụng cho đơn có giá trị cao hơn cho đến khi hết lượt
-            if (platformOrderPromotion != null) {
-                int remainingUsage = platformOrderPromotion.getUsageLimit() != null
-                        ? platformOrderPromotion.getUsageLimit()
-                                - (platformOrderPromotion.getUsedCount() + platformOrderPromotionUsed)
-                        : Integer.MAX_VALUE;
-
-                if (remainingUsage > 0) {
-                    // Check minOrderValue với currentTotal (sau khi áp dụng store voucher)
-                    if (platformOrderPromotion.getMinOrderValue() == null ||
-                            currentTotal
-                                    .compareTo(BigDecimal.valueOf(platformOrderPromotion.getMinOrderValue())) >= 0) {
-
-                        BigDecimal platformDiscount = calculateDiscount(currentTotal, platformOrderPromotion);
-                        orderDiscount = orderDiscount.add(platformDiscount);
-                        currentTotal = currentTotal.subtract(platformDiscount);
-                        appliedPromotions.add(platformOrderPromotion);
-                        platformOrderPromotionUsed++; // Tăng số lần đã dùng
-                    }
-                }
-            }
-
-            // 10.3.3. Platform SHIPPING Promotion (tính riêng)
-            BigDecimal shippingFee = BigDecimal.valueOf(30000); // Default shipping fee
-
-            // Chỉ áp dụng nếu store này nằm trong danh sách được chọn
-            if (platformShippingPromotion != null && applyShippingToStores.contains(storeId)) {
-                // Check minOrderValue với storeTotal gốc (không phải currentTotal)
-                if (platformShippingPromotion.getMinOrderValue() == null ||
-                        storeTotal.compareTo(BigDecimal.valueOf(platformShippingPromotion.getMinOrderValue())) >= 0) {
-
-                    BigDecimal platformShippingDiscount = calculateDiscount(shippingFee, platformShippingPromotion);
-                    shippingDiscount = shippingDiscount.add(platformShippingDiscount);
-                    appliedPromotions.add(platformShippingPromotion);
-                }
-            }
-
-            // 10.3.4. Tính tổng tiền cuối cùng
-            BigDecimal finalShippingFee = shippingFee.subtract(shippingDiscount).max(BigDecimal.ZERO);
-            
-            // 10.3.5. Tính phí dịch vụ (cố định: 5000đ cho mỗi đơn hàng)
-            BigDecimal serviceFee = BigDecimal.valueOf(5000);
-            
-            // 10.3.6. Tính tổng tiền cuối cùng khách hàng phải thanh toán
-            BigDecimal finalTotal = storeTotal.subtract(orderDiscount).add(finalShippingFee).add(serviceFee).max(BigDecimal.ZERO);
+            // Cộng dồn vào tổng tiền thanh toán
+            totalPaymentAmount = totalPaymentAmount.add(finalTotal);
 
             // 10.4. Tạo Order cho store này
             Order order = Order.builder()
@@ -325,7 +275,10 @@ public class OrderService implements IOrderService {
                     .promotions(appliedPromotions.isEmpty() ? null : appliedPromotions)
                     .productPrice(storeTotal) // Giá sản phẩm
                     .shippingFee(finalShippingFee) // Phí ship
-                    .serviceFee(serviceFee) // Phí dịch vụ
+                    .platformCommission(platformCommission) // Hoa hồng sàn 5%
+                    .storeDiscountAmount(storeDiscountAmount) // Tiền shop chịu
+                    .platformDiscountAmount(platformDiscountAmount) // Tiền sàn chịu
+                    .totalDiscountAmount(platformDiscountAmount)
                     .totalPrice(finalTotal) // Tổng tiền khách thanh toán
                     .isRated(false)
                     .vnpTnxRef(orderDTO.getVnpTnxRef())
@@ -336,21 +289,12 @@ public class OrderService implements IOrderService {
                             .phone(orderDTO.getAddress().getPhone())
                             .build())
                     .paymentMethod(orderDTO.getPaymentMethod())
+                    .paymentStatus(Order.PaymentStatus.UNPAID.name())
                     .status(Order.OrderStatus.PENDING.name())
                     .note(orderDTO.getNote())
                     .build();
 
             order = orderRepository.save(order);
-
-            // 10.4.1. Lưu phí dịch vụ cho admin
-            AdminRevenue adminRevenue = AdminRevenue.builder()
-                    .order(order)
-                    .serviceFee(serviceFee)
-                    .revenueType("SERVICE_FEE")
-                    .status("PENDING")
-                    .description(String.format("Phí dịch vụ từ đơn hàng #%s", order.getId()))
-                    .build();
-            adminRevenueRepository.save(adminRevenue);
 
             // 10.5. Tạo OrderItems cho store này và trừ stock
             List<OrderItem> orderItems = new ArrayList<>();
@@ -427,7 +371,28 @@ public class OrderService implements IOrderService {
 
         cartService.removeSelectedItemsByIds(user, selectedCartItemIds);
 
-        // 12. Return danh sách orders
+        // 12. Gửi thông báo cho người mua và người bán
+        for (Order order : orders) {
+            try {
+                // Thông báo cho người mua
+                notificationService.createUserNotification(user.getId(),
+                        "Đơn hàng mới được tạo",
+                        String.format("Đơn hàng #%s của bạn đã được tạo thành công. Tổng tiền: %,.0f đ",
+                                order.getId(), order.getTotalPrice().doubleValue()),
+                        order.getId());
+
+                // Thông báo cho chủ shop (store)
+                notificationService.createStoreNotification(order.getStore().getId(),
+                        "Có đơn hàng mới",
+                        String.format("Bạn nhận được đơn hàng mới #%s từ khách %s.",
+                                order.getId(), user.getFullName()),
+                        order.getId());
+            } catch (Exception e) {
+                System.err.println("Error creating notification: " + e.getMessage());
+            }
+        }
+
+        // 13. Return danh sách orders
         return orders;
 
     }
@@ -491,6 +456,17 @@ public class OrderService implements IOrderService {
 
         order.setStatus(Order.OrderStatus.CANCELLED.name());
 
+        // Hoàn tiền nếu đã thanh toán
+        if (order.getPaymentStatus().equals(Order.PaymentStatus.PAID.name())) {
+            try {
+                refundService.createRefundRequest(order);
+            } catch (Exception e) {
+                System.err.println("Error creating refund request: " + e.getMessage());
+                // Vẫn cho phép hủy đơn nhưng ghi log lỗi
+                // Admin sẽ xử lý hoàn tiền thủ công
+            }
+        }
+
         // 4. Hoàn trả stock
         List<OrderItem> orderItem = orderItemRepository.findByOrderId(order.getId());
         for (OrderItem item : orderItem) {
@@ -523,13 +499,102 @@ public class OrderService implements IOrderService {
         }
         // 5. Cập nhật trạng thái đơn hàng
         orderRepository.save(order);
+
+        // 6. Gửi thông báo cho chủ shop về việc hủy đơn
+        try {
+            notificationService.createStoreNotification(order.getStore().getId(),
+                    "Đơn hàng bị hủy",
+                    String.format("Khách hàng %s đã hủy đơn hàng #%s", user.getFullName(), order.getId()),
+                    order.getId());
+        } catch (Exception e) {
+            System.err.println("Error creating notification: " + e.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public Order completeOrder(User user, String orderId) throws Exception {
+        String buyerId = user.getId();
+
+        // Tìm order
+        Order order = orderRepository.findByIdAndBuyerId(orderId, buyerId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy đơn hàng"));
+
+        // Kiểm tra trạng thái - chỉ cho phép complete đơn hàng DELIVERED
+        if (!Order.OrderStatus.DELIVERED.name().equals(order.getStatus())) {
+            throw new IllegalArgumentException("Chỉ có thể xác nhận hoàn tất đơn hàng đã giao");
+        }
+
+        // Cập nhật trạng thái
+        order.setStatus(Order.OrderStatus.COMPLETED.name());
+        
+        Order savedOrder = orderRepository.save(order);
+
+        // Cộng tiền vào ví shop
+        try {
+            // Tính doanh thu từ sản phẩm (sau khi trừ discount shop chịu)
+            BigDecimal productRevenue = order.getProductPrice()
+                    .subtract(order.getStoreDiscountAmount() != null ? order.getStoreDiscountAmount() : BigDecimal.ZERO);
+            
+            // Sàn lấy 5% hoa hồng từ doanh thu sản phẩm, tối đa 500,000đ
+            BigDecimal platformCommission = productRevenue.multiply(BigDecimal.valueOf(0.05));
+            BigDecimal maxCommission = BigDecimal.valueOf(500000);
+            platformCommission = platformCommission.min(maxCommission);
+            
+            // Shop nhận 95% doanh thu sản phẩm + phí ship đầy đủ
+            // Không trừ serviceFee vì serviceFee là phí khách hàng trả cho sàn (đã bao gồm trong totalPrice)
+            BigDecimal storeRevenue = productRevenue.subtract(platformCommission)
+                    .add(order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO);
+            
+            walletService.addOrderPaymentToWallet(
+                    order.getStore().getId(),
+                    order.getId(),
+                    storeRevenue,
+                    String.format("Thanh toán đơn hàng #%s ", order.getId())
+            );
+            
+            // Lưu hoa hồng sàn vào AdminRevenue để thống kê
+            try {
+                AdminRevenue platformCommissionRevenue = AdminRevenue.builder()
+                        .order(order)
+                        .amount(platformCommission)
+                        .revenueType(AdminRevenue.RevenueType.PLATFORM_COMMISSION.name())
+                        .description(String.format("Hoa hồng 5%% từ đơn hàng #%s", order.getId()))
+                        .build();
+                adminRevenueRepository.save(platformCommissionRevenue);
+            } catch (Exception ex) {
+                System.err.println("Error saving platform commission to admin revenue: " + ex.getMessage());
+            }
+        } catch (Exception e) {
+            System.err.println("Error adding payment to wallet: " + e.getMessage());
+            notificationService.createAdminNotification(
+                    "Lỗi cộng tiền vào ví shop",
+                    String.format("Đơn hàng #%s của shop %s đã hoàn tất nhưng không thể cộng tiền vào ví. Vui lòng kiểm tra hệ thống.",
+                            order.getId(), order.getStore().getName()),
+                    Notification.NotificationType.SYSTEM.name(),
+                    order.getId()
+            );
+            // Vẫn tiếp tục xử lý đơn hàng ngay cả khi có lỗi cộng tiền vào ví
+        }
+
+        // Gửi thông báo cho chủ shop
+        try {
+            notificationService.createStoreNotification(order.getStore().getId(),
+                    "Đơn hàng hoàn tất",
+                    String.format("Khách hàng %s đã xác nhận hoàn tất đơn hàng #%s", user.getFullName(), order.getId()),
+                    order.getId());
+        } catch (Exception e) {
+            System.err.println("Error creating notification: " + e.getMessage());
+        }
+
+        return savedOrder;
     }
 
     /**
      * Validate payment method
      */
     private boolean isValidPaymentMethod(String paymentMethod) {
-        List<String> validMethods = List.of("COD", "BANK_TRANSFER", "CREDIT_CARD", "E_WALLET", "VNPAY", "MOMO");
+        List<String> validMethods = List.of("COD", "VNPAY", "MOMO");
         return validMethods.contains(paymentMethod.toUpperCase());
     }
 
@@ -614,9 +679,7 @@ public class OrderService implements IOrderService {
     // ===== SELLER METHODS =====
 
     @Override
-    public Page<Order> getStoreOrders(String storeId, int page, int size, String status) throws Exception {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-
+    public Page<OrderResponse> getStoreOrders(String storeId, String status, Pageable pageable) throws Exception {
         Page<Order> orders;
         if (status != null && !status.trim().isEmpty()) {
             orders = orderRepository.findByStoreIdAndStatus(storeId, status, pageable);
@@ -624,13 +687,23 @@ public class OrderService implements IOrderService {
             orders = orderRepository.findByStoreId(storeId, pageable);
         }
 
-        // Load orderItems cho mỗi order
-        for (Order order : orders.getContent()) {
-            List<OrderItem> orderItems = orderItemRepository.findByOrderId(order.getId());
-            order.setOrderItems(orderItems);
+        if (!orders.getContent().isEmpty()) {
+            List<String> orderIds = orders.getContent().stream()
+                    .map(Order::getId)
+                    .toList();
+
+            List<OrderItem> allOrderItems = orderItemRepository.findByOrderIdIn(orderIds);
+
+            Map<String, List<OrderItem>> itemsByOrderId = allOrderItems.stream()
+                    .collect(Collectors.groupingBy(item -> item.getOrder().getId()));
+
+            orders.getContent().forEach(order -> {
+                List<OrderItem> items = itemsByOrderId.getOrDefault(order.getId(), new ArrayList<>());
+                order.setOrderItems(items);
+            });
         }
 
-        return orders;
+        return orders.map(OrderResponse::fromOrder);
     }
 
     @Override
@@ -652,111 +725,44 @@ public class OrderService implements IOrderService {
 
     @Override
     @Transactional
-    public Order updateOrderStatus(String storeId, String orderId, String newStatus) throws Exception {
+    public Order confirmOrder(String storeId, String orderId) throws Exception {
         Order order = getStoreOrderDetail(storeId, orderId);
 
-        // Kiểm tra trạng thái hợp lệ
-        String currentStatus = order.getStatus();
-        if (!isValidStatusTransition(currentStatus, newStatus)) {
-            throw new IllegalArgumentException(
-                    String.format("Không thể chuyển từ trạng thái %s sang %s", currentStatus, newStatus));
+        // Kiểm tra nếu phương thức thanh toán online thì phải đã thanh toán
+        if ("VNPAY".equalsIgnoreCase(order.getPaymentMethod()) || 
+            "MOMO".equalsIgnoreCase(order.getPaymentMethod())) {
+            if (!Order.PaymentStatus.PAID.name().equals(order.getPaymentStatus())) {
+                throw new IllegalArgumentException(
+                    "Không thể xác nhận đơn hàng. Khách hàng chưa thanh toán thành công. " +
+                    "Vui lòng chờ khách hàng hoàn tất thanh toán trước khi xác nhận đơn hàng."
+                );
+            }
         }
 
-        order.setStatus(newStatus);
+        order.setStatus(Order.OrderStatus.CONFIRMED.name());
         Order savedOrder = orderRepository.save(order);
-        
-        // Nếu đơn hàng chuyển sang DELIVERED, cộng tiền vào ví store
-        if ("DELIVERED".equals(newStatus)) {
-            addMoneyToStoreWallet(order);
-            
-            // Cập nhật trạng thái AdminRevenue từ PENDING sang COLLECTED
-            adminRevenueRepository.findByOrderId(order.getId())
-                    .ifPresent(adminRevenue -> {
-                        adminRevenue.setStatus("COLLECTED");
-                        adminRevenueRepository.save(adminRevenue);
-                    });
+
+        // Gửi thông báo cho người mua về sự thay đổi trạng thái
+        try {
+            String statusMessage = getStatusMessage(Order.OrderStatus.CONFIRMED.name());
+            notificationService.createUserNotification(order.getBuyer().getId(),
+                    "Cập nhật trạng thái đơn hàng",
+                    String.format("Đơn hàng #%s của bạn đã được cập nhật: %s",
+                            order.getId(), statusMessage),
+                    order.getId());
+        } catch (Exception e) {
+            System.err.println("Error creating notification: " + e.getMessage());
         }
-        
+
         return savedOrder;
     }
 
     @Override
-    public Map<String, Object> getStoreOrderStatistics(String storeId) throws Exception {
-        Map<String, Object> stats = new HashMap<>();
-
-        // Tổng số đơn hàng
-        long totalOrders = orderRepository.countByStoreId(storeId);
-        stats.put("totalOrders", totalOrders);
-
-        // Đếm theo trạng thái
-        stats.put("pending", orderRepository.countByStoreIdAndStatus(storeId, "PENDING"));
-        stats.put("confirmed", orderRepository.countByStoreIdAndStatus(storeId, "CONFIRMED"));
-        stats.put("shipping", orderRepository.countByStoreIdAndStatus(storeId, "SHIPPING"));
-        stats.put("delivered", orderRepository.countByStoreIdAndStatus(storeId, "DELIVERED"));
-        stats.put("cancelled", orderRepository.countByStoreIdAndStatus(storeId, "CANCELLED"));
-
-        // Tính tổng doanh thu (chỉ đơn hàng hoàn thành)
-        List<Order> completedOrders = orderRepository.findByStoreIdAndStatus(storeId, "DELIVERED");
-        BigDecimal totalRevenue = completedOrders.stream()
-                .map(Order::getTotalPrice)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        stats.put("totalRevenue", totalRevenue);
-
-        return stats;
-    }
-
-    @Override
-    public Map<String, Object> getStoreRevenue(String storeId, String startDate, String endDate) throws Exception {
-        LocalDateTime start = LocalDateTime.parse(startDate + "T00:00:00");
-        LocalDateTime end = LocalDateTime.parse(endDate + "T23:59:59");
-
-        List<Order> orders = orderRepository.findByStoreIdAndDateRange(storeId, start, end);
-
-        Map<String, Object> revenue = new HashMap<>();
-
-        // Lọc theo trạng thái và tính doanh thu
-        BigDecimal totalRevenue = BigDecimal.ZERO;
-        BigDecimal pendingRevenue = BigDecimal.ZERO;
-        long totalOrders = 0;
-        long completedOrders = 0;
-
-        for (Order order : orders) {
-            totalOrders++;
-            if ("DELIVERED".equals(order.getStatus())) {
-                totalRevenue = totalRevenue.add(order.getTotalPrice());
-                completedOrders++;
-            } else if (!"CANCELLED".equals(order.getStatus())) {
-                pendingRevenue = pendingRevenue.add(order.getTotalPrice());
-            }
-        }
-
-        revenue.put("totalRevenue", totalRevenue);
-        revenue.put("pendingRevenue", pendingRevenue);
-        revenue.put("totalOrders", totalOrders);
-        revenue.put("completedOrders", completedOrders);
-        revenue.put("startDate", startDate);
-        revenue.put("endDate", endDate);
-
-        return revenue;
-    }
-
-    /**
-     * Kiểm tra việc chuyển trạng thái có hợp lệ không
-     */
-    private boolean isValidStatusTransition(String currentStatus, String newStatus) {
-        switch (currentStatus) {
-            case "PENDING":
-                return "CONFIRMED".equals(newStatus) || "CANCELLED".equals(newStatus);
-            case "CONFIRMED":
-                return "SHIPPING".equals(newStatus) || "CANCELLED".equals(newStatus);
-            case "SHIPPING":
-                return "DELIVERED".equals(newStatus);
-            case "DELIVERED":
-            case "CANCELLED":
-                return false; // Không thể thay đổi trạng thái cuối
-            default:
-                return false;
-        }
+    public Order rejectOrder(String storeId, String orderId, String reason) throws Exception {
+        Order order = getStoreOrderDetail(storeId, orderId);
+        order.setStatus(Order.OrderStatus.CANCELLED.name());
+        order.setRejectReason(reason);
+        return orderRepository.save(order);
     }
 
     // Lấy giá của sản phẩm (có thể theo màu)
@@ -790,52 +796,233 @@ public class OrderService implements IOrderService {
         }
         return total;
     }
-    
+
     /**
-     * Cộng tiền vào ví của store khi đơn hàng hoàn thành
+     * Tính toán tất cả các khoản tiền cho một đơn hàng
+     * 
+     * @param storeItems Danh sách sản phẩm của store
+     * @param storeId ID của store
+     * @param store Đối tượng Store
+     * @param user Người mua
+     * @param orderDTO Dữ liệu đơn hàng
+     * @param platformOrderPromotion Mã giảm giá đơn hàng của sàn
+     * @param platformShippingPromotion Mã giảm phí ship của sàn
+     * @param platformOrderPromotionUsed Số lần đã dùng platform order promotion
+     * @param applyShippingToStores Danh sách store được áp dụng shipping voucher
+     * @return OrderFinancials chứa tất cả thông tin tài chính
      */
-    private void addMoneyToStoreWallet(Order order) {
-        try {
-            Store store = order.getStore();
-            BigDecimal orderAmount = order.getTotalPrice();
-            
-            // Tìm hoặc tạo ví cho store
-            Wallet wallet = walletRepository.findByStoreId(store.getId())
-                    .orElseGet(() -> {
-                        Wallet newWallet = Wallet.builder()
-                                .store(store)
-                                .balance(BigDecimal.ZERO)
-                                .totalEarned(BigDecimal.ZERO)
-                                .totalWithdrawn(BigDecimal.ZERO)
-                                .pendingAmount(BigDecimal.ZERO)
-                                .build();
-                        return walletRepository.save(newWallet);
-                    });
-            
-            // Lưu số dư trước giao dịch
-            BigDecimal balanceBefore = wallet.getBalance();
-            
-            // Cập nhật số dư
-            wallet.setBalance(wallet.getBalance().add(orderAmount));
-            wallet.setTotalEarned(wallet.getTotalEarned().add(orderAmount));
-            walletRepository.save(wallet);
-            
-            // Tạo transaction ghi nhận
-            Transaction transaction = Transaction.builder()
-                    .wallet(wallet)
-                    .order(order)
-                    .type(Transaction.TransactionType.ORDER_COMPLETED)
-                    .amount(orderAmount)
-                    .balanceBefore(balanceBefore)
-                    .balanceAfter(wallet.getBalance())
-                    .description(String.format("Tiền từ đơn hàng #%s", order.getId()))
-                    .status("COMPLETED")
-                    .build();
-            transactionRepository.save(transaction);
-            
-        } catch (Exception e) {
-            System.err.println("Error adding money to store wallet: " + e.getMessage());
-            // Không throw exception để không ảnh hưởng đến việc cập nhật trạng thái đơn hàng
+    private OrderFinancials calculateOrderFinancials(
+            List<OrderDTO.SelectedCartItem> storeItems,
+            String storeId,
+            Store store,
+            User user,
+            OrderDTO orderDTO,
+            Promotion platformOrderPromotion,
+            Promotion platformShippingPromotion,
+            int platformOrderPromotionUsed,
+            List<String> applyShippingToStores) {
+
+        // 1. Tính tổng tiền sản phẩm của store
+        BigDecimal storeTotal = BigDecimal.ZERO;
+        for (OrderDTO.SelectedCartItem item : storeItems) {
+            ProductVariant productVariant = productVariantRepository.findById(item.getProductVariantId()).get();
+            Long itemPrice = getProductPrice(productVariant, item.getColorId());
+            BigDecimal itemTotal = BigDecimal.valueOf(itemPrice)
+                    .multiply(BigDecimal.valueOf(item.getQuantity()));
+            storeTotal = storeTotal.add(itemTotal);
         }
+
+        // 2. Khởi tạo các biến tính toán
+        List<Promotion> appliedPromotions = new ArrayList<>();
+        BigDecimal storeDiscountAmount = BigDecimal.ZERO; // Tiền shop chịu
+        BigDecimal platformDiscountAmount = BigDecimal.ZERO; // Tiền sàn chịu
+        BigDecimal shippingDiscount = BigDecimal.ZERO;
+        boolean isPlatformOrderPromotionApplied = false;
+
+        BigDecimal currentTotal = storeTotal; // Track giá trị sau mỗi lần discount
+
+        // 3. Áp dụng Store ORDER Promotion (TRƯỚC)
+        if (orderDTO.getStorePromotions() != null && orderDTO.getStorePromotions().containsKey(storeId)) {
+            String storePromo = orderDTO.getStorePromotions().get(storeId);
+
+            if (storePromo != null && !storePromo.trim().isEmpty()) {
+                Promotion storeOrderPromotion = promotionRepository.findByCode(storePromo)
+                        .orElseThrow(() -> new IllegalArgumentException(
+                                "Mã giảm giá đơn hàng không tồn tại: " + storePromo));
+
+                // Validate: Phải là mã ORDER
+                if (!Promotion.ApplicableFor.ORDER.name().equals(storeOrderPromotion.getApplicableFor())) {
+                    throw new IllegalArgumentException("Mã " + storePromo + " không phải là mã giảm giá đơn hàng");
+                }
+
+                // Validate điều kiện áp dụng
+                if (isPromotionValid(storeOrderPromotion, currentTotal, user, store)) {
+                    BigDecimal storeDiscount = calculateDiscount(currentTotal, storeOrderPromotion);
+                    storeDiscountAmount = storeDiscountAmount.add(storeDiscount); // Shop chịu chi phí này
+                    currentTotal = currentTotal.subtract(storeDiscount);
+                    appliedPromotions.add(storeOrderPromotion);
+                } else {
+                    throw new IllegalArgumentException(
+                            "Mã giảm giá đơn hàng không hợp lệ hoặc không đủ điều kiện cho cửa hàng: "
+                                    + store.getName());
+                }
+            }
+        }
+
+        // 4. Áp dụng Platform ORDER Promotion (SAU store voucher)
+        if (platformOrderPromotion != null) {
+            int remainingUsage = platformOrderPromotion.getUsageLimit() != null
+                    ? platformOrderPromotion.getUsageLimit()
+                            - (platformOrderPromotion.getUsedCount() + platformOrderPromotionUsed)
+                    : Integer.MAX_VALUE;
+
+            if (remainingUsage > 0) {
+                // Check minOrderValue với currentTotal (sau khi áp dụng store voucher)
+                if (platformOrderPromotion.getMinOrderValue() == null ||
+                        currentTotal
+                                .compareTo(BigDecimal.valueOf(platformOrderPromotion.getMinOrderValue())) >= 0) {
+
+                    BigDecimal platformDiscount = calculateDiscount(currentTotal, platformOrderPromotion);
+                    platformDiscountAmount = platformDiscountAmount.add(platformDiscount); // Sàn chịu chi phí này
+                    currentTotal = currentTotal.subtract(platformDiscount);
+                    appliedPromotions.add(platformOrderPromotion);
+                    isPlatformOrderPromotionApplied = true;
+                }
+            }
+        }
+
+        // 5. Áp dụng Platform SHIPPING Promotion
+        BigDecimal shippingFee = BigDecimal.valueOf(30000); // Default shipping fee
+
+        if (platformShippingPromotion != null && applyShippingToStores.contains(storeId)) {
+            // Check minOrderValue với storeTotal gốc (không phải currentTotal)
+            if (platformShippingPromotion.getMinOrderValue() == null ||
+                    storeTotal.compareTo(BigDecimal.valueOf(platformShippingPromotion.getMinOrderValue())) >= 0) {
+
+                BigDecimal platformShippingDiscount = calculateDiscount(shippingFee, platformShippingPromotion);
+                shippingDiscount = shippingDiscount.add(platformShippingDiscount);
+                appliedPromotions.add(platformShippingPromotion);
+            }
+        }
+
+        // 6. Tính phí ship cuối cùng
+        BigDecimal finalShippingFee = shippingFee.subtract(shippingDiscount).max(BigDecimal.ZERO);
+
+        // 7. Tính hoa hồng sàn (5% doanh thu sản phẩm của shop, tối đa 500k)
+        BigDecimal productRevenue = storeTotal.subtract(storeDiscountAmount);
+        BigDecimal platformCommission = productRevenue.multiply(BigDecimal.valueOf(0.05));
+        // Giới hạn hoa hồng tối đa 500,000đ mỗi đơn
+        BigDecimal maxCommission = BigDecimal.valueOf(500000);
+        platformCommission = platformCommission.min(maxCommission);
+
+        // 8. Tính tổng tiền cuối cùng khách hàng phải thanh toán
+        BigDecimal totalDiscount = storeDiscountAmount.add(platformDiscountAmount);
+        BigDecimal finalTotal = storeTotal.subtract(totalDiscount).add(finalShippingFee).max(BigDecimal.ZERO);
+
+        // 9. Trả về kết quả
+        return new OrderFinancials(
+                storeTotal,
+                storeDiscountAmount,
+                platformDiscountAmount,
+                totalDiscount,
+                finalShippingFee,
+                platformCommission,
+                finalTotal,
+                appliedPromotions,
+                isPlatformOrderPromotionApplied
+        );
     }
+
+
+
+    /**
+     * Lấy thông báo theo trạng thái đơn hàng
+     */
+    private String getStatusMessage(String status) {
+        return switch (status) {
+            case "PENDING" -> "Đơn hàng đang chờ xử lý";
+            case "CONFIRMED" -> "Đơn hàng đã được xác nhận";
+            case "SHIPPING" -> "Đơn hàng đang được vận chuyển";
+            case "DELIVERED" -> "Đơn hàng đã được giao";
+            case "COMPLETED" -> "Đơn hàng đã hoàn tất";
+            case "CANCELLED" -> "Đơn hàng đã bị hủy";
+            default -> "Trạng thái đơn hàng: " + status;
+        };
+    }
+
+    @Override
+    public Map<String, Long> countOrdersByStatus(String storeId) throws Exception {
+        Map<String, Long> statusCounts = new HashMap<>();
+
+        long pending = orderRepository.countByStoreIdAndStatus(storeId, Order.OrderStatus.PENDING.name());
+        long confirmed = orderRepository.countByStoreIdAndStatus(storeId, Order.OrderStatus.CONFIRMED.name());
+        long shipping = orderRepository.countByStoreIdAndStatus(storeId, Order.OrderStatus.SHIPPING.name());
+        long delivered = orderRepository.countByStoreIdAndStatus(storeId, Order.OrderStatus.DELIVERED.name());
+        long cancelled = orderRepository.countByStoreIdAndStatus(storeId, Order.OrderStatus.CANCELLED.name());
+
+        long total = pending + confirmed + shipping + delivered + cancelled;
+
+        statusCounts.put("total", total);
+        statusCounts.put("pending", pending);
+        statusCounts.put("confirmed", confirmed);
+        statusCounts.put("shipping", shipping);
+        statusCounts.put("delivered", delivered);
+        statusCounts.put("cancelled", cancelled);
+
+        return statusCounts;
+    }
+
+    @Override
+    @Transactional
+    public void updatePaymentStatus(String orderId, String paymentStatus, Long momoTransId) throws Exception {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new DataNotFoundException("Đơn hàng không tồn tại: " + orderId));
+
+        // Cập nhật trạng thái thanh toán
+        order.setPaymentStatus(paymentStatus);
+
+        // Lưu mã giao dịch MoMo nếu có
+        if (momoTransId != null && momoTransId > 0) {
+            order.setMomoTransId(String.valueOf(momoTransId));
+        }
+
+        // Nếu thanh toán thành công và đơn hàng đang PENDING
+        if ("PAID".equals(paymentStatus) && Order.OrderStatus.PENDING.name().equals(order.getStatus())) {
+            order.setPaymentStatus(Order.PaymentStatus.PAID.name());
+            // Gửi thông báo cho cửa hàng
+            try {
+                notificationService.createStoreNotification(
+                        order.getStore().getId(),
+                        "Đơn hàng mới",
+                        "Bạn có đơn hàng mới #" + order.getId() + " đã thanh toán thành công",
+                        order.getId());
+            } catch (Exception e) {
+                System.err.println("Failed to send notification: " + e.getMessage());
+            }
+        }
+
+        // Nếu thanh toán thất bại, có thể tự động hủy đơn
+        if ("FAILED".equals(paymentStatus) && Order.OrderStatus.PENDING.name().equals(order.getStatus())) {
+            order.setStatus(Order.OrderStatus.CANCELLED.name());
+            try {
+                notificationService.createUserNotification(
+                        order.getBuyer().getId(),
+                        "Thanh toán thất bại",
+                        "Thanh toán cho đơn hàng #" + order.getId() + " đã thất bại. Đơn hàng bị hủy.",
+                        order.getId());
+            } catch (Exception e) {
+                System.out.println("Failed to send notification: " + e.getMessage());
+            }
+            System.out.println("Payment failed for order: " + orderId + ". Order status remains PENDING.");
+        }
+
+        orderRepository.save(order);
+    }
+
+    @Override
+    public Order getOrderById(String orderId) throws Exception {
+        return orderRepository.findById(orderId)
+                .orElseThrow(() -> new DataNotFoundException("Đơn hàng không tồn tại: " + orderId));
+    }
+
 }

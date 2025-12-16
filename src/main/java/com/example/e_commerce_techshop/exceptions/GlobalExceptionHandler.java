@@ -67,7 +67,7 @@ public class GlobalExceptionHandler {
         }
         
         // Fallback cho các NullPointerException khác
-        if (errorMessage != null && (errorMessage.contains("currentUser") || errorMessage.contains("user"))) {
+        if (errorMessage != null && errorMessage.contains("User.getId()")) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error("Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại"));
         }

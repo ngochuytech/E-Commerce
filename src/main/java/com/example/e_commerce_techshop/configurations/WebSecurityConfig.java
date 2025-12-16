@@ -59,6 +59,11 @@ public class WebSecurityConfig {
                         ).permitAll()
                         // Cho phép truy cập ảnh tĩnh đã upload
                         .requestMatchers("/image/**").permitAll()
+                        // Payment gateway callbacks (không cần authentication)
+                        .requestMatchers(
+                                String.format("%s/buyer/payments/momo/ipn", apiPrefix),
+                                String.format("%s/buyer/payments/vnpay/ipn", apiPrefix)
+                        ).permitAll()
                         // TEMPORARY: Cho phép tất cả APIs để test (SAU NÀY SẼ BẬT LẠI AUTHENTICATION)
                         .anyRequest().permitAll()
                 );

@@ -11,6 +11,10 @@ import java.util.List;
 public interface TokenRepository extends MongoRepository<Token, String> {
 
     List<Token> findByUser(User user);
+
     Token findByRefreshToken(String token);
+
     Token findByToken(String token);
+
+    long deleteByRefreshToken(String refreshToken);
 }

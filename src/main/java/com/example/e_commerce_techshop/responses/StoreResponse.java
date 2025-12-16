@@ -30,7 +30,7 @@ public class StoreResponse {
         private String suggestedName;
     }
 
-        @Getter
+    @Getter
     @Setter
     @Builder
     static class OwnerResponse {

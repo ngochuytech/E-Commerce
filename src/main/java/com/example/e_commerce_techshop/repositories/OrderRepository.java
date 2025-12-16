@@ -29,13 +29,26 @@ public interface OrderRepository extends MongoRepository<Order, String> {
     List<Order> findByStoreIdAndStatus(String storeId, String status);
     
     long countByStoreIdAndStatus(String storeId, String status);
-    
-    @Query("{ 'store.$id': ?0, 'createdAt': { '$gte': ?1, '$lte': ?2 } }")
-    List<Order> findByStoreIdAndDateRange(String storeId, LocalDateTime start, LocalDateTime end);
+
+    @Query("{ 'store.$id': { $oid: ?0 }, 'status': ?1, 'createdAt': { $gte: ?2, $lte: ?3 } }")
+    List<Order> findByStoreIdAndStatusAndDateRange(String storeId, String status, LocalDateTime start, LocalDateTime end);
     
     Page<Order> findByStoreId(String storeId, Pageable pageable);
     
     Page<Order> findByStoreIdAndStatus(String storeId, String status, Pageable pageable);
     
     long countByStoreId(String storeId);
+
+    /**
+     * Tìm các orders theo status và updatedAt trước một thời điểm nhất định
+     * Dùng cho scheduled task tự động chuyển DELIVERED -> COMPLETED sau 7 ngày
+     */
+    List<Order> findByStatusAndUpdatedAtBefore(String status, LocalDateTime dateTime);
+
+    /**
+     * Tìm các orders thanh toán online chưa thanh toán và quá thời hạn
+     * Dùng cho scheduled task tự động hủy đơn hàng chưa thanh toán quá 1 giờ
+     */
+    List<Order> findByPaymentStatusAndStatusAndPaymentMethodInAndCreatedAtBefore(
+            String paymentStatus, String status, List<String> paymentMethods, LocalDateTime dateTime);
 }

@@ -1,5 +1,7 @@
 package com.example.e_commerce_techshop.dtos.user;
 
+import java.time.LocalDate;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import jakarta.validation.constraints.NotBlank;
@@ -27,4 +29,8 @@ public class UserRegisterDTO {
     @JsonProperty("full_name")
     @NotBlank(message = "Full name is required")
     private String fullName;
+
+    private String phone;
+
+    private LocalDate dateOfBirth;
 }

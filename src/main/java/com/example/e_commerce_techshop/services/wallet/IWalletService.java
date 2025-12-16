@@ -51,4 +51,16 @@ public interface IWalletService {
      * Admin: Hoàn thành chuyển tiền (sau khi đã chuyển tiền thực tế)
      */
     WithdrawalRequest completeWithdrawalRequest(String requestId, String adminNote) throws Exception;
+    
+    /**
+     * Cộng tiền vào ví shop khi đơn hàng được giao thành công
+     * Số tiền = productPrice - storeDiscountAmount - serviceFee (không tính platform discount và phí ship) + shippingFee
+     */
+    void addOrderPaymentToWallet(String storeId, String orderId, BigDecimal amount, String description) throws Exception;
+
+    /**
+     * Hoàn tiền cho buyer khi trả hàng thành công
+     * Tiền được hoàn vào ví user (UserWallet)
+     */
+    void refundToBuyer(String buyerId, String orderId, BigDecimal amount, String description) throws Exception;
 }

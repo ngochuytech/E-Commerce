@@ -20,11 +20,13 @@ public class AdminRevenue extends BaseEntity {
     @DBRef
     private Order order;  // Liên kết đến order
 
-    private BigDecimal serviceFee;  // Phí dịch vụ
+    private BigDecimal amount;  // Số tiền
 
-    private String revenueType;  // SERVICE_FEE, COMMISSION (để mở rộng sau)
-
-    private String status;  // PENDING (lúc tạo order), COLLECTED (lúc order DELIVERED)
+    private String revenueType;  // PLATFORM_COMMISSION
 
     private String description;
+
+    public enum RevenueType {
+        PLATFORM_COMMISSION, PLATFORM_DISCOUNT_LOSS
+    }
 }

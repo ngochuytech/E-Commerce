@@ -31,22 +31,25 @@ public class JwtTokenProvider {
 
     private final TokenRepository tokenRepository;
 
-    public String generateToken(Authentication authentication){
+    public String generateToken(Authentication authentication) {
         String username = authentication.getName();
 
         Date currentDate = new Date();
 
         Date expireDate = new Date(currentDate.getTime() + jwtExpirationDate);
 
+        User user = (User) authentication.getPrincipal();
+
         return Jwts.builder()
                 .subject(username)
+                .claim("userId", user.getId())
                 .issuedAt(new Date())
                 .expiration(expireDate)
                 .signWith(key())
                 .compact();
     }
 
-    public String generateToken(User user){
+    public String generateToken(User user) {
         String username = user.getEmail();
 
         Date currentDate = new Date();
@@ -55,19 +58,20 @@ public class JwtTokenProvider {
 
         return Jwts.builder()
                 .subject(username)
+                .claim("userId", user.getId())
                 .issuedAt(new Date())
                 .expiration(expireDate)
                 .signWith(key())
                 .compact();
     }
 
-    private SecretKey key(){
+    private SecretKey key() {
         byte[] bytes = Decoders.BASE64.decode(jwtSecret);
         return Keys.hmacShaKeyFor(bytes);
     }
 
     // get username from JWT token
-    public String getUsername(String token){
+    public String getUsername(String token) {
         try {
             return Jwts.parser()
                     .verifyWith((SecretKey) key())
@@ -84,15 +88,27 @@ public class JwtTokenProvider {
         }
     }
 
+    public String getUserId(String token) {
+        try {
+            return this.extractClaim(token, claims -> claims.get("userId", String.class));
+        } catch (ExpiredJwtException e) {
+            throw new JwtAuthenticationException("JWT token đã hết hạn", e);
+        } catch (JwtException e) {
+            throw new JwtAuthenticationException("JWT token không hợp lệ", e);
+        } catch (Exception e) {
+            throw new JwtAuthenticationException("Lỗi khi xử lý JWT token", e);
+        }
+    }
+
     // validate JWT token
-    public boolean validateToken(String token, User user){
+    public boolean validateToken(String token, User user) {
         try {
             String subject = extractClaim(token, Claims::getSubject);
             // Subject là email
 
             // Kiểm tra token tồn tại trong DB ko ?
             Token existingToken = tokenRepository.findByToken(token);
-            if(existingToken == null || existingToken.isRevoked() ||!user.getIsActive()) {
+            if (existingToken == null || existingToken.isRevoked() || !user.getIsActive()) {
                 return false;
             }
             return (subject.equals(user.getUsername())) && !isTokenExpired(token);
@@ -104,13 +120,14 @@ public class JwtTokenProvider {
             throw new JwtAuthenticationException("Lỗi khi xác thực JWT token", e);
         }
     }
+
     private Claims extractAllClaims(String token) {
         try {
-            return Jwts.parser()  // Khởi tạo JwtParserBuilder
-                    .verifyWith(key())  // Sử dụng verifyWith() để thiết lập signing key
-                    .build()  // Xây dựng JwtParser
-                    .parseSignedClaims(token)  // Phân tích token đã ký
-                    .getPayload();  // Lấy phần body của JWT, chứa claims
+            return Jwts.parser() // Khởi tạo JwtParserBuilder
+                    .verifyWith(key()) // Sử dụng verifyWith() để thiết lập signing key
+                    .build() // Xây dựng JwtParser
+                    .parseSignedClaims(token) // Phân tích token đã ký
+                    .getPayload(); // Lấy phần body của JWT, chứa claims
         } catch (ExpiredJwtException e) {
             throw new JwtAuthenticationException("JWT token đã hết hạn", e);
         } catch (JwtException e) {
@@ -120,8 +137,7 @@ public class JwtTokenProvider {
         }
     }
 
-
-    public  <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
+    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = this.extractAllClaims(token);
         return claimsResolver.apply(claims);
     }
