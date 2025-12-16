@@ -17,6 +17,7 @@ import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.repositories.OrderRepository;
 import com.example.e_commerce_techshop.repositories.RefundRequestRepository;
 import com.example.e_commerce_techshop.responses.admin.RefundRequestResponse;
+import com.example.e_commerce_techshop.services.momo.IMomoService;
 import com.example.e_commerce_techshop.services.notification.INotificationService;
 
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class RefundAdminService implements IRefundAdminService {
     private final RefundRequestRepository refundRequestRepository;
     private final OrderRepository orderRepository;
     private final INotificationService notificationService;
+    private final IMomoService momoService;
 
     @Override
     public Page<RefundRequestResponse> getRefundRequests(String status, Pageable pageable) {
@@ -88,32 +90,89 @@ public class RefundAdminService implements IRefundAdminService {
         Order order = refundRequest.getOrder();
         
         if ("APPROVE".equalsIgnoreCase(dto.getAction())) {
-            // Validate
-            if (dto.getRefundTransactionId() == null || dto.getRefundTransactionId().trim().isEmpty()) {
-                throw new IllegalArgumentException("Vui lòng nhập mã giao dịch hoàn tiền");
+            // Xử lý theo phương thức thanh toán
+            String paymentMethod = order.getPaymentMethod();
+            
+            if ("COD".equalsIgnoreCase(paymentMethod)) {
+                // COD: Admin phải nhập mã giao dịch chuyển khoản thủ công
+                if (dto.getRefundTransactionId() == null || dto.getRefundTransactionId().trim().isEmpty()) {
+                    throw new IllegalArgumentException("Đơn COD cần nhập mã giao dịch chuyển khoản (refundTransactionId)");
+                }
+                
+                // Duyệt hoàn tiền COD
+                refundRequest.setStatus(RefundRequest.RefundStatus.COMPLETED.name());
+                refundRequest.setRefundTransactionId(dto.getRefundTransactionId());
+                refundRequest.setAdminNote(dto.getAdminNote());
+                refundRequest.setProcessedBy(admin);
+                
+                // Cập nhật order với thông tin manual refund
+                order.setRefundStatus(Order.RefundStatus.COMPLETED.name());
+                order.setRefundCompletedAt(LocalDateTime.now());
+                order.setManualRefundTransactionRef(dto.getRefundTransactionId());
+                order.setManualRefundTransferredAt(LocalDateTime.now());
+                order.setManualRefundNote(dto.getAdminNote());
+                
+                // Thông báo cho khách hàng
+                notificationService.createUserNotification(
+                        refundRequest.getBuyer().getId(),
+                        "Hoàn tiền thành công",
+                        String.format("Đơn hàng #%s đã được hoàn tiền %,.0f đ về tài khoản ngân hàng của bạn. Mã GD: %s",
+                                order.getId(),
+                                refundRequest.getRefundAmount().doubleValue(),
+                                dto.getRefundTransactionId()),
+                        order.getId());
+                        
+            } else if ("MOMO".equalsIgnoreCase(paymentMethod)) {
+                // MOMO: Tự động hoàn tiền qua payment gateway
+                String momoTransId = order.getMomoTransId();
+                if (momoTransId == null || momoTransId.trim().isEmpty()) {
+                    throw new IllegalArgumentException("Không tìm thấy mã giao dịch MoMo (đơn hàng chưa thanh toán hoặc mất thông tin transId)");
+                }
+                
+                // Gọi MoMo API để hoàn tiền
+                Long transIdLong = Long.parseLong(momoTransId);
+                Long amountLong = refundRequest.getRefundAmount().longValue();
+                String description = String.format("Hoàn tiền đơn hàng #%s - Admin: %s", order.getId(), admin.getFullName());
+                
+                String momoResponse = momoService.refundPayment(transIdLong, amountLong, description);
+                
+                // Parse response từ MoMo
+                org.cloudinary.json.JSONObject json = new org.cloudinary.json.JSONObject(momoResponse);
+                int resultCode = json.getInt("resultCode");
+                String refundTransId = json.optString("transId", "");
+                String momoRefundOrderId = json.optString("orderId", ""); // RF_xxx
+                
+                if (resultCode == 0) {
+                    // Hoàn tiền thành công
+                    refundRequest.setStatus(RefundRequest.RefundStatus.COMPLETED.name());
+                    refundRequest.setRefundTransactionId(refundTransId);
+                    refundRequest.setAdminNote(dto.getAdminNote());
+                    refundRequest.setProcessedBy(admin);
+                    
+                    // Cập nhật order
+                    order.setRefundStatus(Order.RefundStatus.COMPLETED.name());
+                    order.setRefundCompletedAt(LocalDateTime.now());
+                    order.setRefundTransactionId(refundTransId);
+                    order.setMomoRefundOrderId(momoRefundOrderId);
+                    
+                    // Thông báo cho khách hàng
+                    notificationService.createUserNotification(
+                            refundRequest.getBuyer().getId(),
+                            "Hoàn tiền thành công",
+                            String.format("Đơn hàng #%s đã được hoàn tiền %,.0f đ về ví MoMo. Mã GD: %s",
+                                    order.getId(),
+                                    refundRequest.getRefundAmount().doubleValue(),
+                                    refundTransId),
+                            order.getId());
+                } else {
+                    // Hoàn tiền thất bại
+                    String errorMessage = json.optString("message", "Lỗi không xác định");
+                    throw new RuntimeException("Hoàn tiền MoMo thất bại: " + errorMessage + " (ResultCode: " + resultCode + ")");
+                }
+                
+            } else {
+                throw new IllegalArgumentException("Phương thức thanh toán không hỗ trợ hoàn tiền: " + paymentMethod);
             }
-            
-            // Duyệt hoàn tiền
-            refundRequest.setStatus(RefundRequest.RefundStatus.COMPLETED.name());
-            refundRequest.setRefundTransactionId(dto.getRefundTransactionId());
-            refundRequest.setAdminNote(dto.getAdminNote());
-            refundRequest.setProcessedBy(admin);
-            
-            // Cập nhật order
-            order.setRefundStatus(Order.RefundStatus.COMPLETED.name());
-            order.setRefundCompletedAt(LocalDateTime.now());
-            order.setRefundTransactionId(dto.getRefundTransactionId());
-            
-            // Thông báo cho khách hàng
-            
-            notificationService.createUserNotification(
-                    refundRequest.getBuyer().getId(),
-                    "Hoàn tiền thành công",
-                    String.format("Đơn hàng #%s đã được hoàn tiền %,.0f đ về tài khoản. Mã GD: %s",
-                            order.getId(),
-                            refundRequest.getRefundAmount().doubleValue(),
-                            dto.getRefundTransactionId()),
-                    order.getId());
             
         } else if ("REJECT".equalsIgnoreCase(dto.getAction())) {
             // Validate

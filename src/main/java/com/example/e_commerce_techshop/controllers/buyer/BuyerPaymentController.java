@@ -119,10 +119,19 @@ public class BuyerPaymentController {
         }
 
         @GetMapping("/momo/refund/check_status/{orderId}")
-        @Operation(summary = "Check MoMo refund status", description = "Query the status of a MoMo refund transaction.")
+        @Operation(summary = "Check MoMo refund status", description = "Query the status of a MoMo refund transaction. Use system orderId, will lookup momoRefundOrderId automatically.")
         public ResponseEntity<?> checkMomoRefundStatus(
                         @PathVariable String orderId) throws Exception {
-                String result = momoService.checkRefundStatus(orderId);
+                // Lấy momoRefundOrderId từ database
+                Order order = orderService.getOrderById(orderId);
+                String momoRefundOrderId = order.getMomoRefundOrderId();
+                
+                if (momoRefundOrderId == null || momoRefundOrderId.isEmpty()) {
+                        return ResponseEntity.badRequest()
+                                        .body(ApiResponse.error("Đơn hàng chưa có giao dịch hoàn tiền MoMo"));
+                }
+                
+                String result = momoService.checkRefundStatus(momoRefundOrderId);
                 return ResponseEntity.ok(result);
         }
 

@@ -88,13 +88,28 @@ public class RefundService implements IRefundService {
             org.cloudinary.json.JSONObject json = new org.cloudinary.json.JSONObject(momoResponse);
             int resultCode = json.getInt("resultCode");
             String refundTransId = json.optString("transId", "");
+            String refundOrderId = json.optString("orderId", ""); // RF_xxx từ MoMo
+            
+            System.out.println("DEBUG - Parsed refund response: resultCode=" + resultCode + ", refundTransId=" + refundTransId + ", refundOrderId=" + refundOrderId);
             
             if (resultCode == 0) {
                 // Hoàn tiền thành công
                 order.setRefundStatus(Order.RefundStatus.COMPLETED.name());
                 order.setRefundCompletedAt(LocalDateTime.now());
                 order.setRefundTransactionId(refundTransId);
-                orderRepository.save(order);
+                order.setMomoRefundOrderId(refundOrderId); // Lưu RF_xxx để check status sau
+                
+                System.out.println("DEBUG - Before save: orderId=" + order.getId() + ", momoRefundOrderId=" + order.getMomoRefundOrderId());
+                Order savedOrder = orderRepository.save(order);
+                System.out.println("DEBUG - After save (from return): momoRefundOrderId=" + savedOrder.getMomoRefundOrderId());
+                
+                // Query lại từ DB để verify
+                Order verifiedOrder = orderRepository.findById(order.getId()).orElse(null);
+                if (verifiedOrder != null) {
+                    System.out.println("DEBUG - Verified from DB: momoRefundOrderId=" + verifiedOrder.getMomoRefundOrderId());
+                } else {
+                    System.out.println("DEBUG - ERROR: Cannot find order after save!");
+                }
 
                 // Tạo RefundRequest record
                 RefundRequest refundRequest = RefundRequest.builder()

@@ -33,6 +33,11 @@ public class OrderResponse {
     private String momoTransId; // Mã giao dịch MoMo (transId khi thanh toán thành công)
 
     private String paymentStatus; // Trạng thái thanh toán: UNPAID, PAID, FAILED
+    
+    // Thông tin hoàn tiền thủ công (COD)
+    private String manualRefundTransactionRef; // Mã giao dịch chuyển khoản thủ công
+    private LocalDateTime manualRefundTransferredAt; // Thời điểm admin chuyển tiền
+    private String manualRefundNote; // Ghi chú hoàn tiền thủ công
 
     private String status; // PENDING, CONFIRMED, SHIPPING, DELIVERED, CANCELLED
 
@@ -138,6 +143,9 @@ public class OrderResponse {
                 .paymentMethod(order.getPaymentMethod())
                 .paymentStatus(order.getPaymentStatus())
                 .momoTransId(order.getMomoTransId())
+                .manualRefundTransactionRef(order.getManualRefundTransactionRef())
+                .manualRefundTransferredAt(order.getManualRefundTransferredAt())
+                .manualRefundNote(order.getManualRefundNote())
                 .status(order.getStatus())
                 .isRated(order.isRated())
                 .orderItems(orderItems)

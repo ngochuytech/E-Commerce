@@ -76,8 +76,11 @@ public class AdminRefundController {
 
     @PostMapping("/process")
     @Operation(summary = "Xử lý yêu cầu hoàn tiền", 
-               description = "Duyệt (APPROVE) hoặc Từ chối (REJECT) yêu cầu hoàn tiền. " +
-                           "Nếu APPROVE, cần nhập refundTransactionId. Nếu REJECT, cần nhập rejectionReason.")
+               description = "Duyệt (APPROVE) hoặc Từ chối (REJECT) yêu cầu hoàn tiền.\n\n" +
+                           "**APPROVE:**\n" +
+                           "- Đơn MOMO/VNPAY: Tự động hoàn tiền qua payment gateway\n" +
+                           "- Đơn COD: Cần nhập `refundTransactionId` (mã giao dịch chuyển khoản) và `adminNote` sau khi đã chuyển tiền thủ công\n\n" +
+                           "**REJECT:** Cần nhập `rejectionReason`")
     public ResponseEntity<?> processRefundRequest(
             @RequestBody ProcessRefundRequestDTO dto,
             @AuthenticationPrincipal User admin) throws Exception {

@@ -126,17 +126,23 @@ public class BuyerOrderController {
     }
 
     @PostMapping(value = "/{orderId}/return", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Yêu cầu trả hàng", description = "Tạo yêu cầu trả hàng cho đơn hàng đã giao (DELIVERED). Upload ảnh/video minh chứng.")
+    @Operation(summary = "Yêu cầu trả hàng", description = "Tạo yêu cầu trả hàng cho đơn hàng đã giao (DELIVERED). Upload ảnh/video minh chứng. Đơn COD bắt buộc nhập thông tin ngân hàng.")
     public ResponseEntity<?> returnOrder(
             @Parameter(description = "Order ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String orderId,
             @Parameter(description = "Lý do trả hàng") @RequestParam String reason,
             @Parameter(description = "Mô tả chi tiết") @RequestParam(required = false) String description,
             @Parameter(description = "Ảnh/video minh chứng (tối đa 5 file)") @RequestParam(value = "evidenceFiles", required = false) List<MultipartFile> evidenceFiles,
+            @Parameter(description = "Tên ngân hàng (bắt buộc cho COD)") @RequestParam(required = false) String bankName,
+            @Parameter(description = "Số tài khoản ngân hàng (bắt buộc cho COD)") @RequestParam(required = false) String bankAccountNumber,
+            @Parameter(description = "Tên chủ tài khoản (bắt buộc cho COD)") @RequestParam(required = false) String bankAccountName,
             @AuthenticationPrincipal User currentUser) throws Exception {
         
         ReturnRequestDTO dto = ReturnRequestDTO.builder()
                 .reason(reason)
                 .description(description)
+                .bankName(bankName)
+                .bankAccountNumber(bankAccountNumber)
+                .bankAccountName(bankAccountName)
                 .build();
         
         ReturnRequest returnRequest = returnRequestService.createReturnRequest(currentUser, orderId, dto, evidenceFiles);
