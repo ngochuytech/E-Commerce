@@ -172,7 +172,7 @@ public class ReturnRequestService implements IReturnRequestService {
 
         // Upload attachment files to Cloudinary
         List<String> attachmentUrls = null;
-        if (evidenceFiles.size() > 5) {
+        if (evidenceFiles != null && evidenceFiles.size() > 5) {
             throw new IllegalArgumentException("Số lượng hình ảnh/video đính kèm tối đa là 5");
         }
         if (evidenceFiles != null && !evidenceFiles.isEmpty())
@@ -526,6 +526,9 @@ public class ReturnRequestService implements IReturnRequestService {
             returnRequest.setAdminHandler(admin);
             returnRequestRepository.save(returnRequest);
 
+            order.setStatus(Order.OrderStatus.RETURNING.name());
+            orderRepository.save(order);
+
             // Chuẩn bị shipment để shipper lấy hàng trả về
             prepareReturnShipment(returnRequest);
 
@@ -846,6 +849,9 @@ public class ReturnRequestService implements IReturnRequestService {
                         .buyer(order.getBuyer())
                         .refundAmount(returnRequest.getRefundAmount())
                         .paymentMethod(RefundRequest.PaymentMethod.BANK_TRANSFER.name()) // Hoàn qua ngân hàng
+                        .bankName(returnRequest.getBankName())
+                        .bankAccountNumber(returnRequest.getBankAccountNumber())
+                        .bankAccountName(returnRequest.getBankAccountName())
                         .status(RefundRequest.RefundStatus.PENDING.name())
                         .build();
                 refundRequestRepository.save(refundRequest);
@@ -1009,6 +1015,9 @@ public class ReturnRequestService implements IReturnRequestService {
                             .buyer(order.getBuyer())
                             .refundAmount(returnRequest.getRefundAmount())
                             .paymentMethod("BANK_TRANSFER")
+                            .bankName(returnRequest.getBankName())
+                            .bankAccountNumber(returnRequest.getBankAccountNumber())
+                            .bankAccountName(returnRequest.getBankAccountName())
                             .status(com.example.e_commerce_techshop.models.RefundRequest.RefundStatus.PENDING.name())
                             .build();
                     refundRequestRepository.save(refundRequest);

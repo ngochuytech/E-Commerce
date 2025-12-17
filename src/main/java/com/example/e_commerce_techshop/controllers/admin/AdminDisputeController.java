@@ -72,7 +72,7 @@ public class AdminDisputeController {
     }
 
     @PutMapping("/{disputeId}/resolve")
-    @Operation(summary = "Giải quyết khiếu nại từ chối đơn trả hàng", description = "Admin quyết định khiếu nại khi buyer khiếu nại việc store từ chối đơn trả hàng. APPROVE_BUYER = đồng ý với buyer (chấp nhận trả hàng), REJECT_BUYER = đồng ý với store (giữ nguyên từ chối)")
+    @Operation(summary = "Giải quyết khiếu nại từ chối đơn trả hàng", description = "Admin quyết định khiếu nại khi buyer khiếu nại việc store từ chối đơn trả hàng. APPROVE_RETURN = đồng ý với buyer (chấp nhận trả hàng), REJECT_RETURN = đồng ý với store (giữ nguyên từ chối)")
     public ResponseEntity<?> resolveDispute(
             @Parameter(description = "Dispute ID") @PathVariable String disputeId,
             @Valid @RequestBody DisputeDecisionDTO dto,

@@ -96,13 +96,37 @@ public class OrderResponse {
     public static OrderResponse fromOrder(Order order) {
         List<OrderItemResponse> orderItems = order.getOrderItems().stream()
                 .map(orderItem -> {
-                    String primaryImageUrl = orderItem.getProductVariant().getPrimaryImageUrl();
+                    String productImage = orderItem.getProductVariant().getPrimaryImageUrl();
+                    
+                    String productName = orderItem.getProductVariant().getProduct().getName();
+                    String colorId = orderItem.getColorId();
+                    
+                    // Tìm tên màu và ảnh màu nếu có
+                    String colorName = null;
+                    if (colorId != null && orderItem.getProductVariant().getColors() != null) {
+                        var colorOptional = orderItem.getProductVariant().getColors().stream()
+                                .filter(color -> color.getId().equals(colorId))
+                                .findFirst();
+                        
+                        if (colorOptional.isPresent()) {
+                            var color = colorOptional.get();
+                            colorName = color.getColorName();
+                            if (color.getImage() != null && !color.getImage().isEmpty()) {
+                                productImage = color.getImage();
+                            }
+                        }
+                    }
+                    
+                    // Nối tên màu vào tên sản phẩm nếu có
+                    if (colorName != null && !colorName.isEmpty()) {
+                        productName = productName + " - " + colorName;
+                    }
 
                     return OrderItemResponse.builder()
                             .id(orderItem.getId())
                             .productVariantId(orderItem.getProductVariant().getId())
-                            .productName(orderItem.getProductVariant().getProduct().getName())
-                            .productImage(primaryImageUrl)
+                            .productName(productName)
+                            .productImage(productImage)
                             .quantity(orderItem.getQuantity())
                             .price(BigDecimal.valueOf(orderItem.getPrice()))
                             .colorId(orderItem.getColorId())

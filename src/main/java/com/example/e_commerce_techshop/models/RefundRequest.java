@@ -38,6 +38,17 @@ public class RefundRequest extends BaseEntity {
     @DBRef
     private User processedBy; // Admin xử lý
 
+    // ========== BANK ACCOUNT FOR REFUND ==========
+    
+    // Tên ngân hàng (cho hoàn tiền)
+    private String bankName;
+    
+    // Số tài khoản ngân hàng (cho hoàn tiền)
+    private String bankAccountNumber;
+    
+    // Tên chủ tài khoản (cho hoàn tiền)
+    private String bankAccountName;
+
     public enum PaymentMethod {
         BANK_TRANSFER, // Hoàn tiền qua chuyển khoản ngân hàng
         E_WALLET      // Hoàn tiền qua ví điện tử (MoMo, ZaloPay, ...)
