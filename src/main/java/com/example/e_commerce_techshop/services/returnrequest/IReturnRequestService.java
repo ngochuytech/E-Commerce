@@ -50,6 +50,11 @@ public interface IReturnRequestService {
      */
     Page<Dispute> getBuyerDisputes(User buyer, Pageable pageable) throws Exception;
 
+    /**
+     * Buyer hủy yêu cầu trả hàng (chỉ được hủy khi status là PENDING hoặc APPROVED)
+     */
+    ReturnRequest cancelReturnRequest(User buyer, String returnRequestId) throws Exception;
+
     // ==================== STORE APIs ====================
     
     /**

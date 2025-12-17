@@ -42,6 +42,10 @@ public class OrderResponse {
     private String status; // PENDING, CONFIRMED, SHIPPING, DELIVERED, CANCELLED
 
     private boolean isRated;
+    
+    private boolean hasReturnRequest; // Đơn hàng đã có yêu cầu trả hàng chưa
+
+    private RefundInfo refundInfo; // Thông tin hoàn tiền (nếu có)
 
     private List<OrderItemResponse> orderItems;
 
@@ -77,6 +81,29 @@ public class OrderResponse {
         private String id;
         private String name;
         private String logo;
+    }
+
+    @Getter
+    @Setter
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class RefundInfo {
+        private String refundRequestId;        // ID của RefundRequest
+        private BigDecimal refundAmount;       // Số tiền hoàn
+        private String refundMethod;           // BANK_TRANSFER, E_WALLET (MoMo), VNPAY
+        private String status;                 // PENDING, COMPLETED, REJECTED
+        private String refundTransactionId;    // Mã giao dịch hoàn tiền
+        private LocalDateTime refundCompletedAt; // Thời điểm hoàn tiền thành công
+        
+        // Thông tin ngân hàng (nếu hoàn qua bank)
+        private String bankName;
+        private String bankAccountNumber;
+        private String bankAccountName;
+        
+        // Thông tin hoàn tiền thủ công
+        private String adminNote;
+        private String rejectionReason;
     }
 
     @Getter
@@ -172,6 +199,7 @@ public class OrderResponse {
                 .manualRefundNote(order.getManualRefundNote())
                 .status(order.getStatus())
                 .isRated(order.isRated())
+                .hasReturnRequest(order.isHasReturnRequest())
                 .orderItems(orderItems)
                 .buyer(buyer)
                 .store(store)

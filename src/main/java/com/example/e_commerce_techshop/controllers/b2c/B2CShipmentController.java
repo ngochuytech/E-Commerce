@@ -45,18 +45,6 @@ public class B2CShipmentController {
     }
 
     /**
-     * Lấy thông tin shipment của đơn hàng
-     */
-    @GetMapping("/order/{orderId}")
-    @Operation(summary = "Lấy thông tin shipment của đơn hàng", description = "Lấy thông tin shipment của một đơn hàng cụ thể")
-    public ResponseEntity<?> getShipmentByOrderId(
-            @Parameter(description = "Order ID", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String orderId)
-            throws Exception {
-        Shipment shipment = shipmentService.getShipmentByOrderId(orderId);
-        return ResponseEntity.ok(ApiResponse.ok(ShipmentResponse.fromShipment(shipment)));
-    }
-
-    /**
      * Lấy danh sách shipment của store
      */
     @GetMapping("/store/{storeId}")

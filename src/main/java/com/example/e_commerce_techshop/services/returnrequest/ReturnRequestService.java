@@ -111,6 +111,10 @@ public class ReturnRequestService implements IReturnRequestService {
 
         ReturnRequest savedRequest = returnRequestRepository.save(returnRequest);
 
+        // Cập nhật flag hasReturnRequest trong Order
+        order.setHasReturnRequest(true);
+        orderRepository.save(order);
+
         // Thông báo cho store
         try {
             notificationService.createStoreNotification(order.getStore().getId(),
@@ -571,6 +575,8 @@ public class ReturnRequestService implements IReturnRequestService {
             returnRequest.setAdminHandler(admin);
             returnRequestRepository.save(returnRequest);
 
+            // Clear flag hasReturnRequest trong Order (vì đã CLOSED)
+
             // Thông báo cho buyer
             try {
                 notificationService.createUserNotification(dispute.getBuyer().getId(),
@@ -881,14 +887,14 @@ public class ReturnRequestService implements IReturnRequestService {
                 throw new RuntimeException("Lỗi khi tạo yêu cầu hoàn tiền: " + e.getMessage());
             }
         } else {
-            // Tự động hoàn tiền qua MoMo 
+            // Tự động hoàn tiền qua MoMo
             try {
                 refundService.createRefundRequest(order);
                 log.info("Auto refund initiated for return request {}, amount: {}",
                         returnRequestId, returnRequest.getRefundAmount());
             } catch (Exception e) {
                 log.error("Error processing auto refund: {}", e.getMessage());
-                
+
                 // Nếu hoàn tiền tự động thất bại, thông báo admin xử lý thủ công
                 try {
                     notificationService.createAdminNotification(
@@ -958,11 +964,12 @@ public class ReturnRequestService implements IReturnRequestService {
             returnRequestRepository.save(returnRequest);
 
             // Hoàn tiền cho store - cộng vào ví của store
-            walletService.addOrderPaymentToWallet(
+            walletService.transferPendingToBalance(
                     returnRequest.getStore().getId(),
                     order.getId(),
                     returnRequest.getRefundAmount(),
                     String.format("Hoàn tiền từ tranh chấp hàng trả về đơn #%s - Store thắng kiện", order.getId()));
+
             log.info("Refunded {} to store {} for order {}",
                     returnRequest.getRefundAmount(),
                     returnRequest.getStore().getId(), order.getId());
@@ -1010,7 +1017,8 @@ public class ReturnRequestService implements IReturnRequestService {
             if ("COD".equals(order.getPaymentMethod())) {
                 // Tạo RefundRequest cho admin xử lý chuyển khoản thủ công
                 try {
-                    com.example.e_commerce_techshop.models.RefundRequest refundRequest = com.example.e_commerce_techshop.models.RefundRequest.builder()
+                    com.example.e_commerce_techshop.models.RefundRequest refundRequest = com.example.e_commerce_techshop.models.RefundRequest
+                            .builder()
                             .order(order)
                             .buyer(order.getBuyer())
                             .refundAmount(returnRequest.getRefundAmount())
@@ -1054,7 +1062,7 @@ public class ReturnRequestService implements IReturnRequestService {
                             disputeId, returnRequest.getRefundAmount());
                 } catch (Exception e) {
                     log.error("Error processing auto refund: {}", e.getMessage());
-                    
+
                     // Nếu hoàn tiền tự động thất bại, thông báo admin xử lý thủ công
                     try {
                         notificationService.createAdminNotification(
@@ -1135,5 +1143,64 @@ public class ReturnRequestService implements IReturnRequestService {
         shipmentRepository.save(returnShipment);
 
         log.info("Created NEW return shipment for order {}, status: READY_TO_PICK", order.getId());
+    }
+
+    @Override
+    @Transactional
+    public ReturnRequest cancelReturnRequest(User buyer, String returnRequestId) throws Exception {
+        ReturnRequest returnRequest = returnRequestRepository.findById(returnRequestId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy yêu cầu trả hàng với ID: " + returnRequestId));
+
+        // Kiểm tra quyền sở hữu
+        if (!returnRequest.getBuyer().getId().equals(buyer.getId())) {
+            throw new IllegalStateException("Bạn không có quyền hủy yêu cầu trả hàng này");
+        }
+
+        // Chỉ cho phép hủy khi status là PENDING 
+        String currentStatus = returnRequest.getStatus();
+        if (!ReturnRequest.ReturnStatus.PENDING.name().equals(currentStatus)) {
+            throw new IllegalStateException(
+                    "Chỉ có thể hủy yêu cầu trả hàng khi trạng thái là PENDING. Trạng thái hiện tại: " + currentStatus);
+        }
+
+        // Cập nhật status thành CLOSED
+        returnRequest.setStatus(ReturnRequest.ReturnStatus.CLOSED.name());
+        returnRequest.setStoreResponse("Buyer đã hủy yêu cầu trả hàng");
+        returnRequestRepository.save(returnRequest);
+
+        // Clear flag hasReturnRequest và hoàn thiện Order
+        Order order = returnRequest.getOrder();
+        order.setStatus(Order.OrderStatus.COMPLETED.name());
+        orderRepository.save(order);
+
+        // Thanh toán cho shop (chuyển tiền từ pending sang balance)
+        try {
+            walletService.transferPendingToBalance(
+                    order.getStore().getId(),
+                    order.getId(),
+                    order.getTotalPrice(),
+                    String.format("Thanh toán đơn hàng #%s - Buyer đã hủy yêu cầu trả hàng", order.getId()));
+            
+            log.info("Transferred {} to store {} for order {} after buyer cancelled return request",
+                    order.getTotalPrice(), order.getStore().getId(), order.getId());
+        } catch (Exception e) {
+            log.error("Error transferring payment to store: {}", e.getMessage());
+            throw new RuntimeException("Lỗi khi thanh toán cho cửa hàng: " + e.getMessage());
+        }
+
+        // Thông báo cho store
+        try {
+            notificationService.createStoreNotification(
+                    order.getStore().getId(),
+                    "Yêu cầu trả hàng đã bị hủy",
+                    String.format("Khách hàng %s đã hủy yêu cầu trả hàng cho đơn #%s",
+                            buyer.getFullName(), order.getId()),
+                    order.getId());
+        } catch (Exception e) {
+            log.warn("Error sending notification to store: {}", e.getMessage());
+        }
+
+        log.info("Buyer {} cancelled return request {} for order {}", buyer.getId(), returnRequestId, order.getId());
+        return returnRequest;
     }
 }

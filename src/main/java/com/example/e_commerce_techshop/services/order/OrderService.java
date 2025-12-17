@@ -24,6 +24,8 @@ import com.example.e_commerce_techshop.models.OrderItem;
 import com.example.e_commerce_techshop.models.ProductVariant;
 import com.example.e_commerce_techshop.models.ProductVariant.ColorOption;
 import com.example.e_commerce_techshop.models.Promotion;
+import com.example.e_commerce_techshop.models.RefundRequest;
+import com.example.e_commerce_techshop.models.Shipment;
 import com.example.e_commerce_techshop.models.Store;
 import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.models.Static.OrderFinancials;
@@ -34,7 +36,10 @@ import com.example.e_commerce_techshop.repositories.OrderRepository;
 import com.example.e_commerce_techshop.repositories.ProductVariantRepository;
 import com.example.e_commerce_techshop.repositories.PromotionRepository;
 import com.example.e_commerce_techshop.repositories.PromotionUsageRepository;
+import com.example.e_commerce_techshop.repositories.RefundRequestRepository;
+import com.example.e_commerce_techshop.repositories.ShipmentRepository;
 import com.example.e_commerce_techshop.repositories.StoreRepository;
+import com.example.e_commerce_techshop.responses.ShipmentResponse;
 import com.example.e_commerce_techshop.responses.buyer.OrderResponse;
 import com.example.e_commerce_techshop.services.cart.ICartService;
 import com.example.e_commerce_techshop.services.notification.INotificationService;
@@ -61,6 +66,8 @@ public class OrderService implements IOrderService {
     private final IRefundService refundService;
     private final IWalletService walletService;
     private final AdminRevenueRepository adminRevenueRepository;
+    private final RefundRequestRepository refundRequestRepository;
+    private final ShipmentRepository shipmentRepository;
 
     @Override
     @Transactional
@@ -545,13 +552,8 @@ public class OrderService implements IOrderService {
             // Không trừ serviceFee vì serviceFee là phí khách hàng trả cho sàn (đã bao gồm trong totalPrice)
             BigDecimal storeRevenue = productRevenue.subtract(platformCommission)
                     .add(order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO);
-            
-            walletService.addOrderPaymentToWallet(
-                    order.getStore().getId(),
-                    order.getId(),
-                    storeRevenue,
-                    String.format("Thanh toán đơn hàng #%s ", order.getId())
-            );
+
+            walletService.transferPendingToBalance(order.getStore().getId(), order.getId(), storeRevenue, String.format("Thanh toán đơn hàng #%s ", order.getId()));
             
             // Lưu hoa hồng sàn vào AdminRevenue để thống kê
             try {
@@ -1135,6 +1137,59 @@ public class OrderService implements IOrderService {
     public Order getOrderById(String orderId) throws Exception {
         return orderRepository.findById(orderId)
                 .orElseThrow(() -> new DataNotFoundException("Đơn hàng không tồn tại: " + orderId));
+    }
+
+    @Override
+    public OrderResponse.RefundInfo getOrderRefundInfo(User user, String orderId) throws Exception {
+        // Kiểm tra order tồn tại và thuộc về user
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy đơn hàng với ID: " + orderId));
+
+        if (!order.getBuyer().getId().equals(user.getId())) {
+            throw new IllegalStateException("Bạn không có quyền xem thông tin đơn hàng này");
+        }
+
+        // Tìm RefundRequest cho order này
+        RefundRequest refundRequest = refundRequestRepository.findByOrderId(orderId)
+            .orElse(null);
+
+        if (refundRequest == null) {
+            return null; // Chưa có hoàn tiền
+        }
+
+        // Map sang RefundInfo
+        return OrderResponse.RefundInfo.builder()
+                .refundRequestId(refundRequest.getId())
+                .refundAmount(refundRequest.getRefundAmount())
+                .refundMethod(refundRequest.getPaymentMethod())
+                .status(refundRequest.getStatus())
+                .refundTransactionId(refundRequest.getRefundTransactionId())
+                .refundCompletedAt(order.getRefundCompletedAt())
+                .bankName(refundRequest.getBankName())
+                .bankAccountNumber(refundRequest.getBankAccountNumber())
+                .bankAccountName(refundRequest.getBankAccountName())
+                .adminNote(refundRequest.getAdminNote())
+                .rejectionReason(refundRequest.getRejectionReason())
+                .build();
+    }
+
+    @Override
+    public ShipmentResponse getReturnShipmentInfo(User user, String orderId) throws Exception {
+        // Kiểm tra order tồn tại và thuộc về user
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy đơn hàng với ID: " + orderId));
+
+        if (!order.getBuyer().getId().equals(user.getId())) {
+            throw new IllegalStateException("Bạn không có quyền xem thông tin đơn hàng này");
+        }
+
+        // Tìm shipment trả hàng của order này (isReturnShipment = true)
+        Shipment shipment = shipmentRepository.findByOrderIdAndIsReturnShipment(orderId, true).orElse(null);
+
+        if (shipment == null) {
+            return null; // Chưa có shipment trả hàng
+        }
+        return ShipmentResponse.fromShipment(shipment);
     }
 
 }

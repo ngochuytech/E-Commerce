@@ -30,6 +30,7 @@ import com.example.e_commerce_techshop.models.Order;
 import com.example.e_commerce_techshop.models.ReturnRequest;
 import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.responses.ApiResponse;
+import com.example.e_commerce_techshop.responses.ShipmentResponse;
 import com.example.e_commerce_techshop.responses.admin.DisputeResponse;
 import com.example.e_commerce_techshop.responses.buyer.OrderResponse;
 import com.example.e_commerce_techshop.responses.buyer.ReturnRequestResponse;
@@ -103,6 +104,11 @@ public class BuyerOrderController {
             @AuthenticationPrincipal User currentUser) throws Exception {
         Order order = orderService.getOrderDetail(currentUser, orderId);
         OrderResponse orderResponse = OrderResponse.fromOrder(order);
+        
+        // Thêm thông tin hoàn tiền (nếu có)
+        OrderResponse.RefundInfo refundInfo = orderService.getOrderRefundInfo(currentUser, orderId);
+        orderResponse.setRefundInfo(refundInfo);
+        
         return ResponseEntity.ok(ApiResponse.ok(orderResponse));
     }
 
@@ -173,6 +179,16 @@ public class BuyerOrderController {
         return ResponseEntity.ok(ApiResponse.ok(ReturnRequestResponse.fromReturnRequest(returnRequest)));
     }
 
+    @PutMapping("/returns/{returnRequestId}/cancel")
+    @Operation(summary = "Hủy yêu cầu trả hàng", description = "Buyer hủy yêu cầu trả hàng (chỉ được hủy khi status là PENDING hoặc APPROVED)")
+    public ResponseEntity<?> cancelReturnRequest(
+            @Parameter(description = "Return Request ID") @PathVariable String returnRequestId,
+            @AuthenticationPrincipal User currentUser) throws Exception {
+        
+        ReturnRequest returnRequest = returnRequestService.cancelReturnRequest(currentUser, returnRequestId);
+        return ResponseEntity.ok(ApiResponse.ok(ReturnRequestResponse.fromReturnRequest(returnRequest)));
+    }
+
     @PostMapping(value = "/returns/{returnRequestId}/dispute", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Khiếu nại", description = "Tạo khiếu nại khi store từ chối yêu cầu trả hàng. Upload ảnh/video minh chứng.")
     public ResponseEntity<?> createDispute(
@@ -219,5 +235,30 @@ public class BuyerOrderController {
         Page<Dispute> disputes = returnRequestService.getBuyerDisputes(currentUser, pageable);
         Page<DisputeResponse> responsePage = disputes.map(DisputeResponse::fromDispute);
         return ResponseEntity.ok(ApiResponse.ok(responsePage));
+    }
+
+    @GetMapping("/{orderId}/refund-status")
+    @Operation(summary = "Thông tin hoàn tiền", description = "Lấy thông tin hoàn tiền của đơn hàng (nếu có). Trả về null nếu chưa có hoàn tiền.")
+    public ResponseEntity<?> getOrderRefundStatus(
+            @Parameter(description = "Order ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String orderId,
+            @AuthenticationPrincipal User currentUser) throws Exception {
+        
+        OrderResponse.RefundInfo refundInfo = orderService.getOrderRefundInfo(currentUser, orderId);
+        return ResponseEntity.ok(ApiResponse.ok(refundInfo));
+    }
+
+    @GetMapping("/{orderId}/return-shipment")
+    @Operation(summary = "Thông tin vận chuyển trả hàng", description = "Lấy thông tin vận chuyển của đơn hàng trả về (nếu có). Trả về null nếu chưa có shipment trả hàng.")
+    public ResponseEntity<?> getReturnShipmentInfo(
+            @Parameter(description = "Order ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String orderId,
+            @AuthenticationPrincipal User currentUser) throws Exception {
+        
+        ShipmentResponse response = orderService.getReturnShipmentInfo(currentUser, orderId);
+        
+        if (response == null) {
+            return ResponseEntity.ok(ApiResponse.ok("Chưa có thông tin vận chuyển trả hàng"));
+        }
+        
+        return ResponseEntity.ok(ApiResponse.ok(response));
     }
 }
