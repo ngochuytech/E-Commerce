@@ -190,7 +190,7 @@ public class OrderScheduledService {
 
                     // Tự động hoàn tiền qua MoMo
                     try {
-                        refundService.createRefundRequest(order);
+                        refundService.createRefundRequest(order, returnRequest.getRefundAmount());
                         log.info("[OrderScheduledService] Auto refund initiated for return request {}, amount: {}",
                                 returnRequest.getId(), returnRequest.getRefundAmount());
                     } catch (Exception e) {

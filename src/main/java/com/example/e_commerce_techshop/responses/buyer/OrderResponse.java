@@ -43,7 +43,7 @@ public class OrderResponse {
 
     private boolean isRated;
     
-    private boolean hasReturnRequest; // Đơn hàng đã có yêu cầu trả hàng chưa
+    private String returnRequestId; // Đơn hàng đã có yêu cầu trả hàng chưa
 
     private RefundInfo refundInfo; // Thông tin hoàn tiền (nếu có)
 
@@ -199,7 +199,7 @@ public class OrderResponse {
                 .manualRefundNote(order.getManualRefundNote())
                 .status(order.getStatus())
                 .isRated(order.isRated())
-                .hasReturnRequest(order.isHasReturnRequest())
+                .returnRequestId(order.getReturnRequestId())
                 .orderItems(orderItems)
                 .buyer(buyer)
                 .store(store)

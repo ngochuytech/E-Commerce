@@ -428,7 +428,7 @@ public class PromotionService implements IPromotionService {
                 .filter(promotion -> {
                     try {
                         // Kiểm tra điều kiện áp dụng
-                        if (orderValue < promotion.getMinOrderValue()) {
+                        if (promotion.getMinOrderValue() != null && orderValue < promotion.getMinOrderValue()) {
                             return false; // Không đủ giá trị đơn hàng tối thiểu
                         }
 
@@ -492,7 +492,7 @@ public class PromotionService implements IPromotionService {
                 .filter(promotion -> {
                     try {
                         // Kiểm tra điều kiện áp dụng
-                        if (orderValue < promotion.getMinOrderValue()) {
+                        if (promotion.getMinOrderValue() != null && orderValue < promotion.getMinOrderValue()) {
                             return false; // Không đủ giá trị đơn hàng tối thiểu
                         }
 

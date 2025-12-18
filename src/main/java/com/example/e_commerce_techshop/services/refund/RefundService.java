@@ -26,12 +26,22 @@ public class RefundService implements IRefundService {
 
     @Override
     @Transactional
-    public void createRefundRequest(Order order) throws Exception {
+    public void createRefundRequest(Order order, BigDecimal refundAmount) throws Exception {
         // Cập nhật trạng thái hoàn tiền
         order.setRefundStatus(Order.RefundStatus.PENDING.name());
         order.setRefundRequestedAt(LocalDateTime.now());
 
         orderRepository.save(order);
+
+        RefundRequest refundRequest = RefundRequest.builder()
+                .order(order)
+                .buyer(order.getBuyer())
+                .refundAmount(refundAmount)
+                .paymentMethod(order.getPaymentMethod())
+                .status(RefundRequest.RefundStatus.PENDING.name())
+                .build();
+
+        refundRequestRepository.save(refundRequest);
 
         // Gửi thông báo cho admin về yêu cầu hoàn tiền
         try {
@@ -39,7 +49,7 @@ public class RefundService implements IRefundService {
                     "Yêu cầu hoàn tiền mới",
                     String.format("Đơn hàng #%s cần hoàn tiền %,.0f đ cho khách hàng %s qua %s",
                             order.getId(),
-                            order.getTotalPrice().doubleValue(),
+                            refundAmount.doubleValue(),
                             order.getBuyer().getFullName(),
                             order.getPaymentMethod()),
                     Notification.NotificationType.REFUND_REQUEST.name(),
@@ -98,7 +108,7 @@ public class RefundService implements IRefundService {
                 order.setRefundCompletedAt(LocalDateTime.now());
                 order.setRefundTransactionId(refundTransId);
                 order.setMomoRefundOrderId(refundOrderId); // Lưu RF_xxx để check status sau
-                
+
                 System.out.println("DEBUG - Before save: orderId=" + order.getId() + ", momoRefundOrderId=" + order.getMomoRefundOrderId());
                 Order savedOrder = orderRepository.save(order);
                 System.out.println("DEBUG - After save (from return): momoRefundOrderId=" + savedOrder.getMomoRefundOrderId());
@@ -112,14 +122,23 @@ public class RefundService implements IRefundService {
                 }
 
                 // Tạo RefundRequest record
-                RefundRequest refundRequest = RefundRequest.builder()
-                        .order(order)
-                        .buyer(order.getBuyer())
-                        .refundAmount(amount)
-                        .paymentMethod("MOMO")
-                        .refundTransactionId(refundTransId)
-                        .status(RefundRequest.RefundStatus.COMPLETED.name())
-                        .build();
+                RefundRequest refundRequest = refundRequestRepository.findByOrderId(orderId)
+                    .orElse(null);
+                    
+                if (refundRequest == null) {
+                    refundRequest = RefundRequest.builder()
+                            .order(order)
+                            .buyer(order.getBuyer())
+                            .refundAmount(amount)
+                            .paymentMethod("MOMO")
+                            .refundTransactionId(refundTransId)
+                            .status(RefundRequest.RefundStatus.COMPLETED.name())
+                            .build();
+                } else {
+                    refundRequest.setRefundTransactionId(refundTransId);
+                    refundRequest.setStatus(RefundRequest.RefundStatus.COMPLETED.name());
+                }
+
                 refundRequestRepository.save(refundRequest);
 
                 // Thông báo cho khách hàng

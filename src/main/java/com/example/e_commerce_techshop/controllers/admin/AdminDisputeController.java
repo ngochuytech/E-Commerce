@@ -83,7 +83,8 @@ public class AdminDisputeController {
     }
 
     @PutMapping("/{disputeId}/resolve-quality")
-    @Operation(summary = "Giải quyết khiếu nại chất lượng hàng trả về", description = "Admin quyết định khi store khiếu nại hàng trả về có vấn đề. APPROVE_STORE = đồng ý với store (hoàn tiền cho store), REJECT_STORE = đồng ý với buyer (hoàn tiền cho buyer)")
+    @Operation(summary = "Giải quyết khiếu nại chất lượng hàng trả về", description = "Admin quyết định khi store khiếu nại hàng trả về có vấn đề." +
+        "APPROVE_STORE = đồng ý với store (hoàn tiền cho store), REJECT_STORE = đồng ý với buyer (hoàn tiền cho buyer), PARTIAL_REFUND = hoàn tiền một phần cho buyer")
     public ResponseEntity<?> resolveReturnQualityDispute(
             @Parameter(description = "Dispute ID") @PathVariable String disputeId,
             @Valid @RequestBody ReturnQualityDecisionDTO dto,

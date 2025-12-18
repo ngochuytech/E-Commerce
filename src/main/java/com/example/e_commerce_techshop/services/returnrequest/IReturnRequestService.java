@@ -36,6 +36,11 @@ public interface IReturnRequestService {
     ReturnRequest getReturnRequestDetail(User buyer, String returnRequestId) throws Exception;
 
     /**
+     * Lấy danh sách disputes liên quan đến return request
+     */
+    List<Dispute> getDisputesByReturnRequest(String returnRequestId) throws Exception;
+
+    /**
      * Buyer khiếu nại khi store từ chối
      */
     Dispute createDispute(User buyer, String returnRequestId, DisputeRequestDTO dto, List<MultipartFile> evidenceFiles) throws Exception;

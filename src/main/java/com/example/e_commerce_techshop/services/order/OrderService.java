@@ -466,11 +466,9 @@ public class OrderService implements IOrderService {
         // Hoàn tiền nếu đã thanh toán
         if (order.getPaymentStatus().equals(Order.PaymentStatus.PAID.name())) {
             try {
-                refundService.createRefundRequest(order);
+                refundService.createRefundRequest(order, order.getTotalPrice());
             } catch (Exception e) {
                 System.err.println("Error creating refund request: " + e.getMessage());
-                // Vẫn cho phép hủy đơn nhưng ghi log lỗi
-                // Admin sẽ xử lý hoàn tiền thủ công
             }
         }
 
@@ -808,7 +806,7 @@ public class OrderService implements IOrderService {
         if (Order.PaymentStatus.PAID.name().equals(order.getPaymentStatus())) {
             try {
                 // Tạo yêu cầu hoàn tiền
-                refundService.createRefundRequest(order);
+                refundService.createRefundRequest(order, order.getTotalPrice());
                 
                 // Trừ pendingAmount vì đơn hàng thanh toán online đã được cộng pending trước đó
                 try {

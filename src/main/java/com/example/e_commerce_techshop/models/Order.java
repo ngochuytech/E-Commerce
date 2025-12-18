@@ -41,7 +41,7 @@ public class Order extends BaseEntity {
 
     private boolean isRated;
 
-    private boolean hasReturnRequest; // Đơn hàng có yêu cầu trả hàng không (không tính CLOSED)
+    private String returnRequestId; // Đơn hàng có yêu cầu trả hàng không (không tính CLOSED)
 
     private String vnpTnxRef; // Mã tham chiếu giao dịch VNPAY (nếu có)
 

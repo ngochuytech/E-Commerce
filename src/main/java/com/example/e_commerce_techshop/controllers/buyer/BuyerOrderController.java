@@ -156,7 +156,7 @@ public class BuyerOrderController {
     }
 
     @GetMapping("/returns")
-    @Operation(summary = "Danh sách yêu cầu trả hàng", description = "Lấy danh sách yêu cầu trả hàng của buyer")
+    @Operation(summary = "Danh sách yêu cầu trả hàng", description = "Lấy danh sách yêu cầu trả hàng của buyer (bao gồm disputes liên quan)")
     public ResponseEntity<?> getReturnRequests(
             @Parameter(description = "Filter by status") @RequestParam(required = false) String status,
             @Parameter(description = "Page number") @RequestParam(defaultValue = "0") int page,
@@ -165,18 +165,32 @@ public class BuyerOrderController {
         
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<ReturnRequest> returnRequests = returnRequestService.getBuyerReturnRequests(currentUser, status, pageable);
-        Page<ReturnRequestResponse> responsePage = returnRequests.map(ReturnRequestResponse::fromReturnRequest);
+        
+        // Map và thêm disputes cho từng return request
+        Page<ReturnRequestResponse> responsePage = returnRequests.map(returnRequest -> {
+            try {
+                List<Dispute> disputes = returnRequestService.getDisputesByReturnRequest(returnRequest.getId());
+                return ReturnRequestResponse.fromReturnRequestWithDisputes(returnRequest, disputes);
+            } catch (Exception e) {
+                // Nếu có lỗi khi lấy disputes, vẫn trả về return request nhưng không có disputes
+                return ReturnRequestResponse.fromReturnRequest(returnRequest);
+            }
+        });
+        
         return ResponseEntity.ok(ApiResponse.ok(responsePage));
     }
 
     @GetMapping("/returns/{returnRequestId}")
-    @Operation(summary = "Chi tiết yêu cầu trả hàng", description = "Xem chi tiết yêu cầu trả hàng")
+    @Operation(summary = "Chi tiết yêu cầu trả hàng", description = "Xem chi tiết yêu cầu trả hàng (bao gồm disputes liên quan)")
     public ResponseEntity<?> getReturnRequestDetail(
             @Parameter(description = "Return Request ID") @PathVariable String returnRequestId,
             @AuthenticationPrincipal User currentUser) throws Exception {
         
         ReturnRequest returnRequest = returnRequestService.getReturnRequestDetail(currentUser, returnRequestId);
-        return ResponseEntity.ok(ApiResponse.ok(ReturnRequestResponse.fromReturnRequest(returnRequest)));
+        List<Dispute> disputes = returnRequestService.getDisputesByReturnRequest(returnRequestId);
+        
+        return ResponseEntity.ok(ApiResponse.ok(
+                ReturnRequestResponse.fromReturnRequestWithDisputes(returnRequest, disputes)));
     }
 
     @PutMapping("/returns/{returnRequestId}/cancel")
@@ -235,6 +249,22 @@ public class BuyerOrderController {
         Page<Dispute> disputes = returnRequestService.getBuyerDisputes(currentUser, pageable);
         Page<DisputeResponse> responsePage = disputes.map(DisputeResponse::fromDispute);
         return ResponseEntity.ok(ApiResponse.ok(responsePage));
+    }
+
+    @GetMapping("/disputes/{disputeId}")
+    @Operation(summary = "Chi tiết khiếu nại", description = "Xem chi tiết một khiếu nại cụ thể")
+    public ResponseEntity<?> getDisputeDetail(
+            @Parameter(description = "Dispute ID") @PathVariable String disputeId,
+            @AuthenticationPrincipal User currentUser) throws Exception {
+        
+        Dispute dispute = returnRequestService.getDisputeDetail(disputeId);
+        
+        // Kiểm tra dispute có thuộc về buyer này không
+        if (!dispute.getBuyer().getId().equals(currentUser.getId())) {
+            throw new IllegalStateException("Bạn không có quyền xem khiếu nại này");
+        }
+        
+        return ResponseEntity.ok(ApiResponse.ok(DisputeResponse.fromDispute(dispute)));
     }
 
     @GetMapping("/{orderId}/refund-status")
