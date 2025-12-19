@@ -3,7 +3,9 @@ package com.example.e_commerce_techshop.services.returnrequest;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -656,92 +658,6 @@ public class ReturnRequestService implements IReturnRequestService {
         return disputeRepository.save(dispute);
     }
 
-    // ==================== SHIPPER APIs ====================
-
-    @Override
-    @Transactional
-    public ReturnRequest updateReturnShipmentStatus(String returnRequestId, String status) throws Exception {
-        ReturnRequest returnRequest = returnRequestRepository.findById(returnRequestId)
-                .orElseThrow(
-                        () -> new DataNotFoundException("Không tìm thấy yêu cầu trả hàng với ID: " + returnRequestId));
-
-        Order order = returnRequest.getOrder();
-
-        switch (status) {
-            case "RETURNING":
-                // Shipper đang lấy hàng trả về
-                if (!ReturnRequest.ReturnStatus.APPROVED.name().equals(returnRequest.getStatus())) {
-                    throw new IllegalStateException("Chỉ có thể bắt đầu trả hàng khi yêu cầu được chấp nhận");
-                }
-                returnRequest.setStatus(ReturnRequest.ReturnStatus.RETURNING.name());
-
-                // Thông báo
-                try {
-                    notificationService.createUserNotification(returnRequest.getBuyer().getId(),
-                            "Shipper đang đến lấy hàng trả",
-                            String.format("Shipper đang đến lấy hàng trả cho đơn #%s", order.getId()),
-                            order.getId());
-
-                    notificationService.createStoreNotification(returnRequest.getStore().getId(),
-                            "Shipper đang trả hàng về",
-                            String.format("Shipper đang lấy hàng trả từ khách và sẽ trả về cho đơn #%s", order.getId()),
-                            order.getId());
-                } catch (Exception e) {
-                    log.warn("Error sending notification: {}", e.getMessage());
-                }
-                break;
-
-            case "RETURNED":
-                // Hàng đã trả về shop - KHÔNG tự động hoàn tiền, chờ store xác nhận
-                if (!ReturnRequest.ReturnStatus.RETURNING.name().equals(returnRequest.getStatus())) {
-                    throw new IllegalStateException("Chỉ có thể hoàn thành trả hàng khi đang trong quá trình trả");
-                }
-                returnRequest.setStatus(ReturnRequest.ReturnStatus.RETURNED.name());
-
-                // Cập nhật order status
-                order.setStatus(Order.OrderStatus.RETURNED.name());
-                orderRepository.save(order);
-
-                // Cập nhật shipment status
-                Shipment shipment = shipmentRepository.findByOrderId(order.getId())
-                        .orElse(null);
-                if (shipment != null) {
-                    shipment.setStatus(Shipment.ShipmentStatus.RETURNED.name());
-                    if (shipment.getHistory() == null) {
-                        shipment.setHistory(new ArrayList<>());
-                    }
-                    shipment.getHistory().add(LocalDateTime.now() + ": Đã trả hàng về shop thành công (RETURNED)");
-                    shipmentRepository.save(shipment);
-                }
-
-                // Thông báo - Store cần kiểm tra hàng trước khi xác nhận hoàn tiền
-                try {
-                    notificationService.createUserNotification(returnRequest.getBuyer().getId(),
-                            "Hàng đã trả về shop",
-                            String.format(
-                                    "Đơn hàng #%s đã được trả về shop. Vui lòng chờ shop kiểm tra và xác nhận hoàn tiền.",
-                                    order.getId()),
-                            order.getId());
-
-                    notificationService.createStoreNotification(returnRequest.getStore().getId(),
-                            "Đã nhận hàng trả về",
-                            String.format(
-                                    "Hàng trả từ đơn #%s đã được shipper giao về. Vui lòng kiểm tra hàng và xác nhận hoàn tiền cho khách hoặc khiếu nại nếu hàng có vấn đề.",
-                                    order.getId()),
-                            order.getId());
-                } catch (Exception e) {
-                    log.warn("Error sending notification: {}", e.getMessage());
-                }
-                break;
-
-            default:
-                throw new IllegalArgumentException("Trạng thái không hợp lệ: " + status);
-        }
-
-        log.info("Return request {} updated to status {}", returnRequestId, status);
-        return returnRequestRepository.save(returnRequest);
-    }
-
     // ==================== STORE - Xử lý hàng trả về ====================
 
     @Override
@@ -1392,5 +1308,63 @@ public class ReturnRequestService implements IReturnRequestService {
                 throw new RuntimeException("Lỗi khi tạo yêu cầu hoàn tiền một phần: " + e.getMessage());
             }
         }
+    }
+
+    @Override
+    public Map<String, Long> countStoreReturnRequestsByStatus(String storeId) throws Exception {
+        Map<String, Long> statusCounts = new HashMap<>();
+        
+        // Lấy tất cả return requests của store
+        List<ReturnRequest> allReturnRequests = returnRequestRepository.findByStoreId(storeId);
+        
+        // 1. Chờ xử lý - PENDING
+        long pendingCount = allReturnRequests.stream()
+                .filter(r -> ReturnRequest.ReturnStatus.PENDING.name().equals(r.getStatus()))
+                .count();
+        statusCounts.put("pending", pendingCount);
+        
+        // 2. Đã chấp nhận - APPROVED, READY_TO_RETURN
+        long approvedCount = allReturnRequests.stream()
+                .filter(r -> ReturnRequest.ReturnStatus.APPROVED.name().equals(r.getStatus()) ||
+                            ReturnRequest.ReturnStatus.READY_TO_RETURN.name().equals(r.getStatus()))
+                .count();
+        statusCounts.put("approved", approvedCount);
+        
+        // 3. Chuẩn bị/Đang/Đã trả - RETURNING, RETURNED, RETURN_DISPUTED
+        long returningCount = allReturnRequests.stream()
+                .filter(r -> ReturnRequest.ReturnStatus.RETURNING.name().equals(r.getStatus()) ||
+                            ReturnRequest.ReturnStatus.RETURNED.name().equals(r.getStatus()) ||
+                            ReturnRequest.ReturnStatus.RETURN_DISPUTED.name().equals(r.getStatus()))
+                .count();
+        statusCounts.put("returning", returningCount);
+        
+        // 4. Đã hoàn tiền - REFUNDED, PARTIAL_REFUND, REFUND_TO_STORE
+        long refundedCount = allReturnRequests.stream()
+                .filter(r -> ReturnRequest.ReturnStatus.REFUNDED.name().equals(r.getStatus()) ||
+                            ReturnRequest.ReturnStatus.PARTIAL_REFUND.name().equals(r.getStatus()) ||
+                            ReturnRequest.ReturnStatus.REFUND_TO_STORE.name().equals(r.getStatus()))
+                .count();
+        statusCounts.put("refunded", refundedCount);
+        
+        // 5. Tổng cộng
+        statusCounts.put("total", (long) allReturnRequests.size());
+        
+        // Bổ sung: Các trạng thái khác (optional)
+        long rejectedCount = allReturnRequests.stream()
+                .filter(r -> ReturnRequest.ReturnStatus.REJECTED.name().equals(r.getStatus()))
+                .count();
+        statusCounts.put("rejected", rejectedCount);
+        
+        long disputedCount = allReturnRequests.stream()
+                .filter(r -> ReturnRequest.ReturnStatus.DISPUTED.name().equals(r.getStatus()))
+                .count();
+        statusCounts.put("disputed", disputedCount);
+        
+        long closedCount = allReturnRequests.stream()
+                .filter(r -> ReturnRequest.ReturnStatus.CLOSED.name().equals(r.getStatus()))
+                .count();
+        statusCounts.put("closed", closedCount);
+        
+        return statusCounts;
     }
 }

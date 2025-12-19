@@ -1,6 +1,7 @@
 package com.example.e_commerce_techshop.controllers.b2c;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -88,6 +89,19 @@ public class B2CReturnController {
 
         return ResponseEntity.ok(ApiResponse.ok(
                 ReturnRequestResponse.fromReturnRequestWithDisputes(returnRequest, disputes)));
+    }
+
+    @GetMapping("/store/{storeId}/count-by-status")
+    @Operation(summary = "Thống kê yêu cầu trả hàng theo trạng thái", description = "Đếm số lượng yêu cầu trả hàng theo từng trạng thái")
+    public ResponseEntity<?> countReturnRequestsByStatus(
+            @PathVariable String storeId,
+            @AuthenticationPrincipal User currentUser) throws Exception {
+
+        Store store = storeService.getStoreByIdAndOwnerId(storeId, currentUser.getId());
+
+        // Đếm số lượng theo trạng thái
+        Map<String, Long> countByStatus = returnRequestService.countStoreReturnRequestsByStatus(store.getId());
+        return ResponseEntity.ok(ApiResponse.ok(countByStatus));
     }
 
     @PutMapping(value = "/store/{storeId}/returnRequest/{returnRequestId}/respond", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

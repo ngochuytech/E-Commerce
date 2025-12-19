@@ -11,6 +11,7 @@ import com.example.e_commerce_techshop.models.ReturnRequest;
 import com.example.e_commerce_techshop.models.User;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -61,6 +62,11 @@ public interface IReturnRequestService {
     ReturnRequest cancelReturnRequest(User buyer, String returnRequestId) throws Exception;
 
     // ==================== STORE APIs ====================
+
+    /**
+     * Đếm số lượng yêu cầu trả hàng của store theo trạng thái
+     */
+    Map<String, Long> countStoreReturnRequestsByStatus(String storeId) throws Exception;
     
     /**
      * Store xem danh sách yêu cầu trả hàng
@@ -135,11 +141,6 @@ public interface IReturnRequestService {
     Dispute addAdminDisputeMessage(User admin, String disputeId, DisputeRequestDTO dto) throws Exception;
 
     // ==================== SHIPPER/SHIPMENT APIs ====================
-    
-    /**
-     * Cập nhật trạng thái return request khi shipper lấy hàng trả
-     */
-    ReturnRequest updateReturnShipmentStatus(String returnRequestId, String status) throws Exception;
 
     /**
      * Chuẩn bị shipment để shipper lấy hàng trả về (READY_TO_PICK cho return)

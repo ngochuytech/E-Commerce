@@ -45,6 +45,7 @@ import com.example.e_commerce_techshop.services.cart.ICartService;
 import com.example.e_commerce_techshop.services.notification.INotificationService;
 import com.example.e_commerce_techshop.services.promotion.IPromotionService;
 import com.example.e_commerce_techshop.services.refund.IRefundService;
+import com.example.e_commerce_techshop.services.shipping.RegionalShippingService;
 import com.example.e_commerce_techshop.services.wallet.IWalletService;
 
 import lombok.RequiredArgsConstructor;
@@ -68,6 +69,7 @@ public class OrderService implements IOrderService {
     private final AdminRevenueRepository adminRevenueRepository;
     private final RefundRequestRepository refundRequestRepository;
     private final ShipmentRepository shipmentRepository;
+    private final RegionalShippingService regionalShippingService;
 
     @Override
     @Transactional
@@ -977,9 +979,24 @@ public class OrderService implements IOrderService {
             }
         }
 
-        // 5. Áp dụng Platform SHIPPING Promotion
-        BigDecimal shippingFee = BigDecimal.valueOf(30000); // Default shipping fee
+        // 5. Tính phí ship động theo vùng miền và trọng lượng
+        int totalQuantity = storeItems.stream()
+                .mapToInt(OrderDTO.SelectedCartItem::getQuantity)
+                .sum();
+        Integer totalWeight = totalQuantity * 500; // Mỗi sản phẩm trung bình 500g
+        
+        // Tính phí ship từ địa chỉ shop đến địa chỉ giao hàng
+        BigDecimal shippingFee = regionalShippingService.calculateShippingFee(
+                store.getAddress(),
+                Address.builder()
+                        .province(orderDTO.getAddress().getProvince())
+                        .ward(orderDTO.getAddress().getWard())
+                        .homeAddress(orderDTO.getAddress().getHomeAddress())
+                        .build(),
+                totalWeight
+        );
 
+        // 6. Áp dụng Platform SHIPPING Promotion
         if (platformShippingPromotion != null && applyShippingToStores.contains(storeId)) {
             // Check minOrderValue với storeTotal gốc (không phải currentTotal)
             if (platformShippingPromotion.getMinOrderValue() == null ||
@@ -991,21 +1008,21 @@ public class OrderService implements IOrderService {
             }
         }
 
-        // 6. Tính phí ship cuối cùng
+        // 7. Tính phí ship cuối cùng sau khi áp dụng giảm giá
         BigDecimal finalShippingFee = shippingFee.subtract(shippingDiscount).max(BigDecimal.ZERO);
 
-        // 7. Tính hoa hồng sàn (5% doanh thu sản phẩm của shop, tối đa 500k)
+        // 8. Tính hoa hồng sàn (5% doanh thu sản phẩm của shop, tối đa 500k)
         BigDecimal productRevenue = storeTotal.subtract(storeDiscountAmount);
         BigDecimal platformCommission = productRevenue.multiply(BigDecimal.valueOf(0.05));
         // Giới hạn hoa hồng tối đa 500,000đ mỗi đơn
         BigDecimal maxCommission = BigDecimal.valueOf(500000);
         platformCommission = platformCommission.min(maxCommission);
 
-        // 8. Tính tổng tiền cuối cùng khách hàng phải thanh toán
+        // 9. Tính tổng tiền cuối cùng khách hàng phải thanh toán
         BigDecimal totalDiscount = storeDiscountAmount.add(platformDiscountAmount);
         BigDecimal finalTotal = storeTotal.subtract(totalDiscount).add(finalShippingFee).max(BigDecimal.ZERO);
 
-        // 9. Trả về kết quả
+        // 10. Trả về kết quả
         return new OrderFinancials(
                 storeTotal,
                 storeDiscountAmount,

@@ -203,40 +203,52 @@ public class StatisticsService implements IStatisticsService {
         Map<String, Object> chartData = new HashMap<>();
 
         // Lấy riêng biệt theo loại doanh thu
-        List<AdminRevenue> serviceFeeRevenues = adminRevenueRepository.findByRevenueType("SERVICE_FEE");
-        List<AdminRevenue> discountLossRevenues = adminRevenueRepository.findByRevenueType("PLATFORM_DISCOUNT_LOSS");
+        List<AdminRevenue> platformCommissionRevenues = adminRevenueRepository.findByRevenueType(AdminRevenue.RevenueType.PLATFORM_COMMISSION.name());
+        List<AdminRevenue> shippingFeeRevenues = adminRevenueRepository.findByRevenueType(AdminRevenue.RevenueType.SHIPPING_FEE.name());
+        List<AdminRevenue> discountLossRevenues = adminRevenueRepository.findByRevenueType(AdminRevenue.RevenueType.PLATFORM_DISCOUNT_LOSS.name());
 
-        if (serviceFeeRevenues.isEmpty() && discountLossRevenues.isEmpty()) {
+        if (platformCommissionRevenues.isEmpty() && shippingFeeRevenues.isEmpty() && discountLossRevenues.isEmpty()) {
             chartData.put("labels", new ArrayList<>());
-            chartData.put("serviceFees", new ArrayList<>());
+            chartData.put("platformCommissions", new ArrayList<>());
+            chartData.put("shippingFees", new ArrayList<>());
             chartData.put("discountLosses", new ArrayList<>());
             chartData.put("netRevenue", new ArrayList<>());
             return chartData;
         }
 
-        Map<String, BigDecimal> serviceFeeData = new LinkedHashMap<>();
+        Map<String, BigDecimal> platformCommissionData = new LinkedHashMap<>();
+        Map<String, BigDecimal> shippingFeeData = new LinkedHashMap<>();
         Map<String, BigDecimal> discountLossData = new LinkedHashMap<>();
 
         if ("WEEK".equalsIgnoreCase(period)) {
-            getWeeklyDataSeparate(serviceFeeRevenues, discountLossRevenues, serviceFeeData, discountLossData);
+            getWeeklyDataThreeSeparate(platformCommissionRevenues, shippingFeeRevenues, discountLossRevenues, 
+                    platformCommissionData, shippingFeeData, discountLossData);
         } else if ("MONTH".equalsIgnoreCase(period)) {
-            getMonthlyDataSeparate(serviceFeeRevenues, discountLossRevenues, serviceFeeData, discountLossData);
+            getMonthlyDataThreeSeparate(platformCommissionRevenues, shippingFeeRevenues, discountLossRevenues, 
+                    platformCommissionData, shippingFeeData, discountLossData);
         } else if ("YEAR".equalsIgnoreCase(period)) {
-            getYearlyDataSeparate(serviceFeeRevenues, discountLossRevenues, serviceFeeData, discountLossData);
+            getYearlyDataThreeSeparate(platformCommissionRevenues, shippingFeeRevenues, discountLossRevenues, 
+                    platformCommissionData, shippingFeeData, discountLossData);
         }
 
-        List<String> labels = new ArrayList<>(serviceFeeData.keySet());
-        List<BigDecimal> serviceFees = new ArrayList<>(serviceFeeData.values());
+        List<String> labels = new ArrayList<>(platformCommissionData.keySet());
+        List<BigDecimal> platformCommissions = new ArrayList<>(platformCommissionData.values());
+        List<BigDecimal> shippingFees = new ArrayList<>(shippingFeeData.values());
         List<BigDecimal> discountLosses = new ArrayList<>(discountLossData.values());
         List<BigDecimal> netRevenues = new ArrayList<>();
 
-        for (int i = 0; i < serviceFees.size(); i++) {
-            netRevenues.add(serviceFees.get(i).subtract(discountLosses.get(i)));
+        for (int i = 0; i < labels.size(); i++) {
+            BigDecimal net = platformCommissions.get(i)
+                    .add(shippingFees.get(i))
+                    .subtract(discountLosses.get(i));
+            netRevenues.add(net);
         }
 
         chartData.put("labels", labels);
-        chartData.put("serviceFees", serviceFees);
-        chartData.put("serviceFeeLabel", "Phí dịch vụ");
+        chartData.put("platformCommissions", platformCommissions);
+        chartData.put("platformCommissionLabel", "Hoa hồng nền tảng");
+        chartData.put("shippingFees", shippingFees);
+        chartData.put("shippingFeeLabel", "Phí vận chuyển");
         chartData.put("discountLosses", discountLosses);
         chartData.put("discountLossLabel", "Mất mát từ giảm giá");
         chartData.put("netRevenue", netRevenues);
@@ -246,12 +258,14 @@ public class StatisticsService implements IStatisticsService {
         return chartData;
     }
 
-    private void getWeeklyDataSeparate(List<AdminRevenue> serviceFeeRevenues, List<AdminRevenue> discountLossRevenues,
-            Map<String, BigDecimal> serviceFeeData, Map<String, BigDecimal> discountLossData) {
+    private void getWeeklyDataThreeSeparate(List<AdminRevenue> platformCommissionRevenues, 
+            List<AdminRevenue> shippingFeeRevenues, List<AdminRevenue> discountLossRevenues,
+            Map<String, BigDecimal> platformCommissionData, Map<String, BigDecimal> shippingFeeData, 
+            Map<String, BigDecimal> discountLossData) {
         WeekFields weekFields = WeekFields.ISO;
 
-        // Xử lý service fees
-        serviceFeeRevenues.stream()
+        // Xử lý platform commissions
+        platformCommissionRevenues.stream()
                 .filter(r -> r.getCreatedAt() != null && r.getAmount() != null)
                 .collect(Collectors.groupingBy(
                         r -> {
@@ -263,7 +277,22 @@ public class StatisticsService implements IStatisticsService {
                         LinkedHashMap::new,
                         Collectors.mapping(AdminRevenue::getAmount,
                                 Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))))
-                .forEach(serviceFeeData::put);
+                .forEach(platformCommissionData::put);
+
+        // Xử lý shipping fees
+        shippingFeeRevenues.stream()
+                .filter(r -> r.getCreatedAt() != null && r.getAmount() != null)
+                .collect(Collectors.groupingBy(
+                        r -> {
+                            LocalDateTime createdAt = r.getCreatedAt();
+                            int weekOfYear = createdAt.get(weekFields.weekOfYear());
+                            int year = createdAt.getYear();
+                            return String.format("Tuần %d/%d", weekOfYear, year);
+                        },
+                        LinkedHashMap::new,
+                        Collectors.mapping(AdminRevenue::getAmount,
+                                Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))))
+                .forEach(shippingFeeData::put);
 
         // Xử lý discount losses
         discountLossRevenues.stream()
@@ -280,16 +309,28 @@ public class StatisticsService implements IStatisticsService {
                                 Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))))
                 .forEach(discountLossData::put);
 
-        // Đảm bảo cả hai map có cùng keys
-        serviceFeeData.keySet().forEach(week -> discountLossData.putIfAbsent(week, BigDecimal.ZERO));
-        discountLossData.keySet().forEach(week -> serviceFeeData.putIfAbsent(week, BigDecimal.ZERO));
+        // Đảm bảo cả ba map có cùng keys
+        platformCommissionData.keySet().forEach(week -> {
+            shippingFeeData.putIfAbsent(week, BigDecimal.ZERO);
+            discountLossData.putIfAbsent(week, BigDecimal.ZERO);
+        });
+        shippingFeeData.keySet().forEach(week -> {
+            platformCommissionData.putIfAbsent(week, BigDecimal.ZERO);
+            discountLossData.putIfAbsent(week, BigDecimal.ZERO);
+        });
+        discountLossData.keySet().forEach(week -> {
+            platformCommissionData.putIfAbsent(week, BigDecimal.ZERO);
+            shippingFeeData.putIfAbsent(week, BigDecimal.ZERO);
+        });
     }
 
-    private void getMonthlyDataSeparate(List<AdminRevenue> serviceFeeRevenues, List<AdminRevenue> discountLossRevenues,
-            Map<String, BigDecimal> serviceFeeData, Map<String, BigDecimal> discountLossData) {
+    private void getMonthlyDataThreeSeparate(List<AdminRevenue> platformCommissionRevenues, 
+            List<AdminRevenue> shippingFeeRevenues, List<AdminRevenue> discountLossRevenues,
+            Map<String, BigDecimal> platformCommissionData, Map<String, BigDecimal> shippingFeeData, 
+            Map<String, BigDecimal> discountLossData) {
 
-        // Xử lý service fees
-        serviceFeeRevenues.stream()
+        // Xử lý platform commissions
+        platformCommissionRevenues.stream()
                 .filter(r -> r.getCreatedAt() != null && r.getAmount() != null)
                 .collect(Collectors.groupingBy(
                         r -> {
@@ -300,7 +341,21 @@ public class StatisticsService implements IStatisticsService {
                         LinkedHashMap::new,
                         Collectors.mapping(AdminRevenue::getAmount,
                                 Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))))
-                .forEach(serviceFeeData::put);
+                .forEach(platformCommissionData::put);
+
+        // Xử lý shipping fees
+        shippingFeeRevenues.stream()
+                .filter(r -> r.getCreatedAt() != null && r.getAmount() != null)
+                .collect(Collectors.groupingBy(
+                        r -> {
+                            YearMonth yearMonth = YearMonth.from(r.getCreatedAt());
+                            return yearMonth.format(java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy",
+                                    java.util.Locale.forLanguageTag("vi_VN")));
+                        },
+                        LinkedHashMap::new,
+                        Collectors.mapping(AdminRevenue::getAmount,
+                                Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))))
+                .forEach(shippingFeeData::put);
 
         // Xử lý discount losses
         discountLossRevenues.stream()
@@ -316,23 +371,45 @@ public class StatisticsService implements IStatisticsService {
                                 Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))))
                 .forEach(discountLossData::put);
 
-        // Đảm bảo cả hai map có cùng keys
-        serviceFeeData.keySet().forEach(month -> discountLossData.putIfAbsent(month, BigDecimal.ZERO));
-        discountLossData.keySet().forEach(month -> serviceFeeData.putIfAbsent(month, BigDecimal.ZERO));
+        // Đảm bảo cả ba map có cùng keys
+        platformCommissionData.keySet().forEach(month -> {
+            shippingFeeData.putIfAbsent(month, BigDecimal.ZERO);
+            discountLossData.putIfAbsent(month, BigDecimal.ZERO);
+        });
+        shippingFeeData.keySet().forEach(month -> {
+            platformCommissionData.putIfAbsent(month, BigDecimal.ZERO);
+            discountLossData.putIfAbsent(month, BigDecimal.ZERO);
+        });
+        discountLossData.keySet().forEach(month -> {
+            platformCommissionData.putIfAbsent(month, BigDecimal.ZERO);
+            shippingFeeData.putIfAbsent(month, BigDecimal.ZERO);
+        });
     }
 
-    private void getYearlyDataSeparate(List<AdminRevenue> serviceFeeRevenues, List<AdminRevenue> discountLossRevenues,
-            Map<String, BigDecimal> serviceFeeData, Map<String, BigDecimal> discountLossData) {
+    private void getYearlyDataThreeSeparate(List<AdminRevenue> platformCommissionRevenues, 
+            List<AdminRevenue> shippingFeeRevenues, List<AdminRevenue> discountLossRevenues,
+            Map<String, BigDecimal> platformCommissionData, Map<String, BigDecimal> shippingFeeData, 
+            Map<String, BigDecimal> discountLossData) {
 
-        // Xử lý service fees
-        serviceFeeRevenues.stream()
+        // Xử lý platform commissions
+        platformCommissionRevenues.stream()
                 .filter(r -> r.getCreatedAt() != null && r.getAmount() != null)
                 .collect(Collectors.groupingBy(
                         r -> String.format("Năm %d", r.getCreatedAt().getYear()),
                         LinkedHashMap::new,
                         Collectors.mapping(AdminRevenue::getAmount,
                                 Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))))
-                .forEach(serviceFeeData::put);
+                .forEach(platformCommissionData::put);
+
+        // Xử lý shipping fees
+        shippingFeeRevenues.stream()
+                .filter(r -> r.getCreatedAt() != null && r.getAmount() != null)
+                .collect(Collectors.groupingBy(
+                        r -> String.format("Năm %d", r.getCreatedAt().getYear()),
+                        LinkedHashMap::new,
+                        Collectors.mapping(AdminRevenue::getAmount,
+                                Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))))
+                .forEach(shippingFeeData::put);
 
         // Xử lý discount losses
         discountLossRevenues.stream()
@@ -344,9 +421,19 @@ public class StatisticsService implements IStatisticsService {
                                 Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))))
                 .forEach(discountLossData::put);
 
-        // Đảm bảo cả hai map có cùng keys
-        serviceFeeData.keySet().forEach(year -> discountLossData.putIfAbsent(year, BigDecimal.ZERO));
-        discountLossData.keySet().forEach(year -> serviceFeeData.putIfAbsent(year, BigDecimal.ZERO));
+        // Đảm bảo cả ba map có cùng keys
+        platformCommissionData.keySet().forEach(year -> {
+            shippingFeeData.putIfAbsent(year, BigDecimal.ZERO);
+            discountLossData.putIfAbsent(year, BigDecimal.ZERO);
+        });
+        shippingFeeData.keySet().forEach(year -> {
+            platformCommissionData.putIfAbsent(year, BigDecimal.ZERO);
+            discountLossData.putIfAbsent(year, BigDecimal.ZERO);
+        });
+        discountLossData.keySet().forEach(year -> {
+            platformCommissionData.putIfAbsent(year, BigDecimal.ZERO);
+            shippingFeeData.putIfAbsent(year, BigDecimal.ZERO);
+        });
     }
 
     @Override
