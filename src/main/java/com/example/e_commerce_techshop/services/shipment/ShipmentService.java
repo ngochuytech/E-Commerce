@@ -22,6 +22,7 @@ import com.example.e_commerce_techshop.repositories.OrderRepository;
 import com.example.e_commerce_techshop.repositories.ReturnRequestRepository;
 import com.example.e_commerce_techshop.repositories.ShipmentRepository;
 import com.example.e_commerce_techshop.services.notification.INotificationService;
+import com.example.e_commerce_techshop.services.shipping.RegionalShippingService;
 import com.example.e_commerce_techshop.services.wallet.IWalletService;
 
 import java.math.BigDecimal;
@@ -37,6 +38,7 @@ public class ShipmentService implements IShipmentService {
     private final INotificationService notificationService;
     private final IWalletService walletService;
     private final AdminRevenueRepository adminRevenueRepository;
+    private final RegionalShippingService regionalShippingService;
 
     /**
      * Tạo shipment khi người bán xác nhận đơn hàng
@@ -70,6 +72,10 @@ public class ShipmentService implements IShipmentService {
                 .suggestedName(order.getAddress().getSuggestedName())
                 .build();
 
+        int estimatedDays = regionalShippingService.calculateEstimatedDeliveryDays(
+                fromAddress,
+                toAddress);
+
         Shipment shipment = Shipment.builder()
                 .order(order)
                 .store(order.getStore())
@@ -78,7 +84,7 @@ public class ShipmentService implements IShipmentService {
                 .shippingFee(order.getShippingFee())
                 .status(Shipment.ShipmentStatus.READY_TO_PICK.name())
                 .history(history)
-                .expectedDeliveryDate(LocalDateTime.now().plusDays(2)) // Dự kiến 2 ngày
+                .expectedDeliveryDate(LocalDateTime.now().plusDays(estimatedDays)) // Dự kiến theo vùng
                 .build();
 
         Shipment savedShipment = shipmentRepository.save(shipment);
@@ -248,37 +254,37 @@ public class ShipmentService implements IShipmentService {
         // Cập nhật trạng thái order sang DELIVERED
         Order order = shipment.getOrder();
         order.setStatus(Order.OrderStatus.DELIVERED.name());
-        
+
         // Nếu là COD, cập nhật payment status thành PAID và cộng pendingAmount
         if ("COD".equalsIgnoreCase(order.getPaymentMethod())) {
             order.setPaymentStatus(Order.PaymentStatus.PAID.name());
-            
+
             // Cộng tiền vào pendingAmount (COD - tiền thu từ khách hàng)
             try {
                 // Tính doanh thu shop sẽ nhận
                 BigDecimal productRevenue = order.getProductPrice()
-                        .subtract(order.getStoreDiscountAmount() != null ? order.getStoreDiscountAmount() : BigDecimal.ZERO);
-                
+                        .subtract(order.getStoreDiscountAmount() != null ? order.getStoreDiscountAmount()
+                                : BigDecimal.ZERO);
+
                 // Sàn lấy 5% hoa hồng, tối đa 500,000đ
                 BigDecimal platformCommission = productRevenue.multiply(BigDecimal.valueOf(0.05));
                 BigDecimal maxCommission = BigDecimal.valueOf(500000);
                 platformCommission = platformCommission.min(maxCommission);
-                
+
                 // Shop nhận 95% doanh thu + phí ship
                 BigDecimal storeRevenue = productRevenue.subtract(platformCommission)
                         .add(order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO);
-                
+
                 walletService.addToPendingAmount(
                         order.getStore().getId(),
                         order.getId(),
                         storeRevenue,
-                        String.format("Tiền chờ từ đơn hàng #%s (COD - đã giao hàng)", order.getId())
-                );
+                        String.format("Tiền chờ từ đơn hàng #%s (COD - đã giao hàng)", order.getId()));
             } catch (Exception e) {
                 System.err.println("Error adding to pending amount for COD: " + e.getMessage());
             }
         }
-        
+
         orderRepository.save(order);
 
         // Lưu phí ship vào AdminRevenue để thống kê (khi giao hàng thành công)
@@ -381,7 +387,7 @@ public class ShipmentService implements IShipmentService {
             throw new IllegalStateException(
                     String.format("Không thể chuyển sang PICKING. Trạng thái hiện tại: %s", shipment.getStatus()));
         }
-        
+
         shipment.setStatus(Shipment.ShipmentStatus.PICKING.name());
         shipment.setCarrier(shipper);
 
@@ -486,20 +492,20 @@ public class ShipmentService implements IShipmentService {
 
         // Kiểm tra trạng thái hợp lệ
         boolean isValidTransition = false;
-        
+
         // Nếu là đơn trả hàng: cho phép chuyển từ PICKED -> RETURNING
         if (shipment.isReturnShipment() && Shipment.ShipmentStatus.PICKED.name().equals(shipment.getStatus())) {
             isValidTransition = true;
         }
-        
+
         // Nếu là đơn giao thất bại: cho phép chuyển từ DELIVERED_FAIL -> RETURNING
         if (Shipment.ShipmentStatus.DELIVERED_FAIL.name().equals(shipment.getStatus())) {
             isValidTransition = true;
         }
-        
+
         if (!isValidTransition) {
             throw new IllegalStateException(
-                    String.format("Không thể chuyển sang RETURNING. Trạng thái hiện tại: %s, isReturnShipment: %s", 
+                    String.format("Không thể chuyển sang RETURNING. Trạng thái hiện tại: %s, isReturnShipment: %s",
                             shipment.getStatus(), shipment.isReturnShipment()));
         }
 

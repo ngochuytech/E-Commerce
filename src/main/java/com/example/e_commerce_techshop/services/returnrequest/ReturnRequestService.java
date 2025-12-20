@@ -34,6 +34,8 @@ import com.example.e_commerce_techshop.repositories.ReturnRequestRepository;
 import com.example.e_commerce_techshop.repositories.ShipmentRepository;
 import com.example.e_commerce_techshop.services.CloudinaryService;
 import com.example.e_commerce_techshop.services.notification.INotificationService;
+import com.example.e_commerce_techshop.services.refund.IRefundService;
+import com.example.e_commerce_techshop.services.shipping.RegionalShippingService;
 import com.example.e_commerce_techshop.services.wallet.IWalletService;
 
 import lombok.RequiredArgsConstructor;
@@ -52,7 +54,8 @@ public class ReturnRequestService implements IReturnRequestService {
     private final IWalletService walletService;
     private final CloudinaryService cloudinaryService;
     private final RefundRequestRepository refundRequestRepository;
-    private final com.example.e_commerce_techshop.services.refund.IRefundService refundService;
+    private final IRefundService refundService;
+    private final RegionalShippingService regionalShippingService;
 
     // ==================== BUYER APIs ====================
 
@@ -1128,6 +1131,12 @@ public class ReturnRequestService implements IReturnRequestService {
                 .suggestedName(order.getStore().getName())
                 .build();
 
+        // Tính số ngày giao hàng dự kiến dựa trên khoảng cách (từ buyer về store)
+        int estimatedDays = regionalShippingService.calculateEstimatedDeliveryDays(
+                fromAddress, 
+                toAddress
+        );
+
         Shipment returnShipment = Shipment.builder()
                 .order(order)
                 .store(order.getStore())
@@ -1137,7 +1146,7 @@ public class ReturnRequestService implements IReturnRequestService {
                 .carrier(null)
                 .isReturnShipment(true)
                 .history(history)
-                .expectedDeliveryDate(LocalDateTime.now().plusDays(3))
+                .expectedDeliveryDate(LocalDateTime.now().plusDays(estimatedDays))
                 .build();
 
         shipmentRepository.save(returnShipment);
