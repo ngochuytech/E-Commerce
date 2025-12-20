@@ -32,15 +32,13 @@ public class TestShippingController {
         
         Address fromAddress = Address.builder().province(fromProvince).build();
         Address toAddress = Address.builder().province(toProvince).build();
-        Integer weight = quantity * 500; // 500g/sản phẩm
         
-        BigDecimal fee = regionalShippingService.calculateShippingFee(fromAddress, toAddress, weight);
+        BigDecimal fee = regionalShippingService.calculateShippingFee(fromAddress, toAddress);
         
         Map<String, Object> result = new HashMap<>();
         result.put("fromProvince", fromProvince);
         result.put("toProvince", toProvince);
         result.put("quantity", quantity);
-        result.put("weight", weight + "g");
         result.put("shippingFee", fee);
         result.put("shippingFeeFormatted", String.format("%,d đ", fee.intValue()));
         

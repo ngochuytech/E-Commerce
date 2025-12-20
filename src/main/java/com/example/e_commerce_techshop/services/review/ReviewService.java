@@ -1,6 +1,7 @@
 package com.example.e_commerce_techshop.services.review;
 
 import com.example.e_commerce_techshop.dtos.ReviewDTO;
+import com.example.e_commerce_techshop.dtos.buyer.UpdateReviewDTO;
 import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
 import com.example.e_commerce_techshop.models.*;
 import com.example.e_commerce_techshop.repositories.*;
@@ -85,7 +86,8 @@ public class ReviewService implements IReviewService {
     }
 
     @Override
-    public void updateReview(String reviewId, ReviewDTO reviewDTO, User currentUser) {
+    @Transactional
+    public void updateReview(String reviewId, UpdateReviewDTO reviewDTO, List<MultipartFile> images, User currentUser) throws Exception {
         Review existingReview = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new DataNotFoundException("Review not found"));
 
@@ -97,6 +99,20 @@ public class ReviewService implements IReviewService {
         // Cập nhật thông tin
         existingReview.setRating(reviewDTO.getRating());
         existingReview.setComment(reviewDTO.getComment());
+
+        // Xử lý upload ảnh mới nếu có
+        if (images != null && !images.isEmpty()) {
+            // Xóa ảnh cũ nếu có
+            if (existingReview.getImageUrls() != null && !existingReview.getImageUrls().isEmpty()) {
+                for (String imageUrl : existingReview.getImageUrls()) {
+                    fileUploadService.deleteFile(imageUrl);
+                }
+            }
+            
+            // Upload ảnh mới
+            List<String> imageUrls = fileUploadService.uploadFiles(images, "reviews");
+            existingReview.setImageUrls(imageUrls);
+        }
 
         reviewRepository.save(existingReview);
     }

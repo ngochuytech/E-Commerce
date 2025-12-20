@@ -1,6 +1,7 @@
 package com.example.e_commerce_techshop.services.review;
 
 import com.example.e_commerce_techshop.dtos.ReviewDTO;
+import com.example.e_commerce_techshop.dtos.buyer.UpdateReviewDTO;
 import com.example.e_commerce_techshop.models.Review;
 import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.responses.ReviewResponse;
@@ -16,7 +17,7 @@ public interface IReviewService {
     
     // CRUD operations
     void createReview(ReviewDTO reviewDTO, List<MultipartFile> images, User currentUser) throws Exception;
-    void updateReview(String reviewId, ReviewDTO reviewDTO, User currentUser);
+    void updateReview(String reviewId, UpdateReviewDTO reviewDTO, List<MultipartFile> images, User currentUser) throws Exception;
     void deleteReview(String reviewId, User currentUser);
     
     // Get reviews by store

@@ -277,11 +277,22 @@ public class OrderService implements IOrderService {
             // Cộng dồn vào tổng tiền thanh toán
             totalPaymentAmount = totalPaymentAmount.add(finalTotal);
 
+            // Đảm bảo tất cả promotions được reload từ DB để có managed state
+            List<Promotion> managedPromotions = new ArrayList<>();
+            if (appliedPromotions != null && !appliedPromotions.isEmpty()) {
+                for (Promotion promo : appliedPromotions) {
+                    if (promo != null && promo.getId() != null) {
+                        // Reload từ DB để đảm bảo managed state
+                        promotionRepository.findById(promo.getId()).ifPresent(managedPromotions::add);
+                    }
+                }
+            }
+
             // 10.4. Tạo Order cho store này
             Order order = Order.builder()
                     .buyer(user)
                     .store(store)
-                    .promotions(appliedPromotions.isEmpty() ? null : appliedPromotions)
+                    .promotions(managedPromotions.isEmpty() ? null : managedPromotions)
                     .productPrice(storeTotal) // Giá sản phẩm
                     .shippingFee(finalShippingFee) // Phí ship
                     .platformCommission(platformCommission) // Hoa hồng sàn 5%
@@ -296,6 +307,7 @@ public class OrderService implements IOrderService {
                             .ward(orderDTO.getAddress().getWard())
                             .homeAddress(orderDTO.getAddress().getHomeAddress())
                             .phone(orderDTO.getAddress().getPhone())
+                            .suggestedName(orderDTO.getAddress().getSuggestedName())
                             .build())
                     .paymentMethod(orderDTO.getPaymentMethod())
                     .paymentStatus(Order.PaymentStatus.UNPAID.name())
@@ -425,10 +437,39 @@ public class OrderService implements IOrderService {
             Map<String, List<OrderItem>> itemsByOrderId = allOrderItems.stream()
                     .collect(Collectors.groupingBy(item -> item.getOrder().getId()));
 
-            // Assign orderItems to each order
+            // Lấy tất cả promotion IDs từ các orders
+            List<String> allPromotionIds = new ArrayList<>();
+            for (Order order : orderPage.getContent()) {
+                if (order.getPromotions() != null && !order.getPromotions().isEmpty()) {
+                    order.getPromotions().stream()
+                            .map(Promotion::getId)
+                            .filter(id -> id != null)
+                            .forEach(allPromotionIds::add);
+                }
+            }
+
+            // Load promotions nếu có
+            Map<String, Promotion> promotionsById = new HashMap<>();
+            if (!allPromotionIds.isEmpty()) {
+                List<Promotion> promotions = promotionRepository.findAllById(allPromotionIds);
+                promotionsById = promotions.stream()
+                        .collect(Collectors.toMap(Promotion::getId, p -> p));
+            }
+
+            // Assign orderItems và promotions to each order
+            Map<String, Promotion> finalPromotionsById = promotionsById;
             orderPage.getContent().forEach(order -> {
                 List<OrderItem> items = itemsByOrderId.getOrDefault(order.getId(), new ArrayList<>());
                 order.setOrderItems(items);
+                
+                // Set promotions
+                if (order.getPromotions() != null && !order.getPromotions().isEmpty()) {
+                    List<Promotion> orderPromotions = order.getPromotions().stream()
+                            .map(p -> finalPromotionsById.get(p.getId()))
+                            .filter(p -> p != null)
+                            .toList();
+                    order.setPromotions(orderPromotions);
+                }
             });
         }
         return orderPage;
@@ -445,6 +486,18 @@ public class OrderService implements IOrderService {
 
         List<OrderItem> orderItems = orderItemRepository.findByOrderId(order.getId());
         order.setOrderItems(orderItems);
+        
+        // Load promotions (vì là @DBRef)
+        if (order.getPromotions() != null && !order.getPromotions().isEmpty()) {
+            List<String> promotionIds = order.getPromotions().stream()
+                    .map(Promotion::getId)
+                    .filter(id -> id != null)
+                    .toList();
+            if (!promotionIds.isEmpty()) {
+                List<Promotion> promotions = promotionRepository.findAllById(promotionIds);
+                order.setPromotions(promotions);
+            }
+        }
 
         return order;
     }
@@ -699,9 +752,39 @@ public class OrderService implements IOrderService {
             Map<String, List<OrderItem>> itemsByOrderId = allOrderItems.stream()
                     .collect(Collectors.groupingBy(item -> item.getOrder().getId()));
 
+            // Lấy tất cả promotion IDs từ các orders
+            List<String> allPromotionIds = new ArrayList<>();
+            for (Order order : orders.getContent()) {
+                if (order.getPromotions() != null && !order.getPromotions().isEmpty()) {
+                    order.getPromotions().stream()
+                            .map(Promotion::getId)
+                            .filter(id -> id != null)
+                            .forEach(allPromotionIds::add);
+                }
+            }
+
+            // Load promotions nếu có
+            Map<String, Promotion> promotionsById = new HashMap<>();
+            if (!allPromotionIds.isEmpty()) {
+                List<Promotion> promotions = promotionRepository.findAllById(allPromotionIds);
+                promotionsById = promotions.stream()
+                        .collect(Collectors.toMap(Promotion::getId, p -> p));
+            }
+
+            // Assign orderItems và promotions to each order
+            Map<String, Promotion> finalPromotionsById = promotionsById;
             orders.getContent().forEach(order -> {
                 List<OrderItem> items = itemsByOrderId.getOrDefault(order.getId(), new ArrayList<>());
                 order.setOrderItems(items);
+                
+                // Set promotions
+                if (order.getPromotions() != null && !order.getPromotions().isEmpty()) {
+                    List<Promotion> orderPromotions = order.getPromotions().stream()
+                            .map(p -> finalPromotionsById.get(p.getId()))
+                            .filter(p -> p != null)
+                            .toList();
+                    order.setPromotions(orderPromotions);
+                }
             });
         }
 
@@ -721,6 +804,18 @@ public class OrderService implements IOrderService {
         // Load orderItems
         List<OrderItem> orderItems = orderItemRepository.findByOrderId(order.getId());
         order.setOrderItems(orderItems);
+        
+        // Load promotions (vì là @DBRef)
+        if (order.getPromotions() != null && !order.getPromotions().isEmpty()) {
+            List<String> promotionIds = order.getPromotions().stream()
+                    .map(Promotion::getId)
+                    .filter(id -> id != null)
+                    .toList();
+            if (!promotionIds.isEmpty()) {
+                List<Promotion> promotions = promotionRepository.findAllById(promotionIds);
+                order.setPromotions(promotions);
+            }
+        }
 
         return order;
     }
@@ -979,21 +1074,14 @@ public class OrderService implements IOrderService {
             }
         }
 
-        // 5. Tính phí ship động theo vùng miền và trọng lượng
-        int totalQuantity = storeItems.stream()
-                .mapToInt(OrderDTO.SelectedCartItem::getQuantity)
-                .sum();
-        Integer totalWeight = totalQuantity * 500; // Mỗi sản phẩm trung bình 500g
-        
-        // Tính phí ship từ địa chỉ shop đến địa chỉ giao hàng
+        // 5. Tính phí ship động theo vùng miền
         BigDecimal shippingFee = regionalShippingService.calculateShippingFee(
                 store.getAddress(),
                 Address.builder()
                         .province(orderDTO.getAddress().getProvince())
                         .ward(orderDTO.getAddress().getWard())
                         .homeAddress(orderDTO.getAddress().getHomeAddress())
-                        .build(),
-                totalWeight
+                        .build()
         );
 
         // 6. Áp dụng Platform SHIPPING Promotion

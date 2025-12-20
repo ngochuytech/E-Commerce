@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
@@ -19,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.example.e_commerce_techshop.annotations.RequireActiveAccount;
 import com.example.e_commerce_techshop.dtos.ReviewDTO;
+import com.example.e_commerce_techshop.dtos.buyer.UpdateReviewDTO;
 import com.example.e_commerce_techshop.models.Review;
 import com.example.e_commerce_techshop.models.User;
 import com.example.e_commerce_techshop.responses.ApiResponse;
@@ -76,14 +76,15 @@ public class BuyerReviewController {
     /**
      * Cập nhật review
      */
-    @PutMapping("/{reviewId}")
+    @PutMapping(value = "/{reviewId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Update review", description = "Update an existing review (only by the review owner)")
     public ResponseEntity<?> updateReview(
             @Parameter(description = "Review ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String reviewId,
-            @Parameter(description = "Updated review information") @Valid @RequestBody ReviewDTO reviewDTO,
+            @Parameter(description = "Updated review information") @Valid @RequestPart("review") UpdateReviewDTO reviewDTO,
+            @Parameter(description = "Optional images for the review") @RequestPart(value = "images", required = false) List<MultipartFile> images,
             @AuthenticationPrincipal User currentUser) throws Exception {
 
-        reviewService.updateReview(reviewId, reviewDTO, currentUser);
+        reviewService.updateReview(reviewId, reviewDTO, images, currentUser);
 
         return ResponseEntity.ok(ApiResponse.ok("Cập nhật đánh giá thành công"));
     }

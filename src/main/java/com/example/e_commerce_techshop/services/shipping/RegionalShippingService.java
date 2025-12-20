@@ -31,9 +31,6 @@ public class RegionalShippingService {
     private static final BigDecimal NEARBY_REGION_FEE = BigDecimal.valueOf(45000);  // Vùng lân cận
     private static final BigDecimal FAR_REGION_FEE = BigDecimal.valueOf(60000);     // Vùng xa
     
-    // Phụ phí theo trọng lượng (mỗi 1kg thêm)
-    private static final BigDecimal WEIGHT_SURCHARGE_PER_KG = BigDecimal.valueOf(5000);
-    
     // Định nghĩa 3 vùng miền
     private static final Map<String, Set<String>> REGIONS = new HashMap<>();
     
@@ -63,14 +60,13 @@ public class RegionalShippingService {
     }
     
     /**
-     * Tính phí ship dựa trên vùng miền và trọng lượng
+     * Tính phí ship dựa trên vùng miền
      * 
      * @param fromAddress Địa chỉ gửi hàng
      * @param toAddress Địa chỉ nhận hàng
-     * @param weightInGrams Trọng lượng (gram)
      * @return Phí ship (VND)
      */
-    public BigDecimal calculateShippingFee(Address fromAddress, Address toAddress, Integer weightInGrams) {
+    public BigDecimal calculateShippingFee(Address fromAddress, Address toAddress) {
         if (fromAddress == null || toAddress == null) {
             log.warn("Address is null, using default fee");
             return SAME_REGION_FEE;
@@ -81,10 +77,8 @@ public class RegionalShippingService {
         
         // 1. Cùng tỉnh/thành
         if (fromProvince.equalsIgnoreCase(toProvince)) {
-            BigDecimal baseFee = SAME_CITY_FEE;
-            BigDecimal weightSurcharge = calculateWeightSurcharge(weightInGrams);
-            log.info("Shipping fee (same city): {} + {} = {}", baseFee, weightSurcharge, baseFee.add(weightSurcharge));
-            return baseFee.add(weightSurcharge);
+            log.info("Shipping fee (same city): {}", SAME_CITY_FEE);
+            return SAME_CITY_FEE;
         }
         
         // 2. Xác định vùng của từng tỉnh
@@ -97,14 +91,11 @@ public class RegionalShippingService {
         }
         
         // 3. Tính phí theo khoảng cách vùng
-        BigDecimal baseFee = calculateBaseFeeByRegion(fromRegion, toRegion);
-        BigDecimal weightSurcharge = calculateWeightSurcharge(weightInGrams);
+        BigDecimal shippingFee = calculateBaseFeeByRegion(fromRegion, toRegion);
+        log.info("Shipping fee: {} ({}) -> {} ({}): {}", 
+                fromProvince, fromRegion, toProvince, toRegion, shippingFee);
         
-        BigDecimal totalFee = baseFee.add(weightSurcharge);
-        log.info("Shipping fee: {} ({}) -> {} ({}): Base={}, Weight={}, Total={}", 
-                fromProvince, fromRegion, toProvince, toRegion, baseFee, weightSurcharge, totalFee);
-        
-        return totalFee;
+        return shippingFee;
     }
     
     /**
@@ -131,24 +122,6 @@ public class RegionalShippingService {
         }
         
         return SAME_REGION_FEE;
-    }
-    
-    /**
-     * Tính phụ phí theo trọng lượng
-     * Mỗi 1kg thêm 5,000đ
-     */
-    private BigDecimal calculateWeightSurcharge(Integer weightInGrams) {
-        if (weightInGrams == null || weightInGrams <= 1000) {
-            return BigDecimal.ZERO; // <= 1kg không tính phụ phí
-        }
-        
-        // Tính số kg vượt quá 1kg đầu tiên
-        int extraKg = (weightInGrams - 1000) / 1000;
-        if ((weightInGrams - 1000) % 1000 > 0) {
-            extraKg++; // Làm tròn lên
-        }
-        
-        return WEIGHT_SURCHARGE_PER_KG.multiply(BigDecimal.valueOf(extraKg));
     }
     
     /**

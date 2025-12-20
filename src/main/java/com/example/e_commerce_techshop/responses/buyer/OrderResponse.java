@@ -47,6 +47,8 @@ public class OrderResponse {
 
     private RefundInfo refundInfo; // Thông tin hoàn tiền (nếu có)
 
+    private List<PromotionResponse> promotions; // Danh sách mã khuyến mãi được sử dụng
+
     private List<OrderItemResponse> orderItems;
 
     private UserResponse buyer;
@@ -104,6 +106,27 @@ public class OrderResponse {
         // Thông tin hoàn tiền thủ công
         private String adminNote;
         private String rejectionReason;
+    }
+
+    @Getter
+    @Setter
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class PromotionResponse {
+        private String id;
+        private String code;                // Mã khuyến mãi
+        private String title;               // Tiêu đề khuyến mãi
+        private String description;         // Mô tả
+        private String type;                // PERCENTAGE, FIXED_AMOUNT
+        private String issuer;              // PLATFORM, STORE
+        private String applicableFor;       // ORDER, SHIPPING
+        private String discountType;        // ORDER, CATEGORY
+        private Long discountValue;         // Giá trị giảm
+        private Long minOrderValue;         // Giá trị đơn hàng tối thiểu
+        private Long maxDiscountValue;      // Giảm giá tối đa
+        private LocalDateTime startDate;    // Ngày bắt đầu
+        private LocalDateTime endDate;      // Ngày kết thúc
     }
 
     @Getter
@@ -183,6 +206,28 @@ public class OrderResponse {
                 .phone(order.getAddress().getPhone())
                 .build();
 
+        // Map promotions
+        List<PromotionResponse> promotions = null;
+        if (order.getPromotions() != null && !order.getPromotions().isEmpty()) {
+            promotions = order.getPromotions().stream()
+                    .map(promotion -> PromotionResponse.builder()
+                            .id(promotion.getId())
+                            .code(promotion.getCode())
+                            .title(promotion.getTitle())
+                            .description(promotion.getDescription())
+                            .type(promotion.getType())
+                            .issuer(promotion.getIssuer())
+                            .applicableFor(promotion.getApplicableFor())
+                            .discountType(promotion.getDiscountType())
+                            .discountValue(promotion.getDiscountValue())
+                            .minOrderValue(promotion.getMinOrderValue())
+                            .maxDiscountValue(promotion.getMaxDiscountValue())
+                            .startDate(promotion.getStartDate())
+                            .endDate(promotion.getEndDate())
+                            .build())
+                    .collect(java.util.stream.Collectors.toList());
+        }
+
         return OrderResponse.builder()
                 .id(order.getId())
                 .totalPrice(order.getTotalPrice())
@@ -200,6 +245,7 @@ public class OrderResponse {
                 .status(order.getStatus())
                 .isRated(order.isRated())
                 .returnRequestId(order.getReturnRequestId())
+                .promotions(promotions)
                 .orderItems(orderItems)
                 .buyer(buyer)
                 .store(store)
