@@ -43,6 +43,10 @@ public class Order extends BaseEntity {
 
     private String returnRequestId; // Đơn hàng có yêu cầu trả hàng không (không tính CLOSED)
 
+    private String shipmentId; // ID của shipment giao hàng
+
+    private String returnShipmentId; // ID của shipment trả hàng
+
     private String vnpTnxRef; // Mã tham chiếu giao dịch VNPAY (nếu có)
 
     private String momoTransId; // Mã giao dịch MoMo (transId khi thanh toán thành công)

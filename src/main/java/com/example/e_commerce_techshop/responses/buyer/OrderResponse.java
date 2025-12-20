@@ -47,6 +47,10 @@ public class OrderResponse {
 
     private RefundInfo refundInfo; // Thông tin hoàn tiền (nếu có)
 
+    private String shipmentId; // ID của shipment giao hàng
+
+    private String returnShipmentId; // ID của shipment trả hàng
+
     private List<PromotionResponse> promotions; // Danh sách mã khuyến mãi được sử dụng
 
     private List<OrderItemResponse> orderItems;
@@ -245,6 +249,8 @@ public class OrderResponse {
                 .status(order.getStatus())
                 .isRated(order.isRated())
                 .returnRequestId(order.getReturnRequestId())
+                .shipmentId(order.getShipmentId())
+                .returnShipmentId(order.getReturnShipmentId())
                 .promotions(promotions)
                 .orderItems(orderItems)
                 .buyer(buyer)

@@ -88,6 +88,8 @@ public class ShipmentService implements IShipmentService {
                 .build();
 
         Shipment savedShipment = shipmentRepository.save(shipment);
+        order.setShipmentId(savedShipment.getId());
+        orderRepository.save(order);
 
         // Thông báo cho khách hàng
         try {

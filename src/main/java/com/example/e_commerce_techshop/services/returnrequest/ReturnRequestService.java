@@ -1151,6 +1151,9 @@ public class ReturnRequestService implements IReturnRequestService {
 
         shipmentRepository.save(returnShipment);
 
+        order.setReturnShipmentId(returnShipment.getId());
+        orderRepository.save(order);
+
         log.info("Created NEW return shipment for order {}, status: READY_TO_PICK", order.getId());
     }
 

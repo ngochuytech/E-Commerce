@@ -836,6 +836,10 @@ public class OrderService implements IOrderService {
             }
         }
 
+        if(!order.getStatus().equals(Order.OrderStatus.PENDING.name())) {
+            throw new IllegalArgumentException("Chỉ có thể xác nhận đơn hàng ở trạng thái PENDING");
+        }
+
         order.setStatus(Order.OrderStatus.CONFIRMED.name());
         Order savedOrder = orderRepository.save(order);
 
