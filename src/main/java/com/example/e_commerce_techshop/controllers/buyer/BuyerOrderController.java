@@ -109,8 +109,20 @@ public class BuyerOrderController {
         OrderResponse.RefundInfo refundInfo = orderService.getOrderRefundInfo(currentUser, orderId);
         orderResponse.setRefundInfo(refundInfo);
         
+        // Thêm thông tin ngân hàng từ ReturnRequest (nếu có)
+        if (order.getReturnRequestId() != null) {
+            try {
+                ReturnRequest returnRequest = returnRequestService.getReturnRequestDetail(currentUser, order.getReturnRequestId());
+                orderResponse.setBankName(returnRequest.getBankName());
+                orderResponse.setBankAccountNumber(returnRequest.getBankAccountNumber());
+                orderResponse.setBankAccountName(returnRequest.getBankAccountName());
+            } catch (Exception e) {
+                // Nếu không lấy được returnRequest, các trường bank sẽ là null
+            }
+        }
+        
         return ResponseEntity.ok(ApiResponse.ok(orderResponse));
-    }
+    }   
 
     @PutMapping("/{orderId}/cancel")
     @Operation(summary = "Cancel order", description = "Cancel an order (only allowed for PENDING status)")

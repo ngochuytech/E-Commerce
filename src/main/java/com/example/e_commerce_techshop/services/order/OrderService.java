@@ -269,6 +269,7 @@ public class OrderService implements IOrderService {
             BigDecimal storeTotal = financials.getStoreTotal();
             BigDecimal storeDiscountAmount = financials.getStoreDiscountAmount();
             BigDecimal platformDiscountAmount = financials.getPlatformDiscountAmount();
+            BigDecimal totalDiscount = financials.getTotalDiscountAmount();
             BigDecimal finalShippingFee = financials.getFinalShippingFee();
             BigDecimal platformCommission = financials.getPlatformCommission();
             BigDecimal finalTotal = financials.getFinalTotal();
@@ -298,7 +299,7 @@ public class OrderService implements IOrderService {
                     .platformCommission(platformCommission) // Hoa hồng sàn 5%
                     .storeDiscountAmount(storeDiscountAmount) // Tiền shop chịu
                     .platformDiscountAmount(platformDiscountAmount) // Tiền sàn chịu
-                    .totalDiscountAmount(platformDiscountAmount)
+                    .totalDiscountAmount(totalDiscount)
                     .totalPrice(finalTotal) // Tổng tiền khách thanh toán
                     .isRated(false)
                     .vnpTnxRef(orderDTO.getVnpTnxRef())

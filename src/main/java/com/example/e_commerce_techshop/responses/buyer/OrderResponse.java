@@ -47,6 +47,11 @@ public class OrderResponse {
 
     private RefundInfo refundInfo; // Thông tin hoàn tiền (nếu có)
 
+    // Thông tin ngân hàng từ ReturnRequest (để hoàn tiền COD)
+    private String bankName;
+    private String bankAccountNumber;
+    private String bankAccountName;
+
     private String shipmentId; // ID của shipment giao hàng
 
     private String returnShipmentId; // ID của shipment trả hàng
@@ -249,6 +254,9 @@ public class OrderResponse {
                 .status(order.getStatus())
                 .isRated(order.isRated())
                 .returnRequestId(order.getReturnRequestId())
+                .bankName(null) // Will be set by controller if returnRequest exists
+                .bankAccountNumber(null) // Will be set by controller if returnRequest exists
+                .bankAccountName(null) // Will be set by controller if returnRequest exists
                 .shipmentId(order.getShipmentId())
                 .returnShipmentId(order.getReturnShipmentId())
                 .promotions(promotions)
