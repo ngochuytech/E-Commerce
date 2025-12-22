@@ -121,6 +121,11 @@ public class OrderService implements IOrderService {
 
             // Kiểm tra trạng thái store
             if (!Store.StoreStatus.APPROVED.name().equals(productVariant.getProduct().getStore().getStatus())) {
+                String storeStatus = productVariant.getProduct().getStore().getStatus();
+                if (Store.StoreStatus.BANNED.name().equals(storeStatus)) {
+                    throw new IllegalArgumentException(
+                            "Cửa hàng " + productVariant.getProduct().getStore().getName() + " đã bị khóa. Không thể đặt hàng từ cửa hàng này.");
+                }
                 throw new IllegalArgumentException(
                         "Cửa hàng tạm thời đóng cửa: " + productVariant.getProduct().getStore().getName());
             }
@@ -609,8 +614,8 @@ public class OrderService implements IOrderService {
 
             walletService.transferPendingToBalance(order.getStore().getId(), order.getId(), storeRevenue, String.format("Thanh toán đơn hàng #%s ", order.getId()));
             
-            // Lưu hoa hồng sàn vào AdminRevenue để thống kê
             try {
+                // Lưu hoa hồng sàn vào AdminRevenue để thống kê
                 AdminRevenue platformCommissionRevenue = AdminRevenue.builder()
                         .order(order)
                         .amount(platformCommission)
@@ -618,6 +623,16 @@ public class OrderService implements IOrderService {
                         .description(String.format("Hoa hồng 5%% từ đơn hàng #%s", order.getId()))
                         .build();
                 adminRevenueRepository.save(platformCommissionRevenue);
+                if(order.getPlatformDiscountAmount() != null && order.getPlatformDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
+                    // Lưu khoản giảm giá sàn thành lỗ của sàn
+                    AdminRevenue platformDiscountLoss = AdminRevenue.builder()
+                            .order(order)
+                            .amount(order.getPlatformDiscountAmount().negate()) // Lỗ nên âm
+                            .revenueType(AdminRevenue.RevenueType.PLATFORM_DISCOUNT_LOSS.name())
+                            .description(String.format("Lỗ do giảm giá từ đơn hàng #%s", order.getId()))
+                            .build();
+                    adminRevenueRepository.save(platformDiscountLoss);
+                }
             } catch (Exception ex) {
                 System.err.println("Error saving platform commission to admin revenue: " + ex.getMessage());
             }

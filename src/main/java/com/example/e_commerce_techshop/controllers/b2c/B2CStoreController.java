@@ -66,6 +66,8 @@ public class B2CStoreController {
             @Parameter(description = "ID of the store to update", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
             @Parameter(description = "Updated store information", required = true, content = @Content(schema = @Schema(implementation = UpdateStoreDTO.class))) @RequestBody @Valid UpdateStoreDTO updateStoreDTO)
             throws Exception {
+        // Kiểm tra shop có bị banned không
+        storeService.validateStoreNotBanned(storeId);
         storeService.updateStore(storeId, updateStoreDTO);
         return ResponseEntity.ok(ApiResponse.ok("Cập nhật cửa hàng thành công!"));
     }
@@ -105,6 +107,8 @@ public class B2CStoreController {
             @Parameter(description = "ID of the store to update logo for", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
             @Parameter(description = "Logo image file (JPG, PNG, GIF supported)", required = true, content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE)) @RequestParam("file") MultipartFile file)
             throws Exception {
+        // Kiểm tra shop có bị banned không
+        storeService.validateStoreNotBanned(storeId);
         storeService.updateStoreLogo(storeId, file);
         return ResponseEntity.ok(ApiResponse.ok("Cập nhật logo thành công!"));
     }
@@ -116,6 +120,8 @@ public class B2CStoreController {
             @Parameter(description = "ID of the store to update banner for", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
             @Parameter(description = "Banner image file (JPG, PNG, GIF supported, recommended size: 1200x400px)", required = true, content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE)) @RequestParam("file") MultipartFile file)
             throws Exception {
+        // Kiểm tra shop có bị banned không
+        storeService.validateStoreNotBanned(storeId);
         storeService.updateStoreBanner(storeId, file);
         return ResponseEntity.ok(ApiResponse.ok("Cập nhật banner thành công!"));
     }

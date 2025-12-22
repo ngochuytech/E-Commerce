@@ -105,4 +105,23 @@ public class AdminStoreController {
         storeService.updateStoreStatus(storeId, "DELETED");
         return ResponseEntity.ok(ApiResponse.ok("Đã xóa (mềm) cửa hàng"));
     }
+
+    @PutMapping("/{storeId}/ban")
+    @Operation(summary = "Ban store", description = "Ban a store and automatically cancel all pending orders. Store will not be able to perform any operations.")
+    public ResponseEntity<?> banStore(
+            @Parameter(description = "ID of the store to ban", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
+            @Parameter(description = "Reason for banning the store", required = true, example = "Vi phạm chính sách bán hàng") @RequestParam String reason)
+            throws Exception {
+        StoreResponse response = storeService.banStore(storeId, reason);
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    @PutMapping("/{storeId}/unban")
+    @Operation(summary = "Unban store", description = "Unban a previously banned store, restoring its status to APPROVED")
+    public ResponseEntity<?> unbanStore(
+            @Parameter(description = "ID of the store to unban", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId)
+            throws Exception {
+        StoreResponse response = storeService.unbanStore(storeId);
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
 }

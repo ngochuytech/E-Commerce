@@ -107,6 +107,12 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(ex.getMessage()));
     }
 
+    @ExceptionHandler(StoreBannedException.class)
+    public ResponseEntity<ApiResponse<Object>> handleStoreBannedException(StoreBannedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
     @ExceptionHandler(AccountNotVerifiedException.class)
     public ResponseEntity<ApiResponse<Object>> handleAccountNotVerifiedException(AccountNotVerifiedException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)

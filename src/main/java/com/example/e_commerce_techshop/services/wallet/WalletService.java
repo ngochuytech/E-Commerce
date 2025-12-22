@@ -406,4 +406,45 @@ public class WalletService implements IWalletService {
                     wallet.getPendingAmount(), amount);
         }
     }
+
+    @Override
+    @Transactional
+    public void deductPendingBalance(String storeId, String orderId, BigDecimal amount, String description)
+            throws Exception {
+        // Validate amount
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Số tiền phải lớn hơn 0");
+        }
+
+        // Lấy wallet của store
+        Wallet wallet = getStoreWallet(storeId);
+
+        // Kiểm tra pendingAmount có đủ không
+        if (wallet.getPendingAmount().compareTo(amount) < 0) {
+            throw new IllegalStateException(
+                    String.format("Số dư pending không đủ để trừ. Hiện tại: %,.0f đ, Cần trừ: %,.0f đ",
+                            wallet.getPendingAmount().doubleValue(), amount.doubleValue()));
+        }
+
+        // Trừ pendingAmount
+        BigDecimal oldPending = wallet.getPendingAmount();
+        wallet.setPendingAmount(wallet.getPendingAmount().subtract(amount));
+        walletRepository.save(wallet);
+
+        // Tạo transaction ghi nhận
+        Transaction transaction = Transaction.builder()
+                .wallet(wallet)
+                .type(Transaction.TransactionType.DISPUTE_LOSS) // Loại giao dịch: thua tranh chấp
+                .amount(amount.negate()) // Số âm để thể hiện tiền bị trừ
+                .balanceBefore(wallet.getBalance())
+                .balanceAfter(wallet.getBalance()) // Balance không đổi, chỉ trừ pending
+                .description(description != null ? description
+                        : String.format("Tranh chấp đơn #%s - Store thua kiện, trừ pending", orderId))
+                .status("COMPLETED")
+                .build();
+        transactionRepository.save(transaction);
+
+        log.info("[WalletService] Trừ {} từ pendingAmount ví shop {} do thua tranh chấp đơn #{}. Pending trước: {}, sau: {}",
+                amount, storeId, orderId, oldPending, wallet.getPendingAmount());
+    }
 }

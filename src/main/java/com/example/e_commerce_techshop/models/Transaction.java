@@ -42,6 +42,7 @@ public class Transaction extends BaseEntity {
         ORDER_CANCELLED, // Đơn hàng bị hủy - trừ pending
         WITHDRAWAL, // Rút tiền
         REFUND, // Hoàn tiền
+        DISPUTE_LOSS, // Thua khiếu nại
         ADJUSTMENT // Điều chỉnh (admin)
     }
 }

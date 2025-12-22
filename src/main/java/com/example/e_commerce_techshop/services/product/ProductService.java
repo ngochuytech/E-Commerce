@@ -225,4 +225,10 @@ public class ProductService implements IProductService {
         
         return variant.getProduct();
     }
+
+    @Override
+    public Product getProductById(String id) throws Exception {
+        return productRepository.findById(id)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy product này"));
+    }
 }

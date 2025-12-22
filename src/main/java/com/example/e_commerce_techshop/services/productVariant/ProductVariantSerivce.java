@@ -643,4 +643,10 @@ public class ProductVariantSerivce implements IProductVariantService {
         return statusCounts;
     }
 
+    @Override
+    public ProductVariant getProductVariantById(String productVariantId) throws Exception {
+        return productVariantRepository.findById(productVariantId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy mẫu sản phẩm này"));
+    }
+
 }

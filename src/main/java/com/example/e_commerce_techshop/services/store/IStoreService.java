@@ -24,10 +24,17 @@ public interface IStoreService {
     List<Store> getStoresByOwner(String ownerId);
     Page<StoreResponse> getStoresByOwner(String ownerId, Pageable pageable);
 
+    // Kiểm tra shop có bị banned không và throw exception nếu bị banned
+    void validateStoreNotBanned(String storeId) throws Exception;
+
     // Admin
     StoreResponse approveStore(String storeId) throws Exception;
     StoreResponse rejectStore(String storeId, String reason) throws Exception;
     Page<StoreResponse> getPendingStores(Pageable pageable);
     Page<StoreResponse> getApprovedStores(Pageable pageable);
     void updateStoreStatus(String storeId, String status) throws Exception;
+    
+    // Ban/Unban store
+    StoreResponse banStore(String storeId, String reason) throws Exception;
+    StoreResponse unbanStore(String storeId) throws Exception;
 }

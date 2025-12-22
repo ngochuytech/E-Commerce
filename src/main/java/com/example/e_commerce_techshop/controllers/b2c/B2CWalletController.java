@@ -23,6 +23,7 @@ import com.example.e_commerce_techshop.responses.ApiResponse;
 import com.example.e_commerce_techshop.responses.TransactionResponse;
 import com.example.e_commerce_techshop.responses.WalletResponse;
 import com.example.e_commerce_techshop.responses.admin.AdminWithdrawalResponse;
+import com.example.e_commerce_techshop.services.store.IStoreService;
 import com.example.e_commerce_techshop.services.wallet.IWalletService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -40,6 +41,7 @@ import lombok.RequiredArgsConstructor;
 public class B2CWalletController {
 
         private final IWalletService walletService;
+        private final IStoreService storeService;
 
         /**
          * Lấy thông tin ví của store
@@ -83,6 +85,9 @@ public class B2CWalletController {
                         @Parameter(description = "Store ID", example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
                         @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Withdrawal request details including amount and bank information", required = true) @RequestBody @Valid WithdrawalRequestDTO dto,
                         @AuthenticationPrincipal User user) throws Exception {
+                // Kiểm tra shop có bị banned không
+                storeService.validateStoreNotBanned(storeId);
+                
                 WithdrawalRequest request = walletService.createWithdrawalRequest(
                                 storeId,
                                 dto.getAmount(),

@@ -94,4 +94,15 @@ public interface IWalletService {
      * @param description Mô tả giao dịch
      */
     void deductFromPendingAmount(String storeId, String orderId, BigDecimal amount, String description) throws Exception;
+
+    /**
+     * Trừ tiền từ pendingAmount của store khi buyer thắng tranh chấp
+     * Tiền này bao gồm cả tiền sản phẩm và phí ship mà shop phải chịu
+     * 
+     * @param storeId ID của store
+     * @param orderId ID của đơn hàng
+     * @param amount Số tiền cần trừ (bao gồm sản phẩm + ship)
+     * @param description Mô tả giao dịch
+     */
+    void deductPendingBalance(String storeId, String orderId, BigDecimal amount, String description) throws Exception;
 }

@@ -14,6 +14,8 @@ import com.example.e_commerce_techshop.responses.ProductVariantResponse;
 
 public interface IProductVariantService {
 
+    ProductVariant getProductVariantById(String productVariantId) throws Exception;
+
     ProductVariantResponse getById(String productVariantId) throws Exception;
 
     Page<ProductVariantResponse> getByProduct(String productId, Pageable pageable) throws Exception;
