@@ -74,6 +74,28 @@ public class B2CProductVariantController {
         return ResponseEntity.ok(ApiResponse.ok(productVariantResponses));
     }
 
+    @GetMapping("/store/{storeId}/search")
+    @Operation(summary = "Search product variants in store", description = "Search for product variants by name within a specific store")
+    public ResponseEntity<?> searchProductVariants(
+            @Parameter(description = "Store ID to search within", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
+            @Parameter(description = "Product name or keyword to search", required = true, example = "iPhone") @RequestParam String name,
+            @Parameter(description = "Filter by status") @RequestParam(required = false) String status,
+            @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size,
+            @Parameter(description = "Sort by field") @RequestParam(defaultValue = "createdAt") String sortBy,
+            @Parameter(description = "Sort direction: asc or desc") @RequestParam(defaultValue = "desc") String sortDir)
+            throws Exception {
+        Sort sort = sortDir.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+        Page<ProductVariant> productVariants = productVariantService.searchByStoreAndName(storeId, name, status, pageable);
+        Page<ProductVariantResponse> productVariantResponses = productVariants
+                .map(ProductVariantResponse::fromProductVariant);
+        return ResponseEntity.ok(ApiResponse.ok(productVariantResponses));
+    }
+
     @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Create product variant", description = "Create a new product variant with specifications like size, color, price, and multiple product images")
     public ResponseEntity<?> createProductVariant(

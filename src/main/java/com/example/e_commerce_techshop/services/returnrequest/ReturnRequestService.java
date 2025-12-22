@@ -38,6 +38,7 @@ import com.example.e_commerce_techshop.repositories.ShipmentRepository;
 import com.example.e_commerce_techshop.repositories.StoreRepository;
 import com.example.e_commerce_techshop.services.CloudinaryService;
 import com.example.e_commerce_techshop.services.notification.INotificationService;
+import com.example.e_commerce_techshop.services.productVariant.ProductVariantSerivce;
 import com.example.e_commerce_techshop.services.refund.IRefundService;
 import com.example.e_commerce_techshop.services.shipping.RegionalShippingService;
 import com.example.e_commerce_techshop.services.wallet.IWalletService;
@@ -62,6 +63,7 @@ public class ReturnRequestService implements IReturnRequestService {
     private final RegionalShippingService regionalShippingService;
     private final AdminRevenueRepository adminRevenueRepository;
     private final StoreRepository storeRepository;
+    private final ProductVariantSerivce productVariantService;
 
     // ==================== BUYER APIs ====================
 
@@ -1579,6 +1581,9 @@ public class ReturnRequestService implements IReturnRequestService {
             if (returnCount >= 5) {
                 store.setStatus(Store.StoreStatus.BANNED.name());
                 storeRepository.save(store);
+                
+                // Xóa toàn bộ cache product variants trong Redis
+                productVariantService.clearAllProductVariantCache();
 
                 // Tự động hủy các đơn hàng PENDING
                 cancelPendingOrdersForBannedStore(store);

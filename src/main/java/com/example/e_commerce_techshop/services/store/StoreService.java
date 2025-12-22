@@ -14,6 +14,7 @@ import com.example.e_commerce_techshop.repositories.StoreRepository;
 import com.example.e_commerce_techshop.responses.StoreResponse;
 import com.example.e_commerce_techshop.services.FileUploadService;
 import com.example.e_commerce_techshop.services.notification.INotificationService;
+import com.example.e_commerce_techshop.services.productVariant.ProductVariantSerivce;
 import com.example.e_commerce_techshop.services.refund.IRefundService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +36,7 @@ public class StoreService implements IStoreService {
     private final INotificationService notificationService;
     private final OrderRepository orderRepository;
     private final IRefundService refundService;
+    private final ProductVariantSerivce productVariantService;
 
     @Override
     public StoreResponse createStore(StoreDTO storeDTO, User owner, MultipartFile logo) throws Exception {
@@ -237,6 +239,9 @@ public class StoreService implements IStoreService {
         store.setStatus(Store.StoreStatus.BANNED.name());
         storeRepository.save(store);
         
+        // Xóa toàn bộ cache product variants trong Redis
+        productVariantService.clearAllProductVariantCache();
+        
         log.info("Store {} has been banned. Reason: {}", storeId, reason);
         
         // Thông báo cho shop owner
@@ -279,6 +284,9 @@ public class StoreService implements IStoreService {
         // Cập nhật status thành APPROVED
         store.setStatus(Store.StoreStatus.APPROVED.name());
         storeRepository.save(store);
+        
+        // Xóa toàn bộ cache product variants trong Redis
+        productVariantService.clearAllProductVariantCache();
         
         log.info("Store {} has been unbanned", storeId);
         
