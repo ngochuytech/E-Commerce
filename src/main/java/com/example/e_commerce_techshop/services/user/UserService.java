@@ -53,7 +53,7 @@ public class UserService implements IUserService {
 
     private final FileUploadService fileUploadService;
 
-    @Value("${spring.mail.properties.from:ngochuymail25@gmail.com}")
+    @Value("${spring.mail.properties.from:truongtmp01012001@gmail.com}")
     private String fromAddress;
 
     @Value("${spring.mail.properties.from-name:TechShop E-commerce}")

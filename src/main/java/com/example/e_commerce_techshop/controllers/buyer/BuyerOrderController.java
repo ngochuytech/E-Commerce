@@ -206,7 +206,7 @@ public class BuyerOrderController {
     }
 
     @PutMapping("/returns/{returnRequestId}/cancel")
-    @Operation(summary = "Hủy yêu cầu trả hàng", description = "Buyer hủy yêu cầu trả hàng (chỉ được hủy khi status là PENDING hoặc APPROVED)")
+    @Operation(summary = "Hủy yêu cầu trả hàng", description = "Buyer hủy yêu cầu trả hàng (chỉ được hủy khi status là PENDING hoặc REJECTED)")
     public ResponseEntity<?> cancelReturnRequest(
             @Parameter(description = "Return Request ID") @PathVariable String returnRequestId,
             @AuthenticationPrincipal User currentUser) throws Exception {

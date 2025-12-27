@@ -1330,13 +1330,12 @@ public class ReturnRequestService implements IReturnRequestService {
             throw new IllegalStateException("Bạn không có quyền hủy yêu cầu trả hàng này");
         }
 
-        // Chỉ cho phép hủy khi status là PENDING
+        // Chỉ cho phép hủy khi status là PENDING hoặc REJECTED
         String currentStatus = returnRequest.getStatus();
-        if (!ReturnRequest.ReturnStatus.PENDING.name().equals(currentStatus)) {
+        if (!ReturnRequest.ReturnStatus.PENDING.name().equals(currentStatus) && !ReturnRequest.ReturnStatus.REJECTED.name().equals(currentStatus)) {
             throw new IllegalStateException(
-                    "Chỉ có thể hủy yêu cầu trả hàng khi trạng thái là PENDING. Trạng thái hiện tại: " + currentStatus);
+                    "Chỉ có thể hủy yêu cầu trả hàng khi trạng thái là PENDING hoặc REJECTED. Trạng thái hiện tại: " + currentStatus);
         }
-
         // Cập nhật status thành CLOSED
         returnRequest.setStatus(ReturnRequest.ReturnStatus.CLOSED.name());
         returnRequest.setStoreResponse("Buyer đã hủy yêu cầu trả hàng");
