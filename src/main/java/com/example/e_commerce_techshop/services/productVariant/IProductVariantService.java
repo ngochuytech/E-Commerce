@@ -14,6 +14,8 @@ import com.example.e_commerce_techshop.responses.ProductVariantResponse;
 
 public interface IProductVariantService {
 
+    ProductVariant getProductVariantById(String productVariantId) throws Exception;
+
     ProductVariantResponse getById(String productVariantId) throws Exception;
 
     Page<ProductVariantResponse> getByProduct(String productId, Pageable pageable) throws Exception;
@@ -30,6 +32,8 @@ public interface IProductVariantService {
 
     // Shop (B2C) methods
     Page<ProductVariant> getAllProductVariantsB2C(String storeId, String status, Pageable pageable) throws Exception;
+
+    Page<ProductVariant> searchByStoreAndName(String storeId, String name, String status, Pageable pageable) throws Exception;
 
     Map<String, Long> countProductVariantsByStatus(String storeId) throws Exception;
 

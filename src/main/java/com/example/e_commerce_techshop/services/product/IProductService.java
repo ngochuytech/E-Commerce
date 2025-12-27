@@ -8,6 +8,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 public interface IProductService {
+    Product getProductById(String id) throws Exception;
+    
     ProductResponse findProductById(String id) throws Exception;
 
     Page<ProductResponse> findProductByName(String name, Pageable pageable);

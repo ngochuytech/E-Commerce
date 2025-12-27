@@ -26,12 +26,22 @@ public class RefundService implements IRefundService {
 
     @Override
     @Transactional
-    public void createRefundRequest(Order order) throws Exception {
+    public void createRefundRequest(Order order, BigDecimal refundAmount) throws Exception {
         // Cập nhật trạng thái hoàn tiền
         order.setRefundStatus(Order.RefundStatus.PENDING.name());
         order.setRefundRequestedAt(LocalDateTime.now());
 
         orderRepository.save(order);
+
+        RefundRequest refundRequest = RefundRequest.builder()
+                .order(order)
+                .buyer(order.getBuyer())
+                .refundAmount(refundAmount)
+                .paymentMethod(order.getPaymentMethod())
+                .status(RefundRequest.RefundStatus.PENDING.name())
+                .build();
+
+        refundRequestRepository.save(refundRequest);
 
         // Gửi thông báo cho admin về yêu cầu hoàn tiền
         try {
@@ -39,7 +49,7 @@ public class RefundService implements IRefundService {
                     "Yêu cầu hoàn tiền mới",
                     String.format("Đơn hàng #%s cần hoàn tiền %,.0f đ cho khách hàng %s qua %s",
                             order.getId(),
-                            order.getTotalPrice().doubleValue(),
+                            refundAmount.doubleValue(),
                             order.getBuyer().getFullName(),
                             order.getPaymentMethod()),
                     Notification.NotificationType.REFUND_REQUEST.name(),
@@ -88,23 +98,47 @@ public class RefundService implements IRefundService {
             org.cloudinary.json.JSONObject json = new org.cloudinary.json.JSONObject(momoResponse);
             int resultCode = json.getInt("resultCode");
             String refundTransId = json.optString("transId", "");
+            String refundOrderId = json.optString("orderId", ""); // RF_xxx từ MoMo
+            
+            System.out.println("DEBUG - Parsed refund response: resultCode=" + resultCode + ", refundTransId=" + refundTransId + ", refundOrderId=" + refundOrderId);
             
             if (resultCode == 0) {
                 // Hoàn tiền thành công
                 order.setRefundStatus(Order.RefundStatus.COMPLETED.name());
                 order.setRefundCompletedAt(LocalDateTime.now());
                 order.setRefundTransactionId(refundTransId);
-                orderRepository.save(order);
+                order.setMomoRefundOrderId(refundOrderId); // Lưu RF_xxx để check status sau
+
+                System.out.println("DEBUG - Before save: orderId=" + order.getId() + ", momoRefundOrderId=" + order.getMomoRefundOrderId());
+                Order savedOrder = orderRepository.save(order);
+                System.out.println("DEBUG - After save (from return): momoRefundOrderId=" + savedOrder.getMomoRefundOrderId());
+                
+                // Query lại từ DB để verify
+                Order verifiedOrder = orderRepository.findById(order.getId()).orElse(null);
+                if (verifiedOrder != null) {
+                    System.out.println("DEBUG - Verified from DB: momoRefundOrderId=" + verifiedOrder.getMomoRefundOrderId());
+                } else {
+                    System.out.println("DEBUG - ERROR: Cannot find order after save!");
+                }
 
                 // Tạo RefundRequest record
-                RefundRequest refundRequest = RefundRequest.builder()
-                        .order(order)
-                        .buyer(order.getBuyer())
-                        .refundAmount(amount)
-                        .paymentMethod("MOMO")
-                        .refundTransactionId(refundTransId)
-                        .status(RefundRequest.RefundStatus.COMPLETED.name())
-                        .build();
+                RefundRequest refundRequest = refundRequestRepository.findByOrderId(orderId)
+                    .orElse(null);
+                    
+                if (refundRequest == null) {
+                    refundRequest = RefundRequest.builder()
+                            .order(order)
+                            .buyer(order.getBuyer())
+                            .refundAmount(amount)
+                            .paymentMethod("MOMO")
+                            .refundTransactionId(refundTransId)
+                            .status(RefundRequest.RefundStatus.COMPLETED.name())
+                            .build();
+                } else {
+                    refundRequest.setRefundTransactionId(refundTransId);
+                    refundRequest.setStatus(RefundRequest.RefundStatus.COMPLETED.name());
+                }
+
                 refundRequestRepository.save(refundRequest);
 
                 // Thông báo cho khách hàng

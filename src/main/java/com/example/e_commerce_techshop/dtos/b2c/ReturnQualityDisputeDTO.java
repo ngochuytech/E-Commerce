@@ -1,11 +1,12 @@
 package com.example.e_commerce_techshop.dtos.b2c;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
-import lombok.*;
-
-import java.util.List;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * DTO cho store khiếu nại hàng trả về có vấn đề
@@ -22,8 +23,4 @@ public class ReturnQualityDisputeDTO {
 
     @Size(max = 2000, message = "Mô tả không được quá 2000 ký tự")
     private String description;
-
-    @NotEmpty(message = "Vui lòng cung cấp ít nhất 1 hình ảnh minh chứng")
-    @Size(min = 1, max = 10, message = "Số lượng hình ảnh minh chứng từ 1 đến 10")
-    private List<String> evidenceImages;
 }

@@ -1,6 +1,7 @@
 package com.example.e_commerce_techshop.controllers.b2c;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -62,12 +63,21 @@ public class B2CReturnController {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<ReturnRequest> returnRequests = returnRequestService.getStoreReturnRequests(store.getId(), status,
                 pageable);
-        Page<ReturnRequestResponse> responsePage = returnRequests.map(ReturnRequestResponse::fromReturnRequest);
+        // Map và thêm disputes cho từng return request
+        Page<ReturnRequestResponse> responsePage = returnRequests.map(returnRequest -> {
+            try {
+                List<Dispute> disputes = returnRequestService.getDisputesByReturnRequest(returnRequest.getId());
+                return ReturnRequestResponse.fromReturnRequestWithDisputes(returnRequest, disputes);
+            } catch (Exception e) {
+                // Nếu có lỗi khi lấy disputes, vẫn trả về return request nhưng không có disputes
+                return ReturnRequestResponse.fromReturnRequest(returnRequest);
+            }
+        });
         return ResponseEntity.ok(ApiResponse.ok(responsePage));
     }
 
     @GetMapping("/store/{storeId}/returnRequest/{returnRequestId}")
-    @Operation(summary = "Chi tiết yêu cầu trả hàng", description = "Xem chi tiết yêu cầu trả hàng")
+    @Operation(summary = "Chi tiết yêu cầu trả hàng", description = "Xem chi tiết yêu cầu trả hàng (bao gồm disputes liên quan)")
     public ResponseEntity<?> getReturnRequestDetail(
             @Parameter(description = "Return Request ID") @PathVariable String returnRequestId,
             @PathVariable String storeId,
@@ -75,7 +85,23 @@ public class B2CReturnController {
 
         Store store = storeService.getStoreByIdAndOwnerId(storeId, currentUser.getId());
         ReturnRequest returnRequest = returnRequestService.getStoreReturnRequestDetail(store.getId(), returnRequestId);
-        return ResponseEntity.ok(ApiResponse.ok(ReturnRequestResponse.fromReturnRequest(returnRequest)));
+        List<Dispute> disputes = returnRequestService.getDisputesByReturnRequest(returnRequestId);
+
+        return ResponseEntity.ok(ApiResponse.ok(
+                ReturnRequestResponse.fromReturnRequestWithDisputes(returnRequest, disputes)));
+    }
+
+    @GetMapping("/store/{storeId}/count-by-status")
+    @Operation(summary = "Thống kê yêu cầu trả hàng theo trạng thái", description = "Đếm số lượng yêu cầu trả hàng theo từng trạng thái")
+    public ResponseEntity<?> countReturnRequestsByStatus(
+            @PathVariable String storeId,
+            @AuthenticationPrincipal User currentUser) throws Exception {
+
+        Store store = storeService.getStoreByIdAndOwnerId(storeId, currentUser.getId());
+
+        // Đếm số lượng theo trạng thái
+        Map<String, Long> countByStatus = returnRequestService.countStoreReturnRequestsByStatus(store.getId());
+        return ResponseEntity.ok(ApiResponse.ok(countByStatus));
     }
 
     @PutMapping(value = "/store/{storeId}/returnRequest/{returnRequestId}/respond", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -86,9 +112,10 @@ public class B2CReturnController {
             @Valid @RequestPart("dto") ReturnResponseDTO dto,
             @Parameter(description = "Ảnh/video minh chứng (tối đa 5 file)") @RequestParam(value = "evidenceFiles", required = false) List<MultipartFile> evidenceFiles,
             @AuthenticationPrincipal User currentUser) throws Exception {
-        
+
         Store store = storeService.getStoreByIdAndOwnerId(storeId, currentUser.getId());
-        ReturnRequest returnRequest = returnRequestService.respondToReturnRequest(store.getId(), returnRequestId, dto, evidenceFiles);
+        ReturnRequest returnRequest = returnRequestService.respondToReturnRequest(store.getId(), returnRequestId, dto,
+                evidenceFiles);
         return ResponseEntity.ok(ApiResponse.ok(ReturnRequestResponse.fromReturnRequest(returnRequest)));
     }
 
@@ -116,15 +143,13 @@ public class B2CReturnController {
 
         Store store = storeService.getStoreByIdAndOwnerId(storeId, currentUser.getId());
 
-        // Upload evidence files to Cloudinary
-        
-
         ReturnQualityDisputeDTO dto = ReturnQualityDisputeDTO.builder()
                 .reason(reason)
                 .description(description)
                 .build();
 
-        Dispute dispute = returnRequestService.createReturnQualityDispute(store.getId(), returnRequestId, dto, evidenceFiles);
+        Dispute dispute = returnRequestService.createReturnQualityDispute(store.getId(), returnRequestId, dto,
+                evidenceFiles);
         return ResponseEntity.ok(ApiResponse.ok(DisputeResponse.fromDispute(dispute)));
     }
 
@@ -141,6 +166,24 @@ public class B2CReturnController {
         Page<Dispute> disputes = returnRequestService.getStoreDisputes(store.getId(), pageable);
         Page<DisputeResponse> responsePage = disputes.map(DisputeResponse::fromDispute);
         return ResponseEntity.ok(ApiResponse.ok(responsePage));
+    }
+
+    @GetMapping("/store/{storeId}/disputes/{disputeId}")
+    @Operation(summary = "Chi tiết khiếu nại", description = "Xem chi tiết một khiếu nại cụ thể")
+    public ResponseEntity<?> getDisputeDetail(
+            @Parameter(description = "Dispute ID") @PathVariable String disputeId,
+            @PathVariable String storeId,
+            @AuthenticationPrincipal User currentUser) throws Exception {
+
+        Store store = storeService.getStoreByIdAndOwnerId(storeId, currentUser.getId());
+        Dispute dispute = returnRequestService.getDisputeDetail(disputeId);
+
+        // Kiểm tra dispute có thuộc về store này không
+        if (!dispute.getStore().getId().equals(store.getId())) {
+            throw new IllegalStateException("Bạn không có quyền xem khiếu nại này");
+        }
+
+        return ResponseEntity.ok(ApiResponse.ok(DisputeResponse.fromDispute(dispute)));
     }
 
     @PostMapping(value = "/store/{storeId}/disputes/{disputeId}/message", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

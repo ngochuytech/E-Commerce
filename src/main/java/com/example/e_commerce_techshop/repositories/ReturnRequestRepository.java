@@ -51,4 +51,7 @@ public interface ReturnRequestRepository extends MongoRepository<ReturnRequest, 
     
     // Tìm các return request theo status và thời gian cập nhật (cho scheduled task)
     List<ReturnRequest> findByStatusAndUpdatedAtBefore(String status, LocalDateTime dateTime);
+    
+    // Đếm số return request theo storeId, status và khoảng thời gian
+    long countByStoreIdAndStatusAndUpdatedAtAfter(String storeId, String status, LocalDateTime after);
 }

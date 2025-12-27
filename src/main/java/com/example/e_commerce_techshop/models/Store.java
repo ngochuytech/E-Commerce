@@ -27,18 +27,25 @@ public class Store extends BaseEntity{
 
     private String banner_url;
 
-    private String status; // PENDING, APPROVED, REJECTED, DELETED
+    private String status; // PENDING, APPROVED, REJECTED, DELETED, BANNED
 
     @DBRef
     private User owner;
 
     private Address address;
 
+    // Số lần cảnh báo về hàng trả về trong tháng hiện tại
+    private Integer returnWarningCount;
+
+    // Tháng của lần cảnh báo cuối (format: yyyy-MM, ví dụ: "2025-12")
+    private String lastWarningMonth;
+
     public enum StoreStatus {
         PENDING,
         APPROVED,
         REJECTED,
-        DELETED
+        DELETED,
+        BANNED
     }
 
     public static boolean isValidStatus(String status) {

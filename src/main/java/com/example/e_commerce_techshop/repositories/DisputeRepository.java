@@ -11,13 +11,11 @@ import java.util.Optional;
 
 @Repository
 public interface DisputeRepository extends MongoRepository<Dispute, String> {
-
-    // Tìm theo return request
-    Optional<Dispute> findByReturnRequestId(String returnRequestId);
-    
     // Tìm theo return request và dispute type
     Optional<Dispute> findByReturnRequestIdAndDisputeType(String returnRequestId, String disputeType);
 
+    List<Dispute> findByReturnRequestId(String returnRequestId);
+    
     // Tìm theo order
     Optional<Dispute> findByOrderId(String orderId);
 

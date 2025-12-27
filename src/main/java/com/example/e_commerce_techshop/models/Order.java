@@ -41,10 +41,16 @@ public class Order extends BaseEntity {
 
     private boolean isRated;
 
+    private String returnRequestId; // Đơn hàng có yêu cầu trả hàng không (không tính CLOSED)
+
+    private String shipmentId; // ID của shipment giao hàng
+
+    private String returnShipmentId; // ID của shipment trả hàng
+
     private String vnpTnxRef; // Mã tham chiếu giao dịch VNPAY (nếu có)
 
-    private String momoOrderId; // Mã đơn hàng MoMo (requestId)
     private String momoTransId; // Mã giao dịch MoMo (transId khi thanh toán thành công)
+    private String momoRefundOrderId; // Mã đơn hoàn tiền MoMo (RF_xxx) để check refund status
     private String paymentStatus; // Trạng thái thanh toán: UNPAID, PAID, FAILED, REFUNDED
 
     private String rejectReason; // Lý do từ chối đơn hàng (nếu có)
@@ -68,6 +74,11 @@ public class Order extends BaseEntity {
     private String refundStatus; // Trạng thái hoàn tiền: PENDING, PROCESSING, COMPLETED, FAILED
     private String refundTransactionId; // Mã giao dịch hoàn tiền
     private LocalDateTime refundRequestedAt; // Thời điểm yêu cầu hoàn tiền
+    
+    // Thông tin hoàn tiền thủ công (cho COD)
+    private String manualRefundTransactionRef; // Mã giao dịch chuyển khoản thủ công
+    private LocalDateTime manualRefundTransferredAt; // Thời điểm admin chuyển tiền
+    private String manualRefundNote; // Ghi chú hoàn tiền thủ công
     private LocalDateTime refundCompletedAt; // Thời điểm hoàn tiền thành công
 
     public enum RefundStatus {

@@ -2,6 +2,7 @@ package com.example.e_commerce_techshop.responses;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import com.example.e_commerce_techshop.models.Shipment;
 
@@ -26,6 +27,9 @@ public class ShipmentResponse {
     private BigDecimal shippingFee;
     private String status;
     private LocalDateTime expectedDeliveryDate;
+    private List<String> history;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
     @Getter
     @Setter
@@ -97,7 +101,10 @@ public class ShipmentResponse {
                         .build())
                 .shippingFee(shipment.getShippingFee())
                 .status(shipment.getStatus())
+                .history(shipment.getHistory() != null ? shipment.getHistory() : List.of())
                 .expectedDeliveryDate(shipment.getExpectedDeliveryDate())
+                .createdAt(shipment.getCreatedAt())
+                .updatedAt(shipment.getUpdatedAt())
                 .build();
     }
 }

@@ -17,6 +17,8 @@ public interface ShipmentRepository extends MongoRepository<Shipment, String> {
 
     Optional<Shipment> findByOrderId(String orderId);
 
+    Optional<Shipment> findByOrderIdAndIsReturnShipment(String orderId, boolean isReturnShipment);
+
     List<Shipment> findByStoreId(String storeId);
 
     List<Shipment> findByStatus(String status);

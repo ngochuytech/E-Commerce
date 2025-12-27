@@ -46,6 +46,14 @@ public class B2COrderController {
     }
 
     /**
+     * Kiểm tra store có bị banned không trước khi cho phép thực hiện các action
+     * chỉnh sửa (confirm, cancel order)
+     */
+    private void validateStoreNotBanned(String storeId) throws Exception {
+        storeService.validateStoreNotBanned(storeId);
+    }
+
+    /**
      * Lấy danh sách đơn hàng của store
      * GET /api/v1/b2c/orders?storeId={storeId}
      */
@@ -107,6 +115,7 @@ public class B2COrderController {
             @Parameter(description = "ID of the store", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @RequestParam String storeId,
             @Parameter(hidden = true) @AuthenticationPrincipal User currentUser) throws Exception {
         validateUserStore(currentUser, storeId);
+        validateStoreNotBanned(storeId); // Shop bị banned không được xác nhận đơn mới
         orderService.confirmOrder(storeId, orderId);
 
         return ResponseEntity.ok(ApiResponse.ok("Đơn hàng đã được xác nhận"));

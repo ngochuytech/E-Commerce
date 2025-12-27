@@ -8,7 +8,7 @@ public interface IRefundService {
     /**
      * Tạo yêu cầu hoàn tiền cho đơn hàng
      */
-    void createRefundRequest(Order order) throws Exception;
+    void createRefundRequest(Order order, BigDecimal refundAmount) throws Exception;
 
     /**
      * Xử lý hoàn tiền qua MoMo

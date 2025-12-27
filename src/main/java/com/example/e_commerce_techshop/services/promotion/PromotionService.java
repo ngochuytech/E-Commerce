@@ -114,6 +114,7 @@ public class PromotionService implements IPromotionService {
                 .discountValue(createPromotionDTO.getDiscountValue())
                 .startDate(createPromotionDTO.getStartDate())
                 .endDate(createPromotionDTO.getEndDate())
+                .minOrderValue(createPromotionDTO.getMinOrderValue())
                 .maxDiscountValue(createPromotionDTO.getMaxDiscountValue())
                 .usageLimit(createPromotionDTO.getUsageLimit())
                 .usageLimitPerUser(createPromotionDTO.getUsageLimitPerUser())
@@ -324,7 +325,7 @@ public class PromotionService implements IPromotionService {
         }
 
         // Check minimum order value
-        if (orderValue < promotion.getMinOrderValue()) {
+        if (promotion.getMinOrderValue() != null && orderValue < promotion.getMinOrderValue()) {
             throw new Exception("Đơn hàng không đạt giá trị tối thiểu cho khuyến mãi");
         }
 
@@ -428,7 +429,7 @@ public class PromotionService implements IPromotionService {
                 .filter(promotion -> {
                     try {
                         // Kiểm tra điều kiện áp dụng
-                        if (orderValue < promotion.getMinOrderValue()) {
+                        if (promotion.getMinOrderValue() != null && orderValue < promotion.getMinOrderValue()) {
                             return false; // Không đủ giá trị đơn hàng tối thiểu
                         }
 
@@ -492,7 +493,7 @@ public class PromotionService implements IPromotionService {
                 .filter(promotion -> {
                     try {
                         // Kiểm tra điều kiện áp dụng
-                        if (orderValue < promotion.getMinOrderValue()) {
+                        if (promotion.getMinOrderValue() != null && orderValue < promotion.getMinOrderValue()) {
                             return false; // Không đủ giá trị đơn hàng tối thiểu
                         }
 
@@ -570,7 +571,7 @@ public class PromotionService implements IPromotionService {
         }
 
         // Check minimum order value
-        if (orderValue < promotion.getMinOrderValue()) {
+        if (promotion.getMinOrderValue() != null && orderValue < promotion.getMinOrderValue()) {
             throw new InvalidPromotionException("Giá trị đơn hàng không đủ để áp dụng khuyến mãi");
         }
 

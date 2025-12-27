@@ -5,6 +5,7 @@ import com.example.e_commerce_techshop.dtos.b2c.ProductVariant.ProductVariantDTO
 import com.example.e_commerce_techshop.exceptions.DataNotFoundException;
 import com.example.e_commerce_techshop.models.Product;
 import com.example.e_commerce_techshop.models.ProductVariant;
+import com.example.e_commerce_techshop.models.Store;
 import com.example.e_commerce_techshop.repositories.*;
 import com.example.e_commerce_techshop.responses.ProductVariantResponse;
 import com.example.e_commerce_techshop.services.FileUploadService;
@@ -14,6 +15,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -33,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ProductVariantSerivce implements IProductVariantService {
 
     private final ProductVariantRepository productVariantRepository;
@@ -40,6 +43,8 @@ public class ProductVariantSerivce implements IProductVariantService {
     private final ProductRepository productRepository;
 
     private final FileUploadService fileUploadService;
+
+    private final StoreRepository storeRepository;
 
     private final ObjectMapper objectMapper;
 
@@ -145,6 +150,10 @@ public class ProductVariantSerivce implements IProductVariantService {
         ProductVariant productVariant = productVariantRepository.findById(productVariantId)
                 .orElseThrow(() -> new DataNotFoundException("Không tìm thấy mẫu sản phẩm này"));
 
+        if(productVariant.getProduct().getStore().getStatus().equals(Store.StoreStatus.BANNED.name())) {
+            throw new IllegalStateException("Cửa hàng của sản phẩm này đã bị khóa, không thể xem sản phẩm");
+        }
+
         if (!ProductVariant.VariantStatus.APPROVED.name().equals(productVariant.getStatus())) {
             throw new DataNotFoundException("Biến thể không khả dụng");
         }
@@ -155,6 +164,13 @@ public class ProductVariantSerivce implements IProductVariantService {
     public Page<ProductVariantResponse> getByProduct(String productId, Pageable pageable) throws Exception {
         if (!productRepository.existsById(productId))
             throw new DataNotFoundException("Không tìm thấy sản phẩm với id được cung cấp");
+
+        Product product = productRepository.findById(productId)
+            .orElseThrow(() -> new DataNotFoundException("Không tìm thấy sản phẩm với id được cung cấp"));
+        
+        if(product.getStore().getStatus().equals(Store.StoreStatus.BANNED.name())) {
+            throw new IllegalStateException("Cửa hàng của sản phẩm này đã bị khóa, không thể xem sản phẩm");
+        }
 
         Page<ProductVariant> productVariants = productVariantRepository.findByProductIdAndStatus(productId,
                 ProductVariant.VariantStatus.APPROVED.name(), pageable);
@@ -179,7 +195,7 @@ public class ProductVariantSerivce implements IProductVariantService {
         }
         // Query database
         Page<ProductVariantResponse> productVariants = productVariantRepository
-                .findByCategoryNameAndStatus(category, ProductVariant.VariantStatus.APPROVED.name(), pageable)
+                .findByCategoryNameAndStatusExcludingBannedStores(category, ProductVariant.VariantStatus.APPROVED.name(), pageable)
                 .map(ProductVariantResponse::fromProductVariant);
 
         try {
@@ -211,7 +227,7 @@ public class ProductVariantSerivce implements IProductVariantService {
         }
 
         Page<ProductVariant> productVariants = productVariantRepository
-                .findByCategoryNameAndBrandNameAndStatus(category, brand,
+                .findByCategoryNameAndBrandNameAndStatusExcludingBannedStores(category, brand,
                         ProductVariant.VariantStatus.APPROVED.name(), pageable);
 
         Page<ProductVariantResponse> result = productVariants.map(ProductVariantResponse::fromProductVariant);
@@ -244,7 +260,7 @@ public class ProductVariantSerivce implements IProductVariantService {
         }
 
         Page<ProductVariantResponse> result = productVariantRepository
-                .findByStatus(ProductVariant.VariantStatus.APPROVED.name(), pageable)
+                .findByStatusExcludingBannedStores(ProductVariant.VariantStatus.APPROVED.name(), pageable)
                 .map(ProductVariantResponse::fromProductVariant);
 
         try {
@@ -261,6 +277,14 @@ public class ProductVariantSerivce implements IProductVariantService {
     @Override
     public Page<ProductVariantResponse> getByStore(String storeId, Pageable pageable)
             throws Exception {
+
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy cửa hàng với id được cung cấp"));
+
+        if(store.getStatus().equals(Store.StoreStatus.BANNED.name())) {
+            throw new IllegalStateException("Cửa hàng đã bị khóa, không thể xem sản phẩm");
+        }
+            
         String hashKey = CACHE_PREFIX + "store:" + storeId;
         String field = buildField(pageable);
 
@@ -296,7 +320,8 @@ public class ProductVariantSerivce implements IProductVariantService {
         Pageable pageable = PageRequest.of(page, size,
                 sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending());
 
-        Page<ProductVariant> variantPage = productVariantRepository.searchByNameAndStatus(name,
+        // Sử dụng custom repository method để filter ở database level
+        Page<ProductVariant> variantPage = productVariantRepository.searchByNameExcludingBannedStores(name,
                 ProductVariant.VariantStatus.APPROVED.name(), pageable);
 
         return variantPage.map(ProductVariantResponse::fromProductVariant);
@@ -560,6 +585,21 @@ public class ProductVariantSerivce implements IProductVariantService {
     }
 
     @Override
+    public Page<ProductVariant> searchByStoreAndName(String storeId, String name, String status, Pageable pageable)
+            throws Exception {
+        Page<ProductVariant> productVariants;
+        if (status != null && !status.isEmpty()) {
+            if (!ProductVariant.isValidStatus(status)) {
+                throw new IllegalArgumentException("Trạng thái không hợp lệ");
+            }
+            productVariants = productVariantRepository.searchByStoreIdAndNameAndStatus(storeId, name, status, pageable);
+        } else {
+            productVariants = productVariantRepository.searchByStoreIdAndName(storeId, name, pageable);
+        }
+        return productVariants;
+    }
+
+    @Override
     @Transactional
     public void updateProductVariantImages(String productVariantId, List<MultipartFile> imageFiles, int indexPrimary)
             throws Exception {
@@ -641,6 +681,31 @@ public class ProductVariantSerivce implements IProductVariantService {
         statusCounts.put("outOfStock", outOfStock);
 
         return statusCounts;
+    }
+
+    @Override
+    public ProductVariant getProductVariantById(String productVariantId) throws Exception {
+        return productVariantRepository.findById(productVariantId)
+                .orElseThrow(() -> new DataNotFoundException("Không tìm thấy mẫu sản phẩm này"));
+    }
+
+    /**
+     * Xóa toàn bộ cache product variants trong Redis
+     * Sử dụng khi cần clear tất cả cache (ví dụ: khi ban/unban store)
+     */
+    public void clearAllProductVariantCache() {
+        try {
+            // Xóa tất cả keys bắt đầu bằng "product-variants:"
+            var keys = redisTemplate.keys(CACHE_PREFIX + "*");
+            if (keys != null && !keys.isEmpty()) {
+                redisTemplate.delete(keys);
+                log.info("Cleared all product variant cache. Total keys deleted: {}", keys.size());
+            } else {
+                log.info("No product variant cache keys found to delete");
+            }
+        } catch (Exception e) {
+            log.error("Error clearing all product variant cache: {}", e.getMessage());
+        }
     }
 
 }

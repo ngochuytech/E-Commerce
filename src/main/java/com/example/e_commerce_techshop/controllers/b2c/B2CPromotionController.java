@@ -168,6 +168,8 @@ public class B2CPromotionController {
         }
 
         validateUserStore(currentUser.getId(), storeId);
+        // Kiểm tra shop có bị banned không
+        storeService.validateStoreNotBanned(storeId);
 
         promotionService.createStorePromotion(createPromotionDTO, storeId);
         return ResponseEntity.ok(ApiResponse.ok("Tạo khuyến mãi thành công"));

@@ -15,6 +15,9 @@ public class StoreResponse {
     private String logoUrl;
     private String bannerUrl;
     private String status;
+    private Integer returnWarningCount;
+    private String lastWarningMonth;
+
     private OwnerResponse owner;
     private AddressResponse address;
     private String createdAt;
@@ -48,6 +51,8 @@ public class StoreResponse {
                 .logoUrl(store.getLogoUrl())
                 .bannerUrl(store.getBanner_url())
                 .status(store.getStatus())
+                .returnWarningCount(store.getReturnWarningCount())
+                .lastWarningMonth(store.getLastWarningMonth())
                 .owner(OwnerResponse.builder()
                         .id(store.getOwner() != null ? store.getOwner().getId() : null)
                         .fullName(store.getOwner() != null ? store.getOwner().getFullName() : null)

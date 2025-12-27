@@ -27,6 +27,6 @@ public class AdminRevenue extends BaseEntity {
     private String description;
 
     public enum RevenueType {
-        PLATFORM_COMMISSION, PLATFORM_DISCOUNT_LOSS
+        PLATFORM_COMMISSION, PLATFORM_DISCOUNT_LOSS, SHIPPING_FEE
     }
 }

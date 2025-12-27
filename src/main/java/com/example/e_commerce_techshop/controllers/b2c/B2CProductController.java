@@ -23,6 +23,7 @@ import com.example.e_commerce_techshop.models.Product;
 import com.example.e_commerce_techshop.responses.ApiResponse;
 import com.example.e_commerce_techshop.responses.ProductResponse;
 import com.example.e_commerce_techshop.services.product.IProductService;
+import com.example.e_commerce_techshop.services.store.IStoreService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -40,6 +41,7 @@ import lombok.RequiredArgsConstructor;
 @SecurityRequirement(name = "bearerAuth")
 public class B2CProductController {
     private final IProductService productService;
+    private final IStoreService storeService;
 
     @GetMapping("/{storeId}")
     @Operation(summary = "Get all products", description = "Retrieve a list of all products for a specific store")
@@ -73,6 +75,8 @@ public class B2CProductController {
                     .toList();
             return ResponseEntity.badRequest().body(new ApiResponse<>(false, null, String.join(", ", errorMessages)));
         }
+        // Kiểm tra shop có bị banned không
+        storeService.validateStoreNotBanned(productDTO.getStoreId());
         productService.createProduct(productDTO);
         return ResponseEntity.ok(ApiResponse.ok("Tạo sản phẩm mới thành công!"));
     }
@@ -90,6 +94,8 @@ public class B2CProductController {
                     .toList();
             return ResponseEntity.badRequest().body(new ApiResponse<>(false, null, String.join(", ", errorMessages)));
         }
+        // Kiểm tra shop có bị banned không
+        storeService.validateStoreNotBanned(productDTO.getStoreId());
         productService.updateProduct(productId, productDTO);
         return ResponseEntity.ok(ApiResponse.ok("Cập nhật sản phẩm thành công!"));
     }

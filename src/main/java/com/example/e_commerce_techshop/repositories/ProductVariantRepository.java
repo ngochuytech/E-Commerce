@@ -9,7 +9,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 
-public interface ProductVariantRepository extends MongoRepository<ProductVariant, String> {
+public interface ProductVariantRepository extends MongoRepository<ProductVariant, String>, CustomProductVariantRepository {
     Page<ProductVariant> findByCategoryNameAndStatus(String categoryName, String status, Pageable pageable);
 
     Page<ProductVariant> findByCategoryNameAndBrandNameAndStatus(String category, String brand, String status,
@@ -25,6 +25,15 @@ public interface ProductVariantRepository extends MongoRepository<ProductVariant
 
     @Query("{'name': {$regex: ?0, $options: 'i'}, 'status': ?1}")
     Page<ProductVariant> searchByNameAndStatus(String name, String status, Pageable pageable);
+
+    @Query(value = "{ $and: [ { 'name': { $regex: ?0, $options: 'i' } }, { 'status': ?1 } ] }", fields = "{ 'product': 1, 'name': 1, 'categoryName': 1, 'brandName': 1, 'storeId': 1, 'price': 1, 'description': 1, 'stock': 1, 'status': 1, 'rejectionReason': 1, 'attributes': 1, 'imageUrls': 1, 'primaryImageUrl': 1, 'colors': 1 }")
+    Page<ProductVariant> searchByNameAndStatusWithProduct(String name, String status, Pageable pageable);
+
+    @Query("{'storeId': ?0, 'name': {$regex: ?1, $options: 'i'}}")
+    Page<ProductVariant> searchByStoreIdAndName(String storeId, String name, Pageable pageable);
+
+    @Query("{'storeId': ?0, 'name': {$regex: ?1, $options: 'i'}, 'status': ?2}")
+    Page<ProductVariant> searchByStoreIdAndNameAndStatus(String storeId, String name, String status, Pageable pageable);
 
     long countByStatus(String status);
 
@@ -42,4 +51,6 @@ public interface ProductVariantRepository extends MongoRepository<ProductVariant
     long countByStoreIdAndStatusAndOutOfStock(String storeId, String status);
 
     List<ProductVariant> findByStoreIdAndStatus(String storeId, String status);
+
+    List<ProductVariant> findByStoreId(String storeId);
 }
