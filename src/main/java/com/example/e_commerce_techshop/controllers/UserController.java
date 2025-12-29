@@ -46,7 +46,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@Tag(name = "User Management", description = "APIs for user registration, authentication and profile management")
+@Tag(name = "User Management", description = "API cho quản lý người dùng - Đăng ký, đăng nhập, hồ sơ và xác minh email")
 @RequestMapping("${api.prefix}/users")
 @RequiredArgsConstructor
 public class UserController {
@@ -59,7 +59,7 @@ public class UserController {
     private final JwtTokenProvider jwtTokenProvider;
 
     @GetMapping("/current")
-    @Operation(summary = "Get current user profile", description = "Retrieve profile information of the currently authenticated user")
+    @Operation(summary = "Lấy hồ sơ người dùng hiện tại", description = "Lấy thông tin hồ sơ của người dùng hiện đang xác thực")
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<?> getCurrentUser(@AuthenticationPrincipal User user) throws Exception {
         UserResponse userResponse = UserResponse.fromUser(user);
@@ -67,9 +67,9 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    @Operation(summary = "User login", description = "Authenticate user with email and password, returns JWT token")
+    @Operation(summary = "Đăng nhập người dùng", description = "Xác thực người dùng bằng email và mật khẩu, trả về token JWT")
     public ResponseEntity<?> login(
-            @Parameter(description = "User login credentials") @RequestBody @Valid UserLoginDTO userLoginDTO,
+            @Parameter(description = "Thông tin đăng nhập người dùng") @RequestBody @Valid UserLoginDTO userLoginDTO,
             BindingResult result,
             HttpServletRequest request,
             HttpServletResponse response) throws Exception {
@@ -112,7 +112,7 @@ public class UserController {
     }
 
     @PostMapping("/logout")
-    @Operation(summary = "User logout", description = "Logout user and revoke refresh token")
+    @Operation(summary = "Đăng xuất người dùng", description = "Đăng xuất người dùng và thu hồi refresh token")
     public ResponseEntity<?> logout(HttpServletRequest request,
             HttpServletResponse response) throws Exception {
         Cookie[] cookies = request.getCookies();
@@ -136,7 +136,7 @@ public class UserController {
     }
 
     @PostMapping("/refresh-token")
-    @Operation(summary = "Refresh access token", description = "Get new access token using refresh token from cookie")
+    @Operation(summary = "Làm mới access token", description = "Lấy access token mới sử dụng refresh token từ cookie")
     public ResponseEntity<?> refreshToken(HttpServletRequest request,
             HttpServletResponse response) throws Exception {
         Cookie[] cookies = request.getCookies();
@@ -175,10 +175,10 @@ public class UserController {
     }
 
     @PostMapping("/register")
-    @Operation(summary = "User registration", description = "Register a new user account, sends email verification")
+    @Operation(summary = "Đăng ký người dùng", description = "Đăng ký tài khoản người dùng mới, gửi email xác minh")
     public ResponseEntity<?> register(
             HttpServletRequest request,
-            @Parameter(description = "User registration information") @RequestBody @Valid UserRegisterDTO userDTO,
+            @Parameter(description = "Thông tin đăng ký người dùng") @RequestBody @Valid UserRegisterDTO userDTO,
             BindingResult result) throws Exception {
         if (result.hasErrors()) {
             List<String> errorMessages = result.getFieldErrors()
@@ -194,20 +194,20 @@ public class UserController {
     }
 
     @PutMapping("/avatar")
-    @Operation(summary = "Update user avatar", description = "Update the avatar image of the currently authenticated user")
+    @Operation(summary = "Cập nhật ảnh đại diện người dùng", description = "Cập nhật ảnh đại diện của người dùng hiện đang xác thực")
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<?> updateAvatar(
-            @Parameter(description = "New avatar image file", required = true) @RequestParam("avatarFile") MultipartFile avatarFile,
+            @Parameter(description = "Tệp ảnh đại diện mới", required = true) @RequestParam("avatarFile") MultipartFile avatarFile,
             @AuthenticationPrincipal User currentUser) throws Exception {
         userService.updateUserAvatar(currentUser, avatarFile);
         return ResponseEntity.ok(ApiResponse.ok("Cập nhật ảnh đại diện thành công"));
     }
 
     @GetMapping("/verify")
-    @Operation(summary = "Verify user email", description = "Verify user account using verification code sent via email")
+    @Operation(summary = "Xác minh email người dùng", description = "Xác minh tài khoản người dùng sử dụng mã xác minh gửi qua email")
     public ResponseEntity<?> verify(
-            @Parameter(description = "Email verification code", example = "abc123def456") @RequestParam("code") String code) {
+            @Parameter(description = "Mã xác minh email", example = "abc123def456") @RequestParam("code") String code) {
         if (userService.verifyUser(code))
             return ResponseEntity.ok(ApiResponse.ok("Đã xác minh tài khoản thành công!"));
         else
@@ -216,11 +216,11 @@ public class UserController {
     }
 
     @PutMapping("/profile")
-    @Operation(summary = "Update user profile", description = "Update the profile information of the currently authenticated user")
+    @Operation(summary = "Cập nhật thông tin cá nhân người dùng", description = "Cập nhật thông tin cá nhân của người dùng hiện đang xác thực")
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<?> updateProfile(
-            @Parameter(description = "Currently authenticated user", required = true) @AuthenticationPrincipal User currentUser,
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "User profile information to update", required = true) @RequestBody @Valid UpdateUserDTO userDTO) throws Exception {
+            @Parameter(description = "Người dùng hiện đang xác thực", required = true) @AuthenticationPrincipal User currentUser,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Thông tin cá nhân người dùng cần cập nhật", required = true) @RequestBody @Valid UpdateUserDTO userDTO) throws Exception {
         userService.updateUserProfile(currentUser, userDTO);
         return ResponseEntity.ok(ApiResponse.ok("Cập nhật thông tin cá nhân thành công"));
     }
@@ -235,7 +235,7 @@ public class UserController {
     }
 
     @PostMapping("/change-password")
-    @Operation(summary = "Change user password", description = "Change the password of the currently authenticated user")
+    @Operation(summary = "Đổi mật khẩu người dùng", description = "Đổi mật khẩu của người dùng hiện đang xác thực")
     public ResponseEntity<?> changePassword(
             @AuthenticationPrincipal User currentUser,
             @RequestBody @Valid ChangePasswordDTO changePasswordDTO) throws Exception {
@@ -245,7 +245,7 @@ public class UserController {
     }
 
     @PostMapping("/send-verification-email")
-    @Operation(summary = "Send verification email", description = "Send a verification email to the user")
+    @Operation(summary = "Gửi lại email xác minh", description = "Gửi lại email xác minh cho người dùng")
     public ResponseEntity<?> sendVerificationEmail(
             HttpServletRequest request,
             @RequestParam("email") String email) throws Exception {

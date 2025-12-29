@@ -47,14 +47,12 @@ public class AdminDisputeController {
     @GetMapping
     @Operation(summary = "Danh sách khiếu nại", description = "Lấy danh sách tất cả khiếu nại")
     public ResponseEntity<?> getAllDisputes(
-            @Parameter(description = "Filter by status (OPEN, IN_PROGRESS, RESOLVED)") 
-            @RequestParam(required = false) String status,
-            @Parameter(description = "Filter by dispute type (RETURN_REJECTION, RETURN_QUALITY)") 
-            @RequestParam(required = false) String disputeType,
+            @Parameter(description = "Filter by status (OPEN, IN_PROGRESS, RESOLVED)") @RequestParam(required = false) String status,
+            @Parameter(description = "Filter by dispute type (RETURN_REJECTION, RETURN_QUALITY)") @RequestParam(required = false) String disputeType,
             @Parameter(description = "Page number") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size") @RequestParam(defaultValue = "10") int size,
             @AuthenticationPrincipal User admin) throws Exception {
-        
+
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<Dispute> disputes = returnRequestService.getAllDisputes(status, disputeType, pageable);
         Page<DisputeResponse> responsePage = disputes.map(DisputeResponse::fromDispute);
@@ -66,8 +64,19 @@ public class AdminDisputeController {
     public ResponseEntity<?> getDisputeDetail(
             @Parameter(description = "Dispute ID") @PathVariable String disputeId,
             @AuthenticationPrincipal User admin) throws Exception {
-        
+
         Dispute dispute = returnRequestService.getDisputeDetail(disputeId);
+        return ResponseEntity.ok(ApiResponse.ok(DisputeResponse.fromDispute(dispute)));
+    }
+
+    @PostMapping("/{disputeId}/message")
+    @Operation(summary = "Thêm tin nhắn vào khiếu nại", description = "Admin thêm tin nhắn/phản hồi vào khiếu nại")
+    public ResponseEntity<?> addDisputeMessage(
+            @Parameter(description = "Dispute ID") @PathVariable String disputeId,
+            @Valid @RequestBody DisputeRequestDTO dto,
+            @AuthenticationPrincipal User admin) throws Exception {
+
+        Dispute dispute = returnRequestService.addAdminDisputeMessage(admin, disputeId, dto);
         return ResponseEntity.ok(ApiResponse.ok(DisputeResponse.fromDispute(dispute)));
     }
 
@@ -77,31 +86,22 @@ public class AdminDisputeController {
             @Parameter(description = "Dispute ID") @PathVariable String disputeId,
             @Valid @RequestBody DisputeDecisionDTO dto,
             @AuthenticationPrincipal User admin) throws Exception {
-        
+
         Dispute dispute = returnRequestService.resolveDispute(admin, disputeId, dto);
         return ResponseEntity.ok(ApiResponse.ok(DisputeResponse.fromDispute(dispute)));
     }
 
     @PutMapping("/{disputeId}/resolve-quality")
-    @Operation(summary = "Giải quyết khiếu nại chất lượng hàng trả về", description = "Admin quyết định khi store khiếu nại hàng trả về có vấn đề." +
-        "APPROVE_STORE = đồng ý với store (hoàn tiền cho store), REJECT_STORE = đồng ý với buyer (hoàn tiền cho buyer), PARTIAL_REFUND = hoàn tiền một phần cho buyer. Lưu ý số tiền hoàn lại (1 phần) cho buyer phải nhỏ hơn số tiền shop được nhận.")
+    @Operation(summary = "Giải quyết khiếu nại chất lượng hàng trả về", description = "Admin quyết định khi store khiếu nại hàng trả về có vấn đề."
+            +
+            "APPROVE_STORE = đồng ý với store (hoàn tiền cho store), REJECT_STORE = đồng ý với buyer (hoàn tiền cho buyer), PARTIAL_REFUND = hoàn tiền một phần cho buyer. Lưu ý số tiền hoàn lại (1 phần) cho buyer phải nhỏ hơn số tiền shop được nhận.")
     public ResponseEntity<?> resolveReturnQualityDispute(
             @Parameter(description = "Dispute ID") @PathVariable String disputeId,
             @Valid @RequestBody ReturnQualityDecisionDTO dto,
             @AuthenticationPrincipal User admin) throws Exception {
-        
+
         ReturnRequest returnRequest = returnRequestService.resolveReturnQualityDispute(admin, disputeId, dto);
         return ResponseEntity.ok(ApiResponse.ok(ReturnRequestResponse.fromReturnRequest(returnRequest)));
     }
 
-    @PostMapping("/{disputeId}/message")
-    @Operation(summary = "Thêm tin nhắn vào khiếu nại", description = "Admin thêm tin nhắn/phản hồi vào khiếu nại")
-    public ResponseEntity<?> addDisputeMessage(
-            @Parameter(description = "Dispute ID") @PathVariable String disputeId,
-            @Valid @RequestBody DisputeRequestDTO dto,
-            @AuthenticationPrincipal User admin) throws Exception {
-        
-        Dispute dispute = returnRequestService.addAdminDisputeMessage(admin, disputeId, dto);
-        return ResponseEntity.ok(ApiResponse.ok(DisputeResponse.fromDispute(dispute)));
-    }
 }

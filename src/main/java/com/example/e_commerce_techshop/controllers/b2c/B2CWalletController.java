@@ -36,36 +36,30 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("${api.prefix}/b2c/wallet")
 @RequiredArgsConstructor
-@Tag(name = "B2C Wallet Management", description = "APIs for store owners to manage wallet balance and withdrawal requests")
+@Tag(name = "B2C Wallet Management", description = "API cho quản lý ví của cửa hàng B2C")
 @SecurityRequirement(name = "bearerAuth")
 public class B2CWalletController {
 
         private final IWalletService walletService;
         private final IStoreService storeService;
 
-        /**
-         * Lấy thông tin ví của store
-         */
         @GetMapping("/store/{storeId}")
-        @Operation(summary = "Get store wallet information", description = "Retrieve wallet balance and details for a specific store")
+        @Operation(summary = "Lấy thông tin ví cửa hàng", description = "Lấy số dư và chi tiết ví cho một cửa hàng cụ thể")
         public ResponseEntity<ApiResponse<WalletResponse>> getStoreWallet(
-                        @Parameter(description = "Store ID", example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
+                        @Parameter(description = "ID cửa hàng", example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
                         @AuthenticationPrincipal User user) throws Exception {
                 Wallet wallet = walletService.getStoreWallet(storeId);
                 return ResponseEntity.ok(ApiResponse.ok(WalletResponse.fromWallet(wallet)));
         }
 
-        /**
-         * Lấy lịch sử giao dịch
-         */
         @GetMapping("/store/{storeId}/transactions")
-        @Operation(summary = "Get transaction history", description = "Retrieve paginated transaction history for a store including deposits, withdrawals, and commissions")
+        @Operation(summary = "Lấy lịch sử giao dịch", description = "Lấy lịch sử giao dịch phân trang cho một cửa hàng bao gồm nạp tiền, rút tiền và hoa hồng")
         public ResponseEntity<ApiResponse<Page<TransactionResponse>>> getTransactionHistory(
-                        @Parameter(description = "Store ID", example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
-                        @Parameter(description = "Page number (0-based)", example = "0") @RequestParam(defaultValue = "0") int page,
-                        @Parameter(description = "Number of items per page", example = "10") @RequestParam(defaultValue = "10") int size,
-                        @Parameter(description = "Sort field", example = "createdAt") @RequestParam(defaultValue = "createdAt") String sortBy,
-                        @Parameter(description = "Sort direction (asc, desc)", example = "desc") @RequestParam(defaultValue = "desc") String sortDir,
+                        @Parameter(description = "ID cửa hàng", example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
+                        @Parameter(description = "Số trang (bắt đầu từ 0)", example = "0") @RequestParam(defaultValue = "0") int page,
+                        @Parameter(description = "Số mục trên mỗi trang", example = "10") @RequestParam(defaultValue = "10") int size,
+                        @Parameter(description = "Trường sắp xếp", example = "createdAt") @RequestParam(defaultValue = "createdAt") String sortBy,
+                        @Parameter(description = "Hướng sắp xếp (asc, desc)", example = "desc") @RequestParam(defaultValue = "desc") String sortDir,
                         @AuthenticationPrincipal User user) throws Exception {
                 Sort sort = sortDir.equalsIgnoreCase("desc")
                                 ? Sort.by(sortBy).descending()
@@ -76,33 +70,8 @@ public class B2CWalletController {
                 return ResponseEntity.ok(ApiResponse.ok(transactions.map(TransactionResponse::fromTransaction)));
         }
 
-        /**
-         * Tạo yêu cầu rút tiền
-         */
-        @PostMapping("/store/{storeId}/withdrawal")
-        @Operation(summary = "Create withdrawal request", description = "Create a new withdrawal request to transfer store balance to bank account. Must be approved by admin.")
-        public ResponseEntity<?> createWithdrawalRequest(
-                        @Parameter(description = "Store ID", example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
-                        @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Withdrawal request details including amount and bank information", required = true) @RequestBody @Valid WithdrawalRequestDTO dto,
-                        @AuthenticationPrincipal User user) throws Exception {
-                // Kiểm tra shop có bị banned không
-                storeService.validateStoreNotBanned(storeId);
-                
-                WithdrawalRequest request = walletService.createWithdrawalRequest(
-                                storeId,
-                                dto.getAmount(),
-                                dto.getBankName(),
-                                dto.getBankAccountNumber(),
-                                dto.getBankAccountName(),
-                                dto.getNote());
-                return ResponseEntity.ok(ApiResponse.ok(AdminWithdrawalResponse.fromWithdrawalRequest(request)));
-        }
-
-        /**
-         * Lấy danh sách yêu cầu rút tiền của store
-         */
         @GetMapping("/store/{storeId}/withdrawals")
-        @Operation(summary = "Get withdrawal requests for store", description = "Retrieve paginated list of all withdrawal requests for a specific store")
+        @Operation(summary = "Lấy danh sách yêu cầu rút tiền của cửa hàng", description = "Lấy danh sách phân trang tất cả các yêu cầu rút tiền của một cửa hàng cụ thể")
         public ResponseEntity<?> getWithdrawalRequests(
                         @Parameter(description = "Store ID", example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
                         @Parameter(description = "Page number (0-based)", example = "0") @RequestParam(defaultValue = "0") int page,
@@ -115,20 +84,36 @@ public class B2CWalletController {
                                 : Sort.by(sortBy).ascending();
                 Pageable pageable = PageRequest.of(page, size, sort);
                 Page<WithdrawalRequest> requests = walletService.getWithdrawalRequests(storeId, pageable);
-                Page<AdminWithdrawalResponse> responseList = requests.map(AdminWithdrawalResponse::fromWithdrawalRequest);
+                Page<AdminWithdrawalResponse> responseList = requests
+                                .map(AdminWithdrawalResponse::fromWithdrawalRequest);
                 return ResponseEntity.ok(ApiResponse.ok(responseList));
         }
 
-        /**
-         * Lấy chi tiết yêu cầu rút tiền
-         */
         @GetMapping("/store/{storeId}/withdrawal/{requestId}")
-        @Operation(summary = "Get withdrawal request details", description = "Retrieve detailed information about a specific withdrawal request")
+        @Operation(summary = "Lấy chi tiết yêu cầu rút tiền", description = "Lấy thông tin chi tiết về một yêu cầu rút tiền cụ thể")
         public ResponseEntity<?> getWithdrawalRequestDetail(
-                        @Parameter(description = "Store ID", example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
-                        @Parameter(description = "Withdrawal request ID", example = "64f1a2b3c4d5e6f7a8b9c0d2") @PathVariable String requestId,
+                        @Parameter(description = "ID cửa hàng", example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
+                        @Parameter(description = "ID yêu cầu rút tiền", example = "64f1a2b3c4d5e6f7a8b9c0d2") @PathVariable String requestId,
                         @AuthenticationPrincipal User user) throws Exception {
                 WithdrawalRequest request = walletService.getWithdrawalRequestDetail(storeId, requestId);
+                return ResponseEntity.ok(ApiResponse.ok(AdminWithdrawalResponse.fromWithdrawalRequest(request)));
+        }
+
+        @PostMapping("/store/{storeId}/withdrawal")
+        @Operation(summary = "Tạo yêu cầu rút tiền", description = "Tạo yêu cầu rút tiền mới để chuyển số dư cửa hàng vào tài khoản ngân hàng. Yêu cầu phải được admin phê duyệt.")
+        public ResponseEntity<?> createWithdrawalRequest(
+                        @Parameter(description = "ID cửa hàng", example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
+                        @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Chi tiết yêu cầu rút tiền bao gồm số tiền và thông tin ngân hàng", required = true) @RequestBody @Valid WithdrawalRequestDTO dto,
+                        @AuthenticationPrincipal User user) throws Exception {
+                storeService.validateStoreNotBanned(storeId);
+
+                WithdrawalRequest request = walletService.createWithdrawalRequest(
+                                storeId,
+                                dto.getAmount(),
+                                dto.getBankName(),
+                                dto.getBankAccountNumber(),
+                                dto.getBankAccountName(),
+                                dto.getNote());
                 return ResponseEntity.ok(ApiResponse.ok(AdminWithdrawalResponse.fromWithdrawalRequest(request)));
         }
 }

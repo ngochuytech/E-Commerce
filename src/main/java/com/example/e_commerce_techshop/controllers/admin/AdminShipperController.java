@@ -106,6 +106,37 @@ public class AdminShipperController {
         return ResponseEntity.ok(ApiResponse.ok("Tạo tài khoản shipper thành công"));
     }
 
+    /**
+     * Reset mật khẩu cho shipper
+     */
+    @PostMapping("/{shipperId}/reset-password")
+    @Operation(summary = "Reset mật khẩu shipper", description = "Admin reset mật khẩu cho shipper về mật khẩu ngẫu nhiên")
+    public ResponseEntity<?> resetShipperPassword(
+            @Parameter(description = "Shipper ID", required = true) @PathVariable String shipperId) throws Exception {
+
+        User shipper = userService.getUserById(shipperId);
+
+        if (!shipper.getRoles().contains("SHIPPER")) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Người dùng này không phải là shipper"));
+        }
+
+        // Generate mật khẩu ngẫu nhiên
+        String newPassword = generateRandomPassword(12);
+
+        // Reset mật khẩu
+        userService.updatePassword(shipper, newPassword);
+
+        // Trả về mật khẩu mới cho admin
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Đã reset mật khẩu thành công");
+        response.put("newPassword", newPassword);
+        response.put("email", shipper.getEmail());
+        response.put("note", "Vui lòng gửi mật khẩu mới này cho shipper");
+
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
     @PutMapping("/shipper/{shipperId}")
     @Operation(summary = "Cập nhật thông tin shipper", description = "Admin cập nhật thông tin cho tài khoản shipper")
     public ResponseEntity<?> updateShipperInfo(@RequestBody @Valid ShipperUpdateInfoDTO updateDTO,
@@ -134,37 +165,6 @@ public class AdminShipperController {
     }
 
     /**
-     * Reset mật khẩu cho shipper
-     */
-    @PostMapping("/{shipperId}/reset-password")
-    @Operation(summary = "Reset mật khẩu shipper", description = "Admin reset mật khẩu cho shipper về mật khẩu ngẫu nhiên")
-    public ResponseEntity<?> resetShipperPassword(
-            @Parameter(description = "Shipper ID", required = true) @PathVariable String shipperId) throws Exception {
-
-        User shipper = userService.getUserById(shipperId);
-
-        if (!shipper.getRoles().contains("SHIPPER")) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Người dùng này không phải là shipper"));
-        }
-
-        // Generate mật khẩu ngẫu nhiên
-        String newPassword = generateRandomPassword(12);
-        
-        // Reset mật khẩu
-        userService.updatePassword(shipper, newPassword);
-
-        // Trả về mật khẩu mới cho admin
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Đã reset mật khẩu thành công");
-        response.put("newPassword", newPassword);
-        response.put("email", shipper.getEmail());
-        response.put("note", "Vui lòng gửi mật khẩu mới này cho shipper");
-
-        return ResponseEntity.ok(ApiResponse.ok(response));
-    }
-
-    /**
      * Generate mật khẩu ngẫu nhiên an toàn
      */
     private String generateRandomPassword(int length) {
@@ -173,21 +173,21 @@ public class AdminShipperController {
         final String DIGITS = "0123456789";
         final String SPECIAL_CHARS = "@#$%&*!";
         final String ALL_CHARS = UPPERCASE + LOWERCASE + DIGITS + SPECIAL_CHARS;
-        
+
         SecureRandom random = new SecureRandom();
         StringBuilder password = new StringBuilder(length);
-        
+
         // Đảm bảo có ít nhất 1 ký tự của mỗi loại
         password.append(UPPERCASE.charAt(random.nextInt(UPPERCASE.length())));
         password.append(LOWERCASE.charAt(random.nextInt(LOWERCASE.length())));
         password.append(DIGITS.charAt(random.nextInt(DIGITS.length())));
         password.append(SPECIAL_CHARS.charAt(random.nextInt(SPECIAL_CHARS.length())));
-        
+
         // Fill phần còn lại
         for (int i = 4; i < length; i++) {
             password.append(ALL_CHARS.charAt(random.nextInt(ALL_CHARS.length())));
         }
-        
+
         // Shuffle để random vị trí
         char[] passwordArray = password.toString().toCharArray();
         for (int i = passwordArray.length - 1; i > 0; i--) {
@@ -196,7 +196,7 @@ public class AdminShipperController {
             passwordArray[i] = passwordArray[j];
             passwordArray[j] = temp;
         }
-        
+
         return new String(passwordArray);
     }
 

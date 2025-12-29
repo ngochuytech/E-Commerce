@@ -43,7 +43,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("${api.prefix}/b2c/promotions")
 @RequiredArgsConstructor
-@Tag(name = "B2C Promotion Management", description = "Promotion management APIs for B2C stores - Handle discount campaigns, coupon codes, and promotional offers")
+@Tag(name = "B2C Promotion Management", description = "Quản lý khuyến mãi cho cửa hàng B2C")
 @SecurityRequirement(name = "bearerAuth")
 public class B2CPromotionController {
 
@@ -59,9 +59,9 @@ public class B2CPromotionController {
     }
 
     @GetMapping("/store/{storeId}")
-    @Operation(summary = "Get promotions by store", description = "Retrieve all promotions for a specific store (both active and inactive)")
+    @Operation(summary = "Lấy danh sách khuyến mãi theo cửa hàng", description = "Lấy tất cả các khuyến mãi cho một cửa hàng cụ thể (bao gồm cả đang hoạt động và không hoạt động)")
     public ResponseEntity<?> getPromotionsByStore(
-            @Parameter(description = "ID of the store", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
+            @Parameter(description = "ID của cửa hàng", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
@@ -76,9 +76,9 @@ public class B2CPromotionController {
     }
 
     @GetMapping("/store/{storeId}/active")
-    @Operation(summary = "Get active promotions by store", description = "Retrieve all active promotions for a specific store")
+    @Operation(summary = "Lấy danh sách khuyến mãi đang hoạt động theo cửa hàng", description = "Lấy tất cả các khuyến mãi đang hoạt động cho một cửa hàng cụ thể")
     public ResponseEntity<?> getActivePromotionsByStore(
-            @Parameter(description = "ID of the store", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
+            @Parameter(description = "ID của cửa hàng", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
@@ -93,9 +93,9 @@ public class B2CPromotionController {
     }
 
     @GetMapping("/store/{storeId}/inactive")
-    @Operation(summary = "Get inactive promotions by store", description = "Retrieve all inactive promotions for a specific store")
+    @Operation(summary = "Lấy danh sách khuyến mãi không hoạt động theo cửa hàng", description = "Lấy tất cả các khuyến mãi không hoạt động cho một cửa hàng cụ thể")
     public ResponseEntity<?> getInactivePromotionsByStore(
-            @Parameter(description = "ID of the store", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
+            @Parameter(description = "ID của cửa hàng", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
@@ -110,9 +110,9 @@ public class B2CPromotionController {
     }
 
     @GetMapping("/store/{storeId}/expired")
-    @Operation(summary = "Get expired promotions by store", description = "Retrieve all expired promotions for a specific store")
+    @Operation(summary = "Lấy danh sách khuyến mãi đã hết hạn theo cửa hàng", description = "Lấy tất cả các khuyến mãi đã hết hạn cho một cửa hàng cụ thể")
     public ResponseEntity<?> getExpiredPromotionsByStore(
-            @Parameter(description = "ID of the store", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
+            @Parameter(description = "ID của cửa hàng", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
@@ -127,9 +127,9 @@ public class B2CPromotionController {
     }
 
     @GetMapping("/store/{storeId}/deleted")
-    @Operation(summary = "Get deleted promotions by store", description = "Retrieve all deleted promotions for a specific store")
+    @Operation(summary = "Lấy danh sách khuyến mãi đã bị xóa theo cửa hàng", description = "Lấy tất cả các khuyến mãi đã bị xóa cho một cửa hàng cụ thể")
     public ResponseEntity<?> getDeletedPromotionsByStore(
-            @Parameter(description = "ID of the store", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
+            @Parameter(description = "ID của cửa hàng", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
@@ -146,17 +146,17 @@ public class B2CPromotionController {
     @GetMapping("/store/{storeId}/count-by-status")
     @Operation(summary = "Đếm số lượng khuyến mãi theo trạng thái")
     public ResponseEntity<?> countPromotionsByStatus(
-            @Parameter(description = "ID of the store", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId) throws Exception {
+            @Parameter(description = "ID của cửa hàng", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId) throws Exception {
         Map<String, Long> counts = promotionService.countPromotionsByStatus(storeId);
         return ResponseEntity.ok(ApiResponse.ok(counts));
     }
 
     // Promotion Management APIs - Store specific (Auto-assign issuer=STORE)
     @PostMapping("/store/{storeId}")
-    @Operation(summary = "Create store promotion", description = "Create promotion for a specific store. Issuer and storeId will be auto-assigned. Only store owner can use this.")
+    @Operation(summary = "Tạo khuyến mãi cho cửa hàng", description = "Tạo khuyến mãi cho một cửa hàng cụ thể. Issuer và storeId sẽ được tự động gán. Chỉ chủ cửa hàng mới có thể sử dụng.")
     public ResponseEntity<?> createStorePromotion(
-            @Parameter(description = "ID of the store creating the promotion", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
-            @Parameter(description = "Promotion information (issuer and storeId not required)", required = true, content = @Content(schema = @Schema(implementation = CreatePromotionDTO.class))) @Valid @RequestBody CreatePromotionDTO createPromotionDTO,
+            @Parameter(description = "ID của cửa hàng tạo khuyến mãi", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
+            @Parameter(description = "Thông tin khuyến mãi (không cần issuer và storeId)", required = true, content = @Content(schema = @Schema(implementation = CreatePromotionDTO.class))) @Valid @RequestBody CreatePromotionDTO createPromotionDTO,
             @Parameter(hidden = true) BindingResult result,
             @Parameter(hidden = true) @AuthenticationPrincipal User currentUser) throws Exception {
         if (result.hasErrors()) {
@@ -176,10 +176,10 @@ public class B2CPromotionController {
     }
 
     @PutMapping("/{promotionId}")
-    @Operation(summary = "Update promotion", description = "Update an existing promotion's information including discount rules and validity period")
+    @Operation(summary = "Cập nhật khuyến mãi", description = "Cập nhật thông tin khuyến mãi hiện có bao gồm quy tắc giảm giá và thời gian hiệu lực")
     public ResponseEntity<?> updatePromotion(
-            @Parameter(description = "ID of the promotion to update", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String promotionId,
-            @Parameter(description = "Updated promotion information", required = true, content = @Content(schema = @Schema(implementation = PromotionDTO.class))) @RequestBody PromotionDTO promotionDTO,
+            @Parameter(description = "ID của khuyến mãi cần cập nhật", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String promotionId,
+            @Parameter(description = "Thông tin khuyến mãi cập nhật", required = true, content = @Content(schema = @Schema(implementation = PromotionDTO.class))) @RequestBody PromotionDTO promotionDTO,
             @Parameter(hidden = true) BindingResult result,
             @Parameter(hidden = true) @AuthenticationPrincipal User currentUser) throws Exception {
         if (result.hasErrors()) {
@@ -194,11 +194,10 @@ public class B2CPromotionController {
         return ResponseEntity.ok(ApiResponse.ok("Cập nhật khuyến mãi thành công"));
     }
 
-    // Promotion Status Management APIs
     @PutMapping("/{promotionId}/activate")
-    @Operation(summary = "Activate promotion", description = "Activate a promotion to make it available for customers to use")
+    @Operation(summary = "Kích hoạt khuyến mãi", description = "Kích hoạt một khuyến mãi để khách hàng có thể sử dụng")
     public ResponseEntity<?> activatePromotion(
-            @Parameter(description = "ID of the promotion to activate", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String promotionId,
+            @Parameter(description = "ID của khuyến mãi cần kích hoạt", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String promotionId,
             @Parameter(hidden = true) @AuthenticationPrincipal User currentUser)
             throws Exception {
         promotionService.activateStorePromotion(promotionId, currentUser.getId());
@@ -206,9 +205,9 @@ public class B2CPromotionController {
     }
 
     @PutMapping("/{promotionId}/deactivate")
-    @Operation(summary = "Deactivate promotion", description = "Deactivate a promotion to stop customers from using it")
+    @Operation(summary = "Vô hiệu hóa khuyến mãi", description = "Vô hiệu hóa một khuyến mãi để ngăn khách hàng sử dụng")
     public ResponseEntity<?> deactivatePromotion(
-            @Parameter(description = "ID of the promotion to deactivate", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String promotionId,
+            @Parameter(description = "ID của khuyến mãi cần vô hiệu hóa", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String promotionId,
             @Parameter(hidden = true) @AuthenticationPrincipal User currentUser)
             throws Exception {
         promotionService.deactivateStorePromotion(promotionId, currentUser.getId());
@@ -216,9 +215,9 @@ public class B2CPromotionController {
     }
 
     @DeleteMapping("/{promotionId}")
-    @Operation(summary = "Delete promotion", description = "Delete a promotion (permanently remove from system)")
+    @Operation(summary = "Xóa khuyến mãi", description = "Xóa một khuyến mãi (xóa vĩnh viễn khỏi hệ thống)")
     public ResponseEntity<?> deletePromotion(
-            @Parameter(description = "ID of the promotion to delete", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String promotionId,
+            @Parameter(description = "ID của khuyến mãi cần xóa", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String promotionId,
             @Parameter(hidden = true) @AuthenticationPrincipal User currentUser)
             throws Exception {
         promotionService.deleteStorePromotion(promotionId, currentUser.getId());

@@ -24,7 +24,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("${api.prefix}/b2c/statistics")
 @RequiredArgsConstructor
-@Tag(name = "Shop Statistics Management", description = "APIs for shop to view revenue statistics")
+@Tag(name = "Shop Statistics Management", description = "API cho quản lý thống kê của cửa hàng")
 @SecurityRequirement(name = "Bearer Authentication")
 public class B2CStatisticsController {
     private final IStatisticsService statisticsService;

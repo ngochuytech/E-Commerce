@@ -9,11 +9,13 @@ import com.example.e_commerce_techshop.models.User;
 
 public interface IAddressService {
 
-    // Lấy địa chỉ của user
+    /** Lấy địa chỉ của user */
     List<AddressDTO> getUserAddress(String userEmail) throws Exception;
 
+    /** Tạo địa chỉ mới */
     AddressDTO createAddress(User user, CreateAddressDTO createAddressDTO) throws Exception;
 
+    /** Cập nhật địa chỉ */
     AddressDTO updateAddress(User user, String addressId, UpdateAddressDTO updateAddressDTO) throws Exception;
     
     /**

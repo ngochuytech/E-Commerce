@@ -43,7 +43,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("${api.prefix}/b2c/returns")
 @RequiredArgsConstructor
-@Tag(name = "B2C Return Management", description = "APIs for store to manage return requests")
+@Tag(name = "B2C Return Management", description = "API cho quản lý yêu cầu trả hàng B2C")
 @SecurityRequirement(name = "bearerAuth")
 public class B2CReturnController {
 

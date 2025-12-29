@@ -44,7 +44,7 @@ public class B2CProductController {
     private final IStoreService storeService;
 
     @GetMapping("/{storeId}")
-    @Operation(summary = "Get all products", description = "Retrieve a list of all products for a specific store")
+    @Operation(summary = "Lấy danh sách sản phẩm của cửa hàng", description = "Lấy danh sách tất cả sản phẩm cho một cửa hàng cụ thể")
     public ResponseEntity<?> getAllProduct(@PathVariable("storeId") String storeId,
             @Parameter(description = "Filter by status") @RequestParam(required = false) String status,
             @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
@@ -64,9 +64,9 @@ public class B2CProductController {
     }
 
     @PostMapping("/create")
-    @Operation(summary = "Create new product", description = "Create a new product for the store with comprehensive product information including name, description, price, category, and specifications")
+    @Operation(summary = "Tạo sản phẩm mới", description = "Tạo một sản phẩm mới cho cửa hàng với thông tin sản phẩm đầy đủ bao gồm tên, mô tả, giá, danh mục, và các thông số kỹ thuật")
     public ResponseEntity<?> createProduct(
-            @Parameter(description = "Product information including name, description, price, category, brand, images, and specifications", required = true, content = @Content(schema = @Schema(implementation = ProductDTO.class))) @RequestBody @Valid ProductDTO productDTO,
+            @Parameter(description = "Thông tin sản phẩm bao gồm tên, mô tả, giá, danh mục, thương hiệu, hình ảnh, và các thông số kỹ thuật", required = true, content = @Content(schema = @Schema(implementation = ProductDTO.class))) @RequestBody @Valid ProductDTO productDTO,
             @Parameter(hidden = true) BindingResult result) throws Exception {
         if (result.hasErrors()) {
             List<String> errorMessages = result.getFieldErrors()
@@ -82,7 +82,7 @@ public class B2CProductController {
     }
 
     @PutMapping("/update/{id}")
-    @Operation(summary = "Update existing product", description = "Update an existing product's information including name, description, price, category, brand, images, and specifications")
+    @Operation(summary = "Cập nhật sản phẩm", description = "Cập nhật thông tin sản phẩm bao gồm tên, mô tả, giá, danh mục, thương hiệu, hình ảnh, và các thông số kỹ thuật")
     public ResponseEntity<?> updateProduct(
             @Parameter(description = "ID of the product to update", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable("id") String productId,
             @Parameter(description = "Updated product information including name, description, price, category, brand, images, and specifications", required = true, content = @Content(schema = @Schema(implementation = ProductDTO.class))) @RequestBody @Valid ProductDTO productDTO,

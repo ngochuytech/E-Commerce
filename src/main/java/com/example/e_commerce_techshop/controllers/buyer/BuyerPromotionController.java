@@ -25,15 +25,15 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("${api.prefix}/buyer/promotions")
 @RequiredArgsConstructor
-@Tag(name = "Buyer Promotion APIs", description = "Buyer APIs to view promotions - Need authentication required")
+@Tag(name = "Buyer Promotion APIs", description = "API cho quản lý khuyến mãi của người mua")
 public class BuyerPromotionController {
     private final IPromotionService promotionService;
 
     @GetMapping("/store/{storeId}/available")
-    @Operation(summary = "Get active promotions by store for customer", description = "Retrieve all currently active promotions for a specific store")
+    @Operation(summary = "Lấy danh sách khuyến mãi đang hoạt động theo cửa hàng cho khách hàng", description = "Lấy tất cả các khuyến mãi đang hoạt động hiện tại cho một cửa hàng cụ thể")
     public ResponseEntity<?> getActivePromotionsByStore(
-            @Parameter(description = "ID of the store (optional, null for platform promotions only)") @PathVariable("storeId") String storeId,
-            @Parameter(description = "Order value to check applicable promotions", required = true, example = "500000") @RequestParam Long orderValue,
+            @Parameter(description = "ID của cửa hàng (tùy chọn, null để chỉ lấy khuyến mãi của nền tảng)") @PathVariable("storeId") String storeId,
+            @Parameter(description = "Giá trị đơn hàng để kiểm tra các khuyến mãi áp dụng", required = true, example = "500000") @RequestParam Long orderValue,
             @AuthenticationPrincipal User currentUser,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -50,7 +50,7 @@ public class BuyerPromotionController {
     }
 
     @GetMapping("/platform/available")
-    @Operation(summary = "Get all platform promotions with status ACTIVE", description = "Retrieve all active platform-wide promotions")
+    @Operation(summary = "Lấy tất cả khuyến mãi nền tảng với trạng thái ACTIVE", description = "Lấy tất cả các khuyến mãi nền tảng đang hoạt động")
     public ResponseEntity<?> getPlatformPromotions(
             @Parameter(description = "Order value to check applicable promotions", required = true, example = "500000") @RequestParam Long orderValue,
             @AuthenticationPrincipal User user,

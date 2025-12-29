@@ -26,19 +26,19 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RestController
 @RequestMapping("${api.prefix}/categories")
 @RequiredArgsConstructor
-@Tag(name = "Category Management", description = "APIs for managing product categories")
+@Tag(name = "Category Management", description = "API cho quản lý danh mục sản phẩm")
 @SecurityRequirement(name = "bearerAuth")
 public class CategoryController {
 
     private final CategoryService categoryService;
 
     @GetMapping
-    @Operation(summary = "Get all categories with pagination", description = "Retrieve paginated list of categories with sorting options")
+    @Operation(summary = "Lấy tất cả danh mục với phân trang", description = "Lấy danh sách các danh mục sản phẩm với tùy chọn phân trang và sắp xếp")
     public ResponseEntity<List<CategoryDTO>> getAllCategories(
-            @Parameter(description = "Page number (0-based)", example = "0") @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "Number of items per page", example = "10") @RequestParam(defaultValue = "10") int size,
-            @Parameter(description = "Sort field", example = "name") @RequestParam(defaultValue = "name") String sortBy,
-            @Parameter(description = "Sort direction (asc, desc)", example = "asc") @RequestParam(defaultValue = "asc") String sortDirection) {
+            @Parameter(description = "Số trang (bắt đầu từ 0)", example = "0") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Số lượng mục trên mỗi trang", example = "10") @RequestParam(defaultValue = "10") int size,
+            @Parameter(description = "Trường sắp xếp", example = "name") @RequestParam(defaultValue = "name") String sortBy,
+            @Parameter(description = "Hướng sắp xếp (asc, desc)", example = "asc") @RequestParam(defaultValue = "asc") String sortDirection) {
 
         Sort sort = sortDirection.equalsIgnoreCase("desc")
                 ? Sort.by(sortBy).descending()
@@ -55,7 +55,7 @@ public class CategoryController {
     }
 
     @GetMapping("/all")
-    @Operation(summary = "Get all categories without pagination", description = "Retrieve complete list of all categories")
+    @Operation(summary = "Lấy tất cả danh mục không phân trang", description = "Lấy danh sách đầy đủ tất cả các danh mục sản phẩm mà không cần phân trang")
     public ResponseEntity<List<CategoryDTO>> getAllCategoriesWithoutPagination() {
         List<Category> categories = categoryService.getAllCategories();
         List<CategoryDTO> categoryDTOs = categories.stream()
@@ -66,7 +66,7 @@ public class CategoryController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get category by ID", description = "Retrieve a specific category by its ID")
+    @Operation(summary = "Lấy danh mục theo ID", description = "Lấy thông tin chi tiết của một danh mục cụ thể theo ID")
     public ResponseEntity<CategoryDTO> getCategoryById(
             @Parameter(description = "Category ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String id)
             throws Exception {
@@ -76,19 +76,35 @@ public class CategoryController {
     }
 
     @GetMapping("/name/{name}")
-    @Operation(summary = "Get category by name", description = "Retrieve a specific category by its name")
+    @Operation(summary = "Lấy danh mục theo tên", description = "Lấy thông tin chi tiết của một danh mục cụ thể theo tên")
     public ResponseEntity<CategoryDTO> getCategoryByName(
-            @Parameter(description = "Category name", example = "Electronics") @PathVariable String name)
+            @Parameter(description = "Tên danh mục", example = "Electronics") @PathVariable String name)
             throws Exception {
         Category category = categoryService.findByName(name);
         CategoryDTO categoryDTO = categoryService.convertToDTO(category);
         return ResponseEntity.ok(categoryDTO);
     }
 
+    @GetMapping("/{id}/exists")
+    @Operation(summary = "Kiểm tra sự tồn tại của danh mục theo ID", description = "Kiểm tra xem một danh mục có tồn tại hay không dựa trên ID của nó")
+    public ResponseEntity<Boolean> checkCategoryExists(
+            @Parameter(description = "ID danh mục", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String id) {
+        boolean exists = categoryService.existsById(id);
+        return ResponseEntity.ok(exists);
+    }
+
+    @GetMapping("/name/{name}/exists")
+    @Operation(summary = "Kiểm tra sự tồn tại của danh mục theo tên", description = "Kiểm tra xem một danh mục có tồn tại hay không dựa trên tên của nó")
+    public ResponseEntity<Boolean> checkCategoryExistsByName(
+            @Parameter(description = "Tên danh mục", example = "Electronics") @PathVariable String name) {
+        boolean exists = categoryService.existsByName(name);
+        return ResponseEntity.ok(exists);
+    }
+
     @PostMapping
-    @Operation(summary = "Create new category", description = "Create a new category with validation")
+    @Operation(summary = "Tạo danh mục mới", description = "Tạo một danh mục mới với kiểm tra hợp lệ")
     public ResponseEntity<?> createCategory(
-            @Parameter(description = "Category information") @Valid @RequestBody CategoryDTO categoryDTO,
+            @Parameter(description = "Thông tin danh mục") @Valid @RequestBody CategoryDTO categoryDTO,
             BindingResult result) throws Exception {
         if (result.hasErrors()) {
             List<String> errorMessages = result.getFieldErrors()
@@ -103,10 +119,10 @@ public class CategoryController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update category", description = "Update an existing category by ID")
+    @Operation(summary = "Cập nhật danh mục", description = "Cập nhật thông tin của một danh mục cụ thể theo ID")
     public ResponseEntity<?> updateCategory(
             @Parameter(description = "Category ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String id,
-            @Parameter(description = "Updated category information") @Valid @RequestBody CategoryDTO categoryDTO,
+            @Parameter(description = "Thông tin danh mục cập nhật") @Valid @RequestBody CategoryDTO categoryDTO,
             BindingResult result) throws Exception {
 
         if (result.hasErrors()) {
@@ -124,27 +140,11 @@ public class CategoryController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete category", description = "Delete a category by ID")
+    @Operation(summary = "Xóa danh mục", description = "Xóa một danh mục theo ID")
     public ResponseEntity<Void> deleteCategory(
-            @Parameter(description = "Category ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String id)
+            @Parameter(description = "ID danh mục", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String id)
             throws Exception {
         categoryService.deleteCategory(id);
         return ResponseEntity.noContent().build();
-    }
-
-    @GetMapping("/{id}/exists")
-    @Operation(summary = "Check if category exists by ID", description = "Check whether a category exists by its ID")
-    public ResponseEntity<Boolean> checkCategoryExists(
-            @Parameter(description = "Category ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String id) {
-        boolean exists = categoryService.existsById(id);
-        return ResponseEntity.ok(exists);
-    }
-
-    @GetMapping("/name/{name}/exists")
-    @Operation(summary = "Check if category exists by name", description = "Check whether a category exists by its name")
-    public ResponseEntity<Boolean> checkCategoryExistsByName(
-            @Parameter(description = "Category name", example = "Electronics") @PathVariable String name) {
-        boolean exists = categoryService.existsByName(name);
-        return ResponseEntity.ok(exists);
     }
 }

@@ -28,15 +28,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "Buyer Address Management", description = "Address management APIs for buyers - Handle delivery address creation, updates, and management")
 @SecurityRequirement(name = "bearerAuth")
 public class BuyerAddressController {
-
+    
     private final IAddressService addressService;
 
-    /**
-     * Lấy địa chỉ của user hiện tại
-     * GET /api/v1/buyer/address
-     */
     @GetMapping
-    @Operation(summary = "Get user addresses", description = "Retrieve all delivery addresses of the current user")
+    @Operation(summary = "Lấy địa chỉ người dùng", description = "Lấy tất cả địa chỉ giao hàng của người dùng hiện tại")
     public ResponseEntity<?> getUserAddress(@AuthenticationPrincipal User currentUser) throws Exception {
         var addresses = addressService.getUserAddress(currentUser.getEmail());
 
@@ -47,14 +43,20 @@ public class BuyerAddressController {
         return ResponseEntity.ok(ApiResponse.ok(addresses));
     }
 
-    /**
-     * Tạo địa chỉ mới
-     * POST /api/v1/buyer/address
-     */
+    @GetMapping("/check")
+    @Operation(summary = "Kiểm tra người dùng có địa chỉ", description = "Kiểm tra xem người dùng hiện tại đã cấu hình địa chỉ giao hàng chưa. Hữu ích cho việc xác thực khi thanh toán")
+    public ResponseEntity<?> checkHasAddress(@AuthenticationPrincipal User currentUser) throws Exception {
+        boolean hasAddress = addressService.hasAddress(currentUser.getEmail());
+
+        return ResponseEntity.ok(ApiResponse.ok(
+                AddressResponse.check("Kiểm tra địa chỉ thành công", hasAddress, hasAddress ? 1L : 0L)));
+
+    }
+
     @PostMapping
-    @Operation(summary = "Create new address", description = "Create a new delivery address for the current user")
+    @Operation(summary = "Tạo địa chỉ mới", description = "Tạo địa chỉ giao hàng mới cho người dùng hiện tại")
     public ResponseEntity<?> createAddress(
-            @Parameter(description = "Address information including street, city, province, postal code, and contact details", required = true, content = @Content(schema = @Schema(implementation = CreateAddressDTO.class))) @Valid @RequestBody CreateAddressDTO createAddressDTO,
+            @Parameter(description = "Thông tin địa chỉ bao gồm đường, thành phố, tỉnh, mã bưu điện và thông tin liên hệ", required = true, content = @Content(schema = @Schema(implementation = CreateAddressDTO.class))) @Valid @RequestBody CreateAddressDTO createAddressDTO,
             @AuthenticationPrincipal User currentUser,
             @Parameter(hidden = true) BindingResult result) throws Exception {
 
@@ -69,12 +71,8 @@ public class BuyerAddressController {
         return ResponseEntity.ok(ApiResponse.ok("Tạo địa chỉ thành công"));
     }
 
-    /**
-     * Cập nhật địa chỉ
-     * PUT /api/v1/buyer/address/{addressId}
-     */
     @PutMapping("/{addressId}")
-    @Operation(summary = "Update address", description = "Update an existing address by ID (index)")
+    @Operation(summary = "Cập nhật địa chỉ", description = "Cập nhật một địa chỉ hiện có theo ID (chỉ số trong danh sách, bắt đầu từ 0)")
     public ResponseEntity<?> updateAddress(
             @Parameter(description = "Address ID (index in the list, starting from 0)", example = "0") @PathVariable String addressId,
             @Parameter(description = "Updated address information", required = true, content = @Content(schema = @Schema(implementation = UpdateAddressDTO.class))) @Valid @RequestBody UpdateAddressDTO updateAddressDTO,
@@ -92,31 +90,13 @@ public class BuyerAddressController {
         return ResponseEntity.ok(ApiResponse.ok("Cập nhật địa chỉ thành công"));
     }
 
-    /**
-     * Xóa địa chỉ
-     * DELETE /api/v1/buyer/address/{addressId}
-     */
     @DeleteMapping("/{addressId}")
-    @Operation(summary = "Delete address", description = "Delete a specific address by ID (index). User can have multiple addresses and delete them individually")
+    @Operation(summary = "Xóa địa chỉ", description = "Xóa một địa chỉ cụ thể theo ID (chỉ số trong danh sách, bắt đầu từ 0). Người dùng có thể có nhiều địa chỉ và xóa từng địa chỉ riêng lẻ")
     public ResponseEntity<?> deleteAddress(
-            @Parameter(description = "Address ID (index in the list, starting from 0)", example = "0") @PathVariable String addressId,
+            @Parameter(description = "ID địa chỉ (chỉ số trong danh sách, bắt đầu từ 0)", example = "0") @PathVariable String addressId,
             @AuthenticationPrincipal User currentUser) throws Exception {
         addressService.deleteAddress(currentUser, addressId);
 
         return ResponseEntity.ok(ApiResponse.ok("Xóa địa chỉ thành công"));
-    }
-
-    /**
-     * Kiểm tra user có địa chỉ không
-     * GET /api/v1/buyer/address/check
-     */
-    @GetMapping("/check")
-    @Operation(summary = "Check if user has address", description = "Check whether the current user has a delivery address configured. Useful for checkout validation")
-    public ResponseEntity<?> checkHasAddress(@AuthenticationPrincipal User currentUser) throws Exception {
-        boolean hasAddress = addressService.hasAddress(currentUser.getEmail());
-
-        return ResponseEntity.ok(ApiResponse.ok(
-                AddressResponse.check("Kiểm tra địa chỉ thành công", hasAddress, hasAddress ? 1L : 0L)));
-
     }
 }

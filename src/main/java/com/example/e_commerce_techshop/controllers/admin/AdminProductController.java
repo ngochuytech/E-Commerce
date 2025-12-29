@@ -26,14 +26,14 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("${api.prefix}/admin/products")
 @RequiredArgsConstructor
-@Tag(name = "Admin Product Management", description = "APIs for admin to approve/reject products")
+@Tag(name = "Admin Product Management", description = "APIS để quản lý sản phẩm cho admin")
 @SecurityRequirement(name = "Bearer Authentication")
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminProductController {
     private final IProductService productService;
 
     @GetMapping("/pending")
-    @Operation(summary = "Get all pending products")
+    @Operation(summary = "Lấy danh sách sản phẩm chờ duyệt", description = "Lấy danh sách tất cả sản phẩm đang chờ duyệt")
     public ResponseEntity<?> getPendingProducts(@RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
@@ -48,7 +48,7 @@ public class AdminProductController {
     }
 
     @PutMapping("/{productId}/approve")
-    @Operation(summary = "Approve product")
+    @Operation(summary = "Duyệt sản phẩm", description = "Duyệt một sản phẩm cụ thể")
     public ResponseEntity<?> approveProduct(
             @Parameter(description = "Product ID") @PathVariable String productId) throws Exception {
         productService.updateStatus(productId, "APPROVED");
@@ -57,7 +57,7 @@ public class AdminProductController {
     }
 
     @PutMapping("/{productId}/reject")
-    @Operation(summary = "Reject product")
+    @Operation(summary = "Từ chối sản phẩm", description = "Từ chối một sản phẩm cụ thể với lý do")
     public ResponseEntity<?> rejectProduct(
             @Parameter(description = "Product ID") @PathVariable String productId,
             @Parameter(description = "Rejection reason") @RequestParam String reason) throws Exception {

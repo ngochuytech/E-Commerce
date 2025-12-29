@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("${api.prefix}/b2c/shipments")
 @RequiredArgsConstructor
-@Tag(name = "B2C Shipment Management", description = "APIs for store owners to manage shipments and track deliveries")
+@Tag(name = "B2C Shipment Management", description = "API cho quản lý vận chuyển B2C")
 @SecurityRequirement(name = "bearerAuth")
 public class B2CShipmentController {
 
@@ -43,10 +43,7 @@ public class B2CShipmentController {
             throw new RuntimeException("Bạn không có quyền truy cập cửa hàng này");
         }
     }
-
-    /**
-     * Lấy thông tin shipment của đơn hàng
-     */
+    
     @GetMapping("/{shipmentId}")
     @Operation(summary = "Lấy thông tin shipment của đơn hàng", description = "Lấy thông tin shipment của một đơn hàng cụ thể")
     public ResponseEntity<?> getShipmentByShipmentId(
@@ -56,9 +53,6 @@ public class B2CShipmentController {
         return ResponseEntity.ok(ApiResponse.ok(ShipmentResponse.fromShipment(shipment)));
     }
 
-    /**
-     * Lấy danh sách shipment của store
-     */
     @GetMapping("/store/{storeId}")
     @Operation(summary = "Lấy danh sách shipment của store", description = "Lấy danh sách phân trang tất cả các shipment của một cửa hàng")
     public ResponseEntity<?> getStoreShipments(

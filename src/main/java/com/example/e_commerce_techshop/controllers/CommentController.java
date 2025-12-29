@@ -27,16 +27,13 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("${api.prefix}/comments")
 @RequiredArgsConstructor
-@Tag(name = "Comment Management", description = "APIs for product comments and statistics")
+@Tag(name = "Comment Management", description = "API cho quản lý bình luận sản phẩm - Xử lý lấy bình luận, trả lời và thống kê bình luận")
 public class CommentController {
 
     private final ICommentService commentService;
 
-    /**
-     * Lấy danh sách comments theo product variant ID
-     */
     @GetMapping("/product-variant/{productVariantId}")
-    @Operation(summary = "Get comments by product variant", description = "Retrieve paginated comments for a specific product variant with sorting options. Includes nested replies.")
+    @Operation(summary = "Lấy bình luận theo biến thể sản phẩm", description = "Lấy danh sách bình luận phân trang cho một biến thể sản phẩm cụ thể với các tùy chọn sắp xếp. Bao gồm các phản hồi lồng nhau.")
     public ResponseEntity<?> getCommentsByProductVariant(
             @Parameter(description = "Product variant ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String productVariantId,
             @Parameter(description = "Page number (0-based)", example = "0") @RequestParam(defaultValue = "0") int page,
@@ -48,17 +45,13 @@ public class CommentController {
         Sort sort = sortDir.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        // Sử dụng method mới để lấy comments kèm replies
         Page<CommentResponse> commentResponses = commentService.getCommentsByProductVariantWithReplies(productVariantId, pageable);
 
         return ResponseEntity.ok(ApiResponse.ok(commentResponses));
     }
 
-    /**
-     * Lấy thông tin chi tiết một comment
-     */
     @GetMapping("/{commentId}")
-    @Operation(summary = "Get comment by ID", description = "Retrieve detailed information of a specific comment including all replies")
+    @Operation(summary = "Lấy bình luận theo ID", description = "Lấy thông tin chi tiết của một bình luận cụ thể bao gồm tất cả các phản hồi")
     public ResponseEntity<?> getCommentById(
             @Parameter(description = "Comment ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String commentId)
             throws Exception {
@@ -67,11 +60,8 @@ public class CommentController {
         return ResponseEntity.ok(ApiResponse.ok(commentResponse));
     }
 
-    /**
-     * Lấy danh sách replies của một comment
-     */
     @GetMapping("/{commentId}/replies")
-    @Operation(summary = "Get replies by comment", description = "Retrieve all replies for a specific comment")
+    @Operation(summary = "Lấy phản hồi theo bình luận", description = "Lấy tất cả các phản hồi cho một bình luận cụ thể")
     public ResponseEntity<?> getRepliesByComment(
             @Parameter(description = "Comment ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String commentId)
             throws Exception {
@@ -80,11 +70,8 @@ public class CommentController {
         return ResponseEntity.ok(ApiResponse.ok(replies));
     }
 
-    /**
-     * Lấy thống kê comments cho một product variant
-     */
     @GetMapping("/product-variant/{productVariantId}/statistics")
-    @Operation(summary = "Get product comment statistics", description = "Get comment statistics for a product variant including total comments count")
+    @Operation(summary = "Lấy thống kê bình luận sản phẩm", description = "Lấy thống kê bình luận cho một biến thể sản phẩm bao gồm tổng số bình luận")
     public ResponseEntity<?> getProductCommentStats(
             @Parameter(description = "Product variant ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String productVariantId)
             throws Exception {
