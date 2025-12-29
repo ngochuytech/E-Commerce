@@ -36,31 +36,14 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("${api.prefix}/buyer/comments")
 @RequiredArgsConstructor
 @RequireActiveAccount
-@Tag(name = "Buyer Comment Management", description = "APIs for buyers to manage their comments")
+@Tag(name = "Buyer Comment Management", description = "API cho quản lý bình luận của người mua - Xử lý tạo, cập nhật, xóa và lấy bình luận sản phẩm")
 @SecurityRequirement(name = "bearerAuth")
 public class BuyerCommentController {
 
     private final ICommentService commentService;
 
-    /**
-     * Tạo comment mới cho sản phẩm
-     */
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Create product comment", description = "ParantCommentId là tùy chọn, dùng để trả lời bình luận khác")
-    public ResponseEntity<?> createComment(
-            @Parameter(description = "Comment information including content and product ID") @Valid @RequestPart("comment") CommentDTO commentDTO,
-            @Parameter(description = "Optional images for the comment") @RequestPart(value = "images", required = false) List<MultipartFile> images,
-            @AuthenticationPrincipal User currentUser) throws Exception {
-        commentService.createComment(commentDTO, images, currentUser);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok("Tạo bình luận thành công"));
-    }
-
-    /**
-     * Lấy danh sách comments của user hiện tại
-     */
     @GetMapping("/my-comments")
-    @Operation(summary = "Get my comments", description = "Retrieve all comments created by the current authenticated user")
+    @Operation(summary = "Lấy bình luận của tôi", description = "Lấy tất cả các bình luận do người dùng hiện tại tạo")
     public ResponseEntity<?> getMyComments(
             @AuthenticationPrincipal User currentUser) throws Exception {
 
@@ -72,15 +55,23 @@ public class BuyerCommentController {
         return ResponseEntity.ok(ApiResponse.ok(commentResponses));
     }
 
-    /**
-     * Cập nhật comment
-     */
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Tạo bình luận sản phẩm", description = "ParantCommentId là tùy chọn, dùng để trả lời bình luận khác")
+    public ResponseEntity<?> createComment(
+            @Parameter(description = "Thông tin bình luận bao gồm nội dung và ID sản phẩm") @Valid @RequestPart("comment") CommentDTO commentDTO,
+            @Parameter(description = "Ảnh tùy chọn cho bình luận") @RequestPart(value = "images", required = false) List<MultipartFile> images,
+            @AuthenticationPrincipal User currentUser) throws Exception {
+        commentService.createComment(commentDTO, images, currentUser);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok("Tạo bình luận thành công"));
+    }
+
     @PutMapping(value = "/{commentId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Update comment", description = "Update an existing comment (only by the comment owner)")
+    @Operation(summary = "Cập nhật bình luận", description = "Cập nhật một bình luận hiện có (chỉ bởi chủ bình luận)")
     public ResponseEntity<?> updateComment(
             @Parameter(description = "Comment ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String commentId,
-            @Parameter(description = "Updated comment information") @Valid @RequestPart("comment") UpdateCommentDTO commentDTO,
-            @Parameter(description = "Optional images for the comment") @RequestPart(value = "images", required = false) List<MultipartFile> images,
+            @Parameter(description = "Thông tin cập nhật bình luận") @Valid @RequestPart("comment") UpdateCommentDTO commentDTO,
+            @Parameter(description = "Ảnh tùy chọn cho bình luận") @RequestPart(value = "images", required = false) List<MultipartFile> images,
             @AuthenticationPrincipal User currentUser) throws Exception {
 
         commentService.updateComment(commentId, commentDTO, images, currentUser);
@@ -88,11 +79,8 @@ public class BuyerCommentController {
         return ResponseEntity.ok(ApiResponse.ok("Cập nhật bình luận thành công"));
     }
 
-    /**
-     * Xóa comment
-     */
     @DeleteMapping("/{commentId}")
-    @Operation(summary = "Delete comment", description = "Delete a comment (only by the comment owner)")
+    @Operation(summary = "Xóa bình luận", description = "Xóa một bình luận (chỉ bởi chủ bình luận)")
     public ResponseEntity<?> deleteComment(
             @Parameter(description = "Comment ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String commentId,
             @AuthenticationPrincipal User currentUser) throws Exception {

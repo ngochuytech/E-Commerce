@@ -19,23 +19,23 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RestController
 @RequestMapping("${api.prefix}/products")
 @RequiredArgsConstructor
-@Tag(name = "Product Browsing", description = "Public APIs for browsing and searching products")
+@Tag(name = "Product Browsing", description = "API cho việc duyệt sản phẩm - Tìm kiếm và lọc sản phẩm")
 public class ProductController {
     private final IProductService productService;
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get product by ID", description = "Retrieve detailed product information by product ID")
+    @Operation(summary = "Lấy sản phẩm theo ID", description = "Lấy thông tin chi tiết sản phẩm theo ID")
     public ResponseEntity<?> getProductById(
-            @Parameter(description = "Product ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable("id") String id)
+            @Parameter(description = "ID sản phẩm", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable("id") String id)
             throws Exception {
         ProductResponse productResponse = productService.findProductById(id);
         return ResponseEntity.ok(ApiResponse.ok(productResponse));
     }
 
     @GetMapping("")
-    @Operation(summary = "Search products by name", description = "Search for products using product name (partial match supported)")
+    @Operation(summary = "Tìm kiếm sản phẩm theo tên", description = "Tìm kiếm sản phẩm theo tên (hỗ trợ tìm kiếm gần đúng)")
     public ResponseEntity<?> getProductByName(
-            @Parameter(description = "Product name to search for", example = "iPhone") @RequestParam("name") String name,
+            @Parameter(description = "Tên sản phẩm cần tìm", example = "iPhone") @RequestParam("name") String name,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
@@ -50,9 +50,9 @@ public class ProductController {
     }
 
     @GetMapping("/category/{name}")
-    @Operation(summary = "Get products by category", description = "Retrieve all products belonging to a specific category")
+    @Operation(summary = "Lấy sản phẩm theo danh mục", description = "Lấy tất cả sản phẩm thuộc một danh mục cụ thể")
     public ResponseEntity<?> getProductByCategory(
-            @Parameter(description = "Category name", example = "Electronics") @PathVariable("name") String category,
+            @Parameter(description = "Tên danh mục", example = "Điện tử") @PathVariable("name") String category,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
@@ -67,10 +67,10 @@ public class ProductController {
     }
 
     @GetMapping("/category/{category}/brand/{brand}")
-    @Operation(summary = "Get products by category and brand", description = "Retrieve products filtered by both category and brand")
+    @Operation(summary = "Lấy sản phẩm theo danh mục và thương hiệu", description = "Lấy sản phẩm được lọc theo cả danh mục và thương hiệu")
     public ResponseEntity<?> getProductByCategoryAndBrand(
-            @PathVariable("category") String category,
-            @PathVariable("brand") String brand,
+            @Parameter(description = "Tên danh mục", example = "Điện tử") @PathVariable("category") String category,
+            @Parameter(description = "Tên thương hiệu", example = "Apple") @PathVariable("brand") String brand,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
@@ -85,9 +85,9 @@ public class ProductController {
     }
 
     @GetMapping("/variant/{variantId}")
-    @Operation(summary = "Get product by variant ID", description = "Retrieve the product associated with a specific product variant ID")
+    @Operation(summary = "Lấy sản phẩm theo ID biến thể", description = "Lấy sản phẩm liên quan đến một biến thể sản phẩm cụ thể")
     public ResponseEntity<?> getProductByVariantId(
-            @Parameter(description = "Product variant ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable("variantId") String variantId)
+            @Parameter(description = "ID biến thể sản phẩm", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable("variantId") String variantId)
             throws Exception {
         ProductResponse productResponse = ProductResponse.fromProduct(productService.getByVariant(variantId));
         return ResponseEntity.ok(ApiResponse.ok(productResponse));

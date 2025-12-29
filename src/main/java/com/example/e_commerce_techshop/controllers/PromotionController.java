@@ -26,13 +26,13 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("${api.prefix}/promotions")
 @RequiredArgsConstructor
-@Tag(name = "Public Promotion APIs", description = "Public APIs to view promotions - No authentication required")
+@Tag(name = "Public Promotion APIs", description = "API công khai cho khuyến mãi")
 public class PromotionController {
 
     private final IPromotionService promotionService;
 
     @GetMapping("")
-    @Operation(summary = "Get all active promotions for customer", description = "Retrieve all currently active promotions across all stores and platform")
+    @Operation(summary = "Lấy tất cả khuyến mãi đang hoạt động cho khách hàng", description = "Lấy tất cả các khuyến mãi đang hoạt động trên tất cả các cửa hàng và nền tảng")
     public ResponseEntity<?> getActivePromotions(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -49,27 +49,27 @@ public class PromotionController {
     }
 
     @GetMapping("/{promotionId}")
-    @Operation(summary = "Get promotion by ID", description = "Retrieve detailed information of a specific promotion")
+    @Operation(summary = "Lấy khuyến mãi theo ID", description = "Lấy thông tin chi tiết của một khuyến mãi cụ thể")
     public ResponseEntity<?> getPromotionById(
-            @Parameter(description = "ID of the promotion to retrieve", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String promotionId)
+            @Parameter(description = "ID của khuyến mãi cần lấy", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String promotionId)
             throws Exception {
         Promotion promotion = promotionService.getPromotionById(promotionId);
         return ResponseEntity.ok(ApiResponse.ok(PromotionResponse.fromPromotion(promotion)));
     }
 
     @GetMapping("/code/{promotionCode}")
-    @Operation(summary = "Get promotion by code", description = "Retrieve detailed information of a specific promotion by its code")
+    @Operation(summary = "Lấy khuyến mãi theo mã", description = "Lấy thông tin chi tiết của một khuyến mãi cụ thể theo mã của nó")
     public ResponseEntity<?> getPromotionByCode(
-            @Parameter(description = "Code of the promotion to retrieve", required = true, example = "BLACKFRIDAY") @PathVariable String promotionCode)
+            @Parameter(description = "Mã của khuyến mãi cần lấy", required = true, example = "BLACKFRIDAY") @PathVariable String promotionCode)
             throws Exception {
         Promotion promotion = promotionService.getPromotionByCode(promotionCode);
         return ResponseEntity.ok(ApiResponse.ok(PromotionResponse.fromPromotion(promotion)));
     }
 
     @GetMapping("/type/{type}")
-    @Operation(summary = "Get promotions by type", description = "Retrieve all active promotions of a specific type (PERCENTAGE, FIXED_AMOUNT, etc.)")
+    @Operation(summary = "Lấy khuyến mãi theo loại", description = "Lấy tất cả các khuyến mãi đang hoạt động theo một loại cụ thể (PERCENTAGE, FIXED_AMOUNT, v.v.)")
     public ResponseEntity<?> getPromotionsByType(
-            @Parameter(description = "Type of promotion to filter by", required = true, example = "PERCENTAGE") @PathVariable String type,
+            @Parameter(description = "Loại khuyến mãi để lọc", required = true, example = "PERCENTAGE") @PathVariable String type,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
@@ -84,7 +84,7 @@ public class PromotionController {
     }
 
     @GetMapping("/validate/{promotionId}")
-    @Operation(summary = "Validate promotion", description = "Check if a promotion can be applied to an order with specified value")
+    @Operation(summary = "Xác thực khuyến mãi", description = "Kiểm tra xem khuyến mãi có thể áp dụng cho đơn hàng với giá trị cụ thể hay không")
     public ResponseEntity<?> validatePromotion(
             @Parameter(description = "ID of the promotion to validate", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String promotionId,
             @Parameter(description = "Order value to validate against promotion conditions", required = true, example = "500000") @RequestParam Long orderValue,
@@ -94,7 +94,7 @@ public class PromotionController {
     }
 
     @GetMapping("/calculate-discount/{promotionId}")
-    @Operation(summary = "Calculate discount amount", description = "Calculate the exact discount amount for a specific order value")
+    @Operation(summary = "Tính toán số tiền giảm giá", description = "Tính toán chính xác số tiền giảm giá cho một giá trị đơn hàng cụ thể")
     public ResponseEntity<?> calculateDiscount(
             @Parameter(description = "ID of the promotion", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String promotionId,
             @Parameter(description = "Order value to calculate discount for", required = true, example = "500000") @RequestParam Long orderValue)

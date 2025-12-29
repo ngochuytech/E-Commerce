@@ -43,25 +43,10 @@ public class B2CCommentController {
     private final ICommentService commentService;
 
     /**
-     * Tạo comment mới cho sản phẩm (từ phía store owner)
-     */
-    @PostMapping(value = "/store/{storeId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Create store comment", description = "ParantCommentId là tùy chọn, dùng để trả lời bình luận khác. Chỉ cửa hàng sở hữu sản phẩm mới có thể tạo bình luận này")
-    public ResponseEntity<?> createStoreComment(
-            @Parameter(description = "Store ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String storeId,
-            @Parameter(description = "Comment information including content and product variant ID") @Valid @RequestPart("comment") CommentDTO commentDTO,
-            @Parameter(description = "Optional images for the comment (max 5)") @RequestPart(value = "images", required = false) List<MultipartFile> images,
-            @AuthenticationPrincipal User currentUser) throws Exception {
-        commentService.createStoreComment(storeId, commentDTO, images, currentUser);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok("Tạo bình luận từ cửa hàng thành công"));
-    }
-
-    /**
      * Lấy danh sách comments của store hiện tại
      */
     @GetMapping("/store/{storeId}/my-comments")
-    @Operation(summary = "Get store comments", description = "Retrieve all comments created by this store")
+    @Operation(summary = "Lấy bình luận cửa hàng", description = "Lấy tất cả bình luận do cửa hàng này tạo")
     public ResponseEntity<?> getStoreComments(
             @Parameter(description = "Store ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String storeId,
             @AuthenticationPrincipal User currentUser) throws Exception {
@@ -75,10 +60,25 @@ public class B2CCommentController {
     }
 
     /**
+     * Tạo comment mới cho sản phẩm (từ phía store owner)
+     */
+    @PostMapping(value = "/store/{storeId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Tạo bình luận cửa hàng", description = "ParantCommentId là tùy chọn, dùng để trả lời bình luận khác. Chỉ cửa hàng sở hữu sản phẩm mới có thể tạo bình luận này")
+    public ResponseEntity<?> createStoreComment(
+            @Parameter(description = "Store ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String storeId,
+            @Parameter(description = "Comment information including content and product variant ID") @Valid @RequestPart("comment") CommentDTO commentDTO,
+            @Parameter(description = "Optional images for the comment (max 5)") @RequestPart(value = "images", required = false) List<MultipartFile> images,
+            @AuthenticationPrincipal User currentUser) throws Exception {
+        commentService.createStoreComment(storeId, commentDTO, images, currentUser);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok("Tạo bình luận từ cửa hàng thành công"));
+    }
+
+    /**
      * Cập nhật comment của store
      */
     @PutMapping(value = "/store/{storeId}/comment/{commentId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Update store comment", description = "Update an existing store comment (only by the store owner)")
+    @Operation(summary = "Cập nhật bình luận cửa hàng", description = "Cập nhật một bình luận cửa hàng hiện có (chỉ bởi chủ cửa hàng)")
     public ResponseEntity<?> updateStoreComment(
             @Parameter(description = "Store ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String storeId,
             @Parameter(description = "Comment ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String commentId,
@@ -95,7 +95,7 @@ public class B2CCommentController {
      * Xóa comment của store
      */
     @DeleteMapping("/store/{storeId}/comment/{commentId}")
-    @Operation(summary = "Delete store comment", description = "Delete a store comment (only by the store owner)")
+    @Operation(summary = "Xóa bình luận cửa hàng", description = "Xóa một bình luận cửa hàng (chỉ bởi chủ cửa hàng)")
     public ResponseEntity<?> deleteStoreComment(
             @Parameter(description = "Store ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String storeId,
             @Parameter(description = "Comment ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String commentId,

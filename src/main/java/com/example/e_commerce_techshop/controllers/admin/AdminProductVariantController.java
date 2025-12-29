@@ -33,7 +33,7 @@ public class AdminProductVariantController {
     private final IProductVariantService productVariantService;
 
     @GetMapping("/pending")
-    @Operation(summary = "Get all pending product variants")
+    @Operation(summary = "Lấy danh sách biến thể sản phẩm chờ duyệt", description = "Lấy danh sách tất cả biến thể sản phẩm đang chờ duyệt")
     public ResponseEntity<?> getPendingVariants(@RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
@@ -50,14 +50,14 @@ public class AdminProductVariantController {
     }
 
     @PutMapping("/{variantId}/approve")
-    @Operation(summary = "Approve product variant")
+    @Operation(summary = "Duyệt biến thể sản phẩm", description = "Duyệt một biến thể sản phẩm cụ thể")
     public ResponseEntity<?> approveVariant(@PathVariable String variantId) throws Exception {
         productVariantService.updateVariantStatus(variantId, ProductVariant.VariantStatus.APPROVED.name());
         return ResponseEntity.ok(ApiResponse.ok("Duyệt biến thể thành công!"));
     }
 
     @PutMapping("/{variantId}/reject")
-    @Operation(summary = "Reject product variant")
+    @Operation(summary = "Từ chối biến thể sản phẩm", description = "Từ chối một biến thể sản phẩm cụ thể với lý do")
     public ResponseEntity<?> rejectVariant(
             @PathVariable String variantId,
             @RequestParam String reason) throws Exception {

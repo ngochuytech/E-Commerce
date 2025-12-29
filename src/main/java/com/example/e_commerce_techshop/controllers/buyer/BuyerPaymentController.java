@@ -33,11 +33,36 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("${api.prefix}/buyer/payments")
-@Tag(name = "Buyer Payment Management", description = "APIs for buyers to manage payment transactions via VNPay gateway")
+@Tag(name = "Buyer Payment Management", description = "API cho quản lý thanh toán của người mua - Xử lý thanh toán và hoàn tiền qua VNPay và MoMo")
 public class BuyerPaymentController {
         private final IOrderService orderService;
         private final IVNPayService vnPayService;
         private final IMomoService momoService;
+
+        @GetMapping("/momo/check_status/{orderId}")
+        @Operation(summary = "Check MoMo payment status", description = "Query the status of a MoMo payment transaction.")
+        public ResponseEntity<?> checkMomoPaymentStatus(
+                        @PathVariable String orderId) throws Exception {
+                String result = momoService.checkPaymentStatus(orderId);
+                return ResponseEntity.ok(result);
+        }
+
+        @GetMapping("/momo/refund/check_status/{orderId}")
+        @Operation(summary = "Check MoMo refund status", description = "Query the status of a MoMo refund transaction. Use system orderId, will lookup momoRefundOrderId automatically.")
+        public ResponseEntity<?> checkMomoRefundStatus(
+                        @PathVariable String orderId) throws Exception {
+                // Lấy momoRefundOrderId từ database
+                Order order = orderService.getOrderById(orderId);
+                String momoRefundOrderId = order.getMomoRefundOrderId();
+
+                if (momoRefundOrderId == null || momoRefundOrderId.isEmpty()) {
+                        return ResponseEntity.badRequest()
+                                        .body(ApiResponse.error("Đơn hàng chưa có giao dịch hoàn tiền MoMo"));
+                }
+
+                String result = momoService.checkRefundStatus(momoRefundOrderId);
+                return ResponseEntity.ok(result);
+        }
 
         @PostMapping("/create_payment_url")
         @Operation(summary = "Create VNPay payment URL", description = "Generate a payment URL for order payment via VNPay gateway. User will be redirected to VNPay website.")
@@ -98,14 +123,6 @@ public class BuyerPaymentController {
                 return ResponseEntity.ok(result);
         }
 
-        @GetMapping("/momo/check_status/{orderId}")
-        @Operation(summary = "Check MoMo payment status", description = "Query the status of a MoMo payment transaction.")
-        public ResponseEntity<?> checkMomoPaymentStatus(
-                        @PathVariable String orderId) throws Exception {
-                String result = momoService.checkPaymentStatus(orderId);
-                return ResponseEntity.ok(result);
-        }
-
         @PostMapping("/momo/refund")
         @Operation(summary = "Refund MoMo payment", description = "Request a refund for a completed MoMo payment transaction. Supports partial and full refund.")
         public ResponseEntity<?> refundMomoPayment(
@@ -118,26 +135,10 @@ public class BuyerPaymentController {
                 return ResponseEntity.ok(result);
         }
 
-        @GetMapping("/momo/refund/check_status/{orderId}")
-        @Operation(summary = "Check MoMo refund status", description = "Query the status of a MoMo refund transaction. Use system orderId, will lookup momoRefundOrderId automatically.")
-        public ResponseEntity<?> checkMomoRefundStatus(
-                        @PathVariable String orderId) throws Exception {
-                // Lấy momoRefundOrderId từ database
-                Order order = orderService.getOrderById(orderId);
-                String momoRefundOrderId = order.getMomoRefundOrderId();
-                
-                if (momoRefundOrderId == null || momoRefundOrderId.isEmpty()) {
-                        return ResponseEntity.badRequest()
-                                        .body(ApiResponse.error("Đơn hàng chưa có giao dịch hoàn tiền MoMo"));
-                }
-                
-                String result = momoService.checkRefundStatus(momoRefundOrderId);
-                return ResponseEntity.ok(result);
-        }
-
         @PostMapping("/momo/ipn")
         @Operation(summary = "MoMo IPN callback", description = "Webhook endpoint for MoMo to notify payment results (server-to-server).")
-        public ResponseEntity<?> momoIpnCallback(@RequestBody String ipnData, HttpServletRequest request) throws Exception {
+        public ResponseEntity<?> momoIpnCallback(@RequestBody String ipnData, HttpServletRequest request)
+                        throws Exception {
                 System.out.println("=== MoMo IPN Callback Received ===");
                 System.out.println("Request from IP: " + request.getRemoteAddr());
                 System.out.println("Request method: " + request.getMethod());
@@ -154,7 +155,8 @@ public class BuyerPaymentController {
                         Long amount = json.getLong("amount");
                         String message = json.getString("message");
 
-                        System.out.println("Parsed - OrderId: " + orderId + ", ResultCode: " + resultCode + ", TransId: " + transId + ", Amount: " + amount);
+                        System.out.println("Parsed - OrderId: " + orderId + ", ResultCode: " + resultCode
+                                        + ", TransId: " + transId + ", Amount: " + amount);
 
                         // Cập nhật trạng thái thanh toán của đơn hàng
                         if (resultCode == 0) {
@@ -172,7 +174,8 @@ public class BuyerPaymentController {
                 } catch (Exception e) {
                         System.err.println("ERROR processing MoMo IPN: " + e.getMessage());
                         e.printStackTrace();
-                        return ResponseEntity.ok().body("{\"message\": \"error\", \"error\": \"" + e.getMessage() + "\"}");
+                        return ResponseEntity.ok()
+                                        .body("{\"message\": \"error\", \"error\": \"" + e.getMessage() + "\"}");
                 }
         }
 

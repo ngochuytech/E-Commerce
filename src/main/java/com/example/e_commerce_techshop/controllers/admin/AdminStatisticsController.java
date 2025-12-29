@@ -55,7 +55,7 @@ public class AdminStatisticsController {
         return ResponseEntity.ok(ApiResponse.ok(statisticsService.getAdminPlatformCommissions(pageable)));
     }
 
-    @Operation(summary = "Get platform discount losses", description = "Retrieve all platform discount loss records")
+    @Operation(summary = "Lấy tổn thất do giảm giá nền tảng", description = "Lấy tất cả các bản ghi tổn thất do giảm giá nền tảng")
     @GetMapping("/platform-discount-losses")
     public ResponseEntity<?> getPlatformDiscountLosses(
             @Parameter(description = "Page number (0-indexed)", required = false, example = "0") @RequestParam(defaultValue = "0") int page,
@@ -87,7 +87,7 @@ public class AdminStatisticsController {
         return ResponseEntity.ok(ApiResponse.ok(statisticsService.getAdminShippingFees(pageable)));
     }
 
-    @Operation(summary = "Get revenue by date range", description = "Get service fees collected in a specific date range")
+    @Operation(summary = "Lấy doanh thu theo khoảng thời gian", description = "Lấy phí dịch vụ thu được trong khoảng thời gian cụ thể")
     @GetMapping("/date-range")
     public ResponseEntity<?> getRevenueByDateRange(
             @Parameter(description = "Start date (format: yyyy-MM-dd)", required = true, example = "2025-11-01") @RequestParam String startDate,
@@ -106,7 +106,7 @@ public class AdminStatisticsController {
                 .ok(ApiResponse.ok(statisticsService.getAdminRevenueByDateRange(startDate, endDate, pageable)));
     }
 
-    @Operation(summary = "Get revenue chart data", description = "Get revenue data for chart visualization by period (WEEK/MONTH/YEAR)")
+    @Operation(summary = "Lấy dữ liệu biểu đồ doanh thu", description = "Lấy dữ liệu doanh thu để hiển thị biểu đồ theo khoảng thời gian (WEEK/MONTH/YEAR)")
     @GetMapping("/chart-data")
     public ResponseEntity<?> getRevenueChartData(
             @Parameter(description = "Period: WEEK, MONTH, or YEAR", required = true, example = "MONTH") @RequestParam String period) {

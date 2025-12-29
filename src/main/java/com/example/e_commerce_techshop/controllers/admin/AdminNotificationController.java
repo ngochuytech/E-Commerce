@@ -29,114 +29,117 @@ import java.util.Map;
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminNotificationController {
 
-    private final INotificationService notificationService;
+        private final INotificationService notificationService;
 
-    @Operation(summary = "Lấy danh sách notification của admin", description = "Retrieve all notifications for the admin")
-    @GetMapping
-    public ResponseEntity<?> getAdminNotifications(
-            @Parameter(description = "Filter by read status (true/false)", required = false) @RequestParam(required = false) Boolean isRead,
-            @Parameter(description = "Page number (0-indexed)", required = false, example = "0") @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "Page size", required = false, example = "10") @RequestParam(defaultValue = "10") int size,
-            @AuthenticationPrincipal User user) throws Exception {
+        @Operation(summary = "Lấy danh sách notification của admin", description = "Retrieve all notifications for the admin")
+        @GetMapping
+        public ResponseEntity<?> getAdminNotifications(
+                        @Parameter(description = "Filter by read status (true/false)", required = false) @RequestParam(required = false) Boolean isRead,
+                        @Parameter(description = "Page number (0-indexed)", required = false, example = "0") @RequestParam(defaultValue = "0") int page,
+                        @Parameter(description = "Page size", required = false, example = "10") @RequestParam(defaultValue = "10") int size,
+                        @AuthenticationPrincipal User user) throws Exception {
 
-            Pageable pageable = PageRequest.of(page, size);
-            Page<Notification> notificationPage;
-            
-            if (isRead != null) {
-                notificationPage = notificationService.getAdminNotificationsPage(isRead, pageable);
-            } else {
-                notificationPage = notificationService.getAdminNotificationsPage(pageable);
-            }
+                Pageable pageable = PageRequest.of(page, size);
+                Page<Notification> notificationPage;
 
-            Page<AdminNotificationResponse> adminNotificationResponses = notificationPage.map(AdminNotificationResponse::fromNotification);
+                if (isRead != null) {
+                        notificationPage = notificationService.getAdminNotificationsPage(isRead, pageable);
+                } else {
+                        notificationPage = notificationService.getAdminNotificationsPage(pageable);
+                }
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("notifications", adminNotificationResponses.getContent());
-            response.put("page", page);
-            response.put("size", size);
-            response.put("total", notificationPage.getTotalElements());
-            response.put("totalPages", notificationPage.getTotalPages());
-            response.put("unreadCount", notificationService.getAdminUnreadCount());
+                Page<AdminNotificationResponse> adminNotificationResponses = notificationPage
+                                .map(AdminNotificationResponse::fromNotification);
 
-            return ResponseEntity.ok(ApiResponse.ok(response));
-    }
+                Map<String, Object> response = new HashMap<>();
+                response.put("notifications", adminNotificationResponses.getContent());
+                response.put("page", page);
+                response.put("size", size);
+                response.put("total", notificationPage.getTotalElements());
+                response.put("totalPages", notificationPage.getTotalPages());
+                response.put("unreadCount", notificationService.getAdminUnreadCount());
 
-    @Operation(summary = "Lấy số notification chưa đọc của admin", description = "Get the number of unread notifications for admin")
-    @GetMapping("/unread-count")
-    public ResponseEntity<?> getAdminUnreadCount(@AuthenticationPrincipal User user) throws Exception {
-            long unreadCount = notificationService.getAdminUnreadCount();
+                return ResponseEntity.ok(ApiResponse.ok(response));
+        }
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("unreadCount", unreadCount);
+        @Operation(summary = "Lấy số notification chưa đọc của admin", description = "Get the number of unread notifications for admin")
+        @GetMapping("/unread-count")
+        public ResponseEntity<?> getAdminUnreadCount(@AuthenticationPrincipal User user) throws Exception {
+                long unreadCount = notificationService.getAdminUnreadCount();
 
-            return ResponseEntity.ok(ApiResponse.ok(response));
-    }
+                Map<String, Object> response = new HashMap<>();
+                response.put("unreadCount", unreadCount);
 
-    @Operation(summary = "Đánh dấu notification là đã đọc", description = "Mark a specific admin notification as read")
-    @PutMapping("/{notificationId}/read")
-    public ResponseEntity<?> markNotificationAsRead(
-            @Parameter(description = "Notification ID", required = true) @PathVariable String notificationId,
-            @AuthenticationPrincipal User user) throws Exception{
-                
-            notificationService.markAdminNotificationAsRead(notificationId);
+                return ResponseEntity.ok(ApiResponse.ok(response));
+        }
 
-            return ResponseEntity.ok(ApiResponse.ok("Đã đánh dấu thông báo là đã đọc"));
-    }
+        @Operation(summary = "Lấy notification theo id", description = "Get a specific admin notification by ID")
+        @GetMapping("/{notificationId}")
+        public ResponseEntity<?> getNotificationById(
+                        @Parameter(description = "Notification ID", required = true) @PathVariable String notificationId,
+                        @AuthenticationPrincipal User user) throws Exception {
 
-    @Operation(summary = "Đánh dấu tất cả notification là đã đọc", description = "Mark all admin notifications as read")
-    @PutMapping("/mark-all-read")
-    public ResponseEntity<?> markAllNotificationsAsRead(@AuthenticationPrincipal User user) throws Exception{
-            notificationService.markAllAdminNotificationsAsRead();
+                Notification notification = notificationService.getAdminNotifications(null)
+                                .stream()
+                                .filter(n -> n.getId().equals(notificationId))
+                                .findFirst()
+                                .orElseThrow(() -> new RuntimeException("Notification not found"));
 
-            return ResponseEntity.ok(ApiResponse.ok("Đã đánh dấu tất cả thông báo là đã đọc"));
-    }
+                return ResponseEntity.ok(ApiResponse.ok(AdminNotificationResponse.fromNotification(notification)));
+        }
 
-    @Operation(summary = "Xóa notification", description = "Delete a specific admin notification")
-    @DeleteMapping("/{notificationId}")
-    public ResponseEntity<?> deleteNotification(
-            @Parameter(description = "Notification ID", required = true) @PathVariable String notificationId,
-            @AuthenticationPrincipal User user) throws Exception{
+        @Operation(summary = "Lấy notification theo type", description = "Get all admin notifications filtered by type")
+        @GetMapping("/by-type/{type}")
+        public ResponseEntity<?> getNotificationsByType(
+                        @Parameter(description = "Notification type (STORE_APPROVAL, PRODUCT_APPROVAL, WITHDRAWAL_REQUEST, SYSTEM)", required = true) @PathVariable String type,
+                        @Parameter(description = "Page number (0-indexed)", required = false, example = "0") @RequestParam(defaultValue = "0") int page,
+                        @Parameter(description = "Page size", required = false, example = "10") @RequestParam(defaultValue = "10") int size,
+                        @AuthenticationPrincipal User user) throws Exception {
 
-            notificationService.deleteNotification(notificationId);
+                Pageable pageable = PageRequest.of(page, size);
+                Page<Notification> notificationPage = notificationService.getAdminNotificationsByTypePage(type,
+                                pageable);
+                Page<AdminNotificationResponse> adminNotificationResponses = notificationPage
+                                .map(AdminNotificationResponse::fromNotification);
 
-            return ResponseEntity.ok(ApiResponse.ok("Đã xóa thông báo thành công"));
-    }
+                Map<String, Object> response = new HashMap<>();
+                response.put("notifications", adminNotificationResponses.getContent());
+                response.put("type", type);
+                response.put("page", notificationPage.getNumber());
+                response.put("size", notificationPage.getSize());
+                response.put("total", notificationPage.getTotalElements());
+                response.put("totalPages", notificationPage.getTotalPages());
 
-    @Operation(summary = "Lấy notification theo id", description = "Get a specific admin notification by ID")
-    @GetMapping("/{notificationId}")
-    public ResponseEntity<?> getNotificationById(
-            @Parameter(description = "Notification ID", required = true) @PathVariable String notificationId,
-            @AuthenticationPrincipal User user) throws Exception {
+                return ResponseEntity.ok(ApiResponse.ok(response));
+        }
 
-            Notification notification = notificationService.getAdminNotifications(null)
-                    .stream()
-                    .filter(n -> n.getId().equals(notificationId))
-                    .findFirst()
-                    .orElseThrow(() -> new RuntimeException("Notification not found"));
+        @Operation(summary = "Đánh dấu notification là đã đọc", description = "Mark a specific admin notification as read")
+        @PutMapping("/{notificationId}/read")
+        public ResponseEntity<?> markNotificationAsRead(
+                        @Parameter(description = "Notification ID", required = true) @PathVariable String notificationId,
+                        @AuthenticationPrincipal User user) throws Exception {
 
-            return ResponseEntity.ok(ApiResponse.ok(AdminNotificationResponse.fromNotification(notification)));
-    }
+                notificationService.markAdminNotificationAsRead(notificationId);
 
-    @Operation(summary = "Lấy notification theo type", description = "Get all admin notifications filtered by type")
-    @GetMapping("/by-type/{type}")
-    public ResponseEntity<?> getNotificationsByType(
-            @Parameter(description = "Notification type (STORE_APPROVAL, PRODUCT_APPROVAL, WITHDRAWAL_REQUEST, SYSTEM)", required = true) @PathVariable String type,
-            @Parameter(description = "Page number (0-indexed)", required = false, example = "0") @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "Page size", required = false, example = "10") @RequestParam(defaultValue = "10") int size,
-            @AuthenticationPrincipal User user) throws Exception {
+                return ResponseEntity.ok(ApiResponse.ok("Đã đánh dấu thông báo là đã đọc"));
+        }
 
-            Pageable pageable = PageRequest.of(page, size);
-            Page<Notification> notificationPage = notificationService.getAdminNotificationsByTypePage(type, pageable);
-            Page<AdminNotificationResponse> adminNotificationResponses = notificationPage.map(AdminNotificationResponse::fromNotification);
+        @Operation(summary = "Đánh dấu tất cả notification là đã đọc", description = "Mark all admin notifications as read")
+        @PutMapping("/mark-all-read")
+        public ResponseEntity<?> markAllNotificationsAsRead(@AuthenticationPrincipal User user) throws Exception {
+                notificationService.markAllAdminNotificationsAsRead();
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("notifications", adminNotificationResponses.getContent());
-            response.put("type", type);
-            response.put("page", notificationPage.getNumber());
-            response.put("size", notificationPage.getSize());
-            response.put("total", notificationPage.getTotalElements());
-            response.put("totalPages", notificationPage.getTotalPages());
+                return ResponseEntity.ok(ApiResponse.ok("Đã đánh dấu tất cả thông báo là đã đọc"));
+        }
 
-            return ResponseEntity.ok(ApiResponse.ok(response));
-    }
+        @Operation(summary = "Xóa notification", description = "Delete a specific admin notification")
+        @DeleteMapping("/{notificationId}")
+        public ResponseEntity<?> deleteNotification(
+                        @Parameter(description = "Notification ID", required = true) @PathVariable String notificationId,
+                        @AuthenticationPrincipal User user) throws Exception {
+
+                notificationService.deleteNotification(notificationId);
+
+                return ResponseEntity.ok(ApiResponse.ok("Đã xóa thông báo thành công"));
+        }
 }

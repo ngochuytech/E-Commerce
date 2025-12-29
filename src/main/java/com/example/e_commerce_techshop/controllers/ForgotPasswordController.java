@@ -19,16 +19,16 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequiredArgsConstructor
-@Tag(name = "Password Reset", description = "API for forgot password functionality - sends new random password via email")
+@Tag(name = "Password Reset", description = "API cho việc đặt lại mật khẩu người dùng")
 public class ForgotPasswordController {
     private final IUserService userService;
     private final SendGridEmailService sendGridEmailService;
 
     @PostMapping("/forgot-password")
-    @Operation(summary = "Request password reset", description = "Generate new random password and send to user's email address")
+    @Operation(summary = "Yêu cầu đặt lại mật khẩu", description = "Tạo mật khẩu ngẫu nhiên mới và gửi đến địa chỉ email của người dùng")
     public ResponseEntity<?> processForgotPassword(
             HttpServletRequest request,
-            @Parameter(description = "User's email address", example = "user@example.com") @RequestParam String email)
+            @Parameter(description = "Địa chỉ email của người dùng", example = "user@example.com") @RequestParam String email)
             throws Exception {
             User user = userService.findByEmail(email);
             if (user == null) {

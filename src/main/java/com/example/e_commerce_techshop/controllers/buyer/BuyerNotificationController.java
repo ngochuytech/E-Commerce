@@ -24,13 +24,13 @@ import java.util.Map;
 @RestController
 @RequestMapping("${api.prefix}/buyer/notifications")
 @RequiredArgsConstructor
-@Tag(name = "Buyer Notification Management", description = "APIs for buyers to manage their notifications")
+@Tag(name = "Buyer Notification Management", description = "API cho quản lý thông báo của người mua")
 @SecurityRequirement(name = "Bearer Authentication")
 public class BuyerNotificationController {
 
     private final INotificationService notificationService;
 
-    @Operation(summary = "Lấy danh sách notification của buyer", description = "Retrieve all notifications for the current buyer")
+    @Operation(summary = "Lấy danh sách notification của buyer", description = "Lấy danh sách phân trang các notification của người mua với tùy chọn lọc theo trạng thái đã đọc")
     @GetMapping
     public ResponseEntity<?> getNotifications(
             @Parameter(description = "Filter by read status (true/false)", required = false) @RequestParam(required = false) Boolean isRead,
@@ -51,7 +51,7 @@ public class BuyerNotificationController {
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
-    @Operation(summary = "Lấy số notification chưa đọc", description = "Get the number of unread notifications for the current buyer")
+    @Operation(summary = "Lấy số notification chưa đọc", description = "Lấy số lượng notification chưa đọc của người mua hiện tại")
     @GetMapping("/unread-count")
     public ResponseEntity<?> getUnreadCount(@AuthenticationPrincipal User user) throws Exception {
         long unreadCount = notificationService.getUserUnreadCount(user.getId());
@@ -62,7 +62,7 @@ public class BuyerNotificationController {
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
-    @Operation(summary = "Đánh dấu 1 notification là đã đọc", description = "Mark a specific notification as read")
+    @Operation(summary = "Đánh dấu 1 notification là đã đọc", description = "Đánh dấu một notification cụ thể là đã đọc")
     @PutMapping("/{notificationId}/read")
     public ResponseEntity<?> markAsRead(
             @Parameter(description = "Notification ID", required = true) @PathVariable String notificationId)
@@ -72,14 +72,14 @@ public class BuyerNotificationController {
         return ResponseEntity.ok(ApiResponse.ok("Đánh dấu thành công"));
     }
 
-    @Operation(summary = "Đánh dấu tất cả notification là đã đọc", description = "Mark all notifications as read for the current buyer")
+    @Operation(summary = "Đánh dấu tất cả notification là đã đọc", description = "Đánh dấu tất cả notification là đã đọc cho người mua hiện tại")
     @PutMapping("/read-all")
     public ResponseEntity<?> markAllAsRead(@AuthenticationPrincipal User user) throws Exception {
         notificationService.markAllAsRead(user.getId());
         return ResponseEntity.ok(ApiResponse.ok("Đánh dấu tất cả thành công"));
     }
 
-    @Operation(summary = "Xóa 1 notification", description = "Delete a specific notification")
+    @Operation(summary = "Xóa 1 notification", description = "Xóa một notification cụ thể")
     @DeleteMapping("/{notificationId}")
     public ResponseEntity<?> deleteNotification(
             @Parameter(description = "Notification ID", required = true) @PathVariable String notificationId)

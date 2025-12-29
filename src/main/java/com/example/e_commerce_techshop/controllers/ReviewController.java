@@ -27,17 +27,14 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("${api.prefix}/reviews")
 @RequiredArgsConstructor
-@Tag(name = "Review Management", description = "APIs for product reviews and rating statistics")
+@Tag(name = "Review Management", description = "API cho quản lý đánh giá sản phẩm")
 @SecurityRequirement(name = "bearerAuth")
 public class ReviewController {
 
     private final ReviewService reviewService;
 
-    /**
-     * Lấy danh sách reviews theo product ID
-     */
     @GetMapping("/product/{productId}")
-    @Operation(summary = "Get reviews by product", description = "Retrieve paginated reviews for a specific product with sorting options")
+    @Operation(summary = "Lấy đánh giá theo sản phẩm", description = "Lấy danh sách đánh giá phân trang cho một sản phẩm cụ thể với các tùy chọn sắp xếp")
     public ResponseEntity<ApiResponse<Page<ReviewResponse>>> getReviewsByProduct(
             @Parameter(description = "Product ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String productId,
             @Parameter(description = "Page number (0-based)", example = "0") @RequestParam(defaultValue = "0") int page,
@@ -55,11 +52,8 @@ public class ReviewController {
         return ResponseEntity.ok(ApiResponse.ok(reviewResponses));
     }
 
-    /**
-     * Lấy danh sách reviews theo product variant ID
-     */
     @GetMapping("/product-variant/{productVariantId}")
-    @Operation(summary = "Get reviews by product variant", description = "Retrieve paginated reviews for a specific product variant with sorting options")
+    @Operation(summary = "Lấy đánh giá theo biến thể sản phẩm", description = "Lấy danh sách đánh giá phân trang cho một biến thể sản phẩm cụ thể với các tùy chọn sắp xếp")
     public ResponseEntity<ApiResponse<Page<ReviewResponse>>> getReviewsByProductVariant(
             @Parameter(description = "Product variant ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String productVariantId,
             @Parameter(description = "Page number (0-based)", example = "0") @RequestParam(defaultValue = "0") int page,
@@ -77,11 +71,8 @@ public class ReviewController {
         return ResponseEntity.ok(ApiResponse.ok(reviewResponses));
     }
 
-    /**
-     * Lấy thông tin chi tiết một review
-     */
     @GetMapping("/{reviewId}")
-    @Operation(summary = "Get review by ID", description = "Retrieve detailed information of a specific review")
+    @Operation(summary = "Lấy đánh giá theo ID", description = "Lấy thông tin chi tiết của một đánh giá cụ thể")
     public ResponseEntity<ApiResponse<ReviewResponse>> getReviewById(
             @Parameter(description = "Review ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String reviewId)
             throws Exception {
@@ -90,11 +81,8 @@ public class ReviewController {
         return ResponseEntity.ok(ApiResponse.ok(reviewResponse));
     }
 
-    /**
-     * Lấy thống kê rating cho một sản phẩm
-     */
     @GetMapping("/product-variant/{productVariantId}/stats")
-    @Operation(summary = "Get product rating statistics", description = "Get rating statistics for a product variant including average rating, total reviews, and rating distribution")
+    @Operation(summary = "Lấy thống kê đánh giá sản phẩm", description = "Lấy thống kê đánh giá cho một biến thể sản phẩm bao gồm điểm đánh giá trung bình, tổng số đánh giá và phân bố đánh giá")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getProductRatingStats(
             @Parameter(description = "Product variant ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String productVariantId)
             throws Exception {

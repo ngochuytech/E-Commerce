@@ -27,14 +27,14 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RestController
 @RequestMapping("${api.prefix}/brands")
 @RequiredArgsConstructor
-@Tag(name = "Brand Management", description = "APIs for managing product brands")
+@Tag(name = "Brand Management", description = "API cho quản lý thương hiệu sản phẩm")
 @SecurityRequirement(name = "bearerAuth")
 public class BrandController {
 
     private final BrandService brandService;
 
     @GetMapping
-    @Operation(summary = "Get all brands with pagination", description = "Retrieve paginated list of brands with sorting options")
+    @Operation(summary = "Lấy tất cả thương hiệu với phân trang", description = "Lấy danh sách các thương hiệu sản phẩm với tùy chọn phân trang và sắp xếp")
     public ResponseEntity<List<BrandDTO>> getAllBrands(
             @Parameter(description = "Page number (0-based)", example = "0") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Number of items per page", example = "10") @RequestParam(defaultValue = "10") int size,
@@ -56,7 +56,7 @@ public class BrandController {
     }
 
     @GetMapping("/all")
-    @Operation(summary = "Get all brands without pagination", description = "Retrieve complete list of all brands")
+    @Operation(summary = "Lấy tất cả thương hiệu không phân trang", description = "Lấy danh sách đầy đủ tất cả các thương hiệu sản phẩm mà không cần phân trang")
     public ResponseEntity<List<BrandDTO>> getAllBrandsWithoutPagination() {
         List<Brand> brands = brandService.getAllBrands();
         List<BrandDTO> brandDTOs = brands.stream()
@@ -67,7 +67,7 @@ public class BrandController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get brand by ID", description = "Retrieve a specific brand by its ID")
+    @Operation(summary = "Lấy thương hiệu theo ID", description = "Lấy thông tin chi tiết của một thương hiệu cụ thể theo ID")
     public ResponseEntity<BrandDTO> getBrandById(
             @Parameter(description = "Brand ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String id)
             throws Exception {
@@ -77,19 +77,19 @@ public class BrandController {
     }
 
     @PostMapping
-    @Operation(summary = "Create new brand", description = "Create a new brand with validation")
+    @Operation(summary = "Tạo thương hiệu mới", description = "Tạo một thương hiệu mới với kiểm tra hợp lệ")
     public ResponseEntity<?> createBrand(
-            @Parameter(description = "Brand information") @Valid @RequestBody BrandDTO brandDTO,
+            @Parameter(description = "Thông tin thương hiệu") @Valid @RequestBody BrandDTO brandDTO,
             BindingResult result) throws Exception {
         brandService.createBrand(brandDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("Tạo thương hiệu thành công"));
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update brand", description = "Update an existing brand by ID")
+    @Operation(summary = "Cập nhật thương hiệu", description = "Cập nhật thông tin của một thương hiệu cụ thể theo ID")
     public ResponseEntity<?> updateBrand(
             @Parameter(description = "Brand ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String id,
-            @Parameter(description = "Updated brand information") @Valid @RequestBody BrandDTO brandDTO,
+            @Parameter(description = "Thông tin thương hiệu cập nhật") @Valid @RequestBody BrandDTO brandDTO,
             BindingResult result) throws Exception {
 
         if (result.hasErrors()) {
@@ -105,17 +105,8 @@ public class BrandController {
         return ResponseEntity.ok(updatedBrandDTO);
     }
 
-    @DeleteMapping("/{id}")
-    @Operation(summary = "Delete brand", description = "Delete a brand by ID")
-    public ResponseEntity<Void> deleteBrand(
-            @Parameter(description = "Brand ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String id)
-            throws Exception {
-        brandService.deleteBrand(id);
-        return ResponseEntity.noContent().build();
-    }
-
     @GetMapping("/{id}/exists")
-    @Operation(summary = "Check if brand exists by ID", description = "Check whether a brand exists by its ID")
+    @Operation(summary = "Kiểm tra sự tồn tại của thương hiệu theo ID", description = "Kiểm tra xem một thương hiệu có tồn tại hay không dựa trên ID của nó")
     public ResponseEntity<Boolean> checkBrandExists(
             @Parameter(description = "Brand ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String id) {
         boolean exists = brandService.existsById(id);
@@ -123,19 +114,28 @@ public class BrandController {
     }
 
     @GetMapping("/name/{name}")
-    @Operation(summary = "Get brand by name", description = "Retrieve a specific brand by its name")
+    @Operation(summary = "Lấy thương hiệu theo tên", description = "Lấy thông tin chi tiết của một thương hiệu cụ thể theo tên")
     public ResponseEntity<BrandDTO> getBrandByName(
-            @Parameter(description = "Brand name", example = "Apple") @PathVariable String name) throws Exception {
+            @Parameter(description = "Tên thương hiệu", example = "Apple") @PathVariable String name) throws Exception {
         Brand brand = brandService.findByName(name);
         BrandDTO brandDTO = brandService.convertToDTO(brand);
         return ResponseEntity.ok(brandDTO);
     }
 
     @GetMapping("/name/{name}/exists")
-    @Operation(summary = "Check if brand exists by name", description = "Check whether a brand exists by its name")
+    @Operation(summary = "Kiểm tra sự tồn tại của thương hiệu theo tên", description = "Kiểm tra xem một thương hiệu có tồn tại hay không dựa trên tên của nó")
     public ResponseEntity<Boolean> checkBrandExistsByName(
-            @Parameter(description = "Brand name", example = "Apple") @PathVariable String name) {
+            @Parameter(description = "Tên thương hiệu", example = "Apple") @PathVariable String name) {
         boolean exists = brandService.existsByName(name);
         return ResponseEntity.ok(exists);
+    }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Xóa thương hiệu", description = "Xóa một thương hiệu theo ID")
+    public ResponseEntity<Void> deleteBrand(
+            @Parameter(description = "Brand ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String id)
+            throws Exception {
+        brandService.deleteBrand(id);
+        return ResponseEntity.noContent().build();
     }
 }

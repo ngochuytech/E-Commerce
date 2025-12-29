@@ -53,7 +53,7 @@ public class B2CProductVariantController {
     private final IProductService productService;
 
     @GetMapping("/{storeId}")
-    @Operation(summary = "Get all product variants", description = "Retrieve a list of all product variants for a specific store")
+    @Operation(summary = "Lấy danh sách biến thể sản phẩm của cửa hàng", description = "Lấy danh sách tất cả biến thể sản phẩm cho một cửa hàng cụ thể")
     public ResponseEntity<?> getAllProductVariant(
             @PathVariable String storeId,
             @Parameter(description = "Filter by status") @RequestParam(required = false) String status,
@@ -75,7 +75,7 @@ public class B2CProductVariantController {
     }
 
     @GetMapping("/store/{storeId}/search")
-    @Operation(summary = "Search product variants in store", description = "Search for product variants by name within a specific store")
+    @Operation(summary = "Tìm kiếm biến thể sản phẩm trong cửa hàng", description = "Tìm kiếm biến thể sản phẩm theo tên trong một cửa hàng cụ thể")
     public ResponseEntity<?> searchProductVariants(
             @Parameter(description = "Store ID to search within", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
             @Parameter(description = "Product name or keyword to search", required = true, example = "iPhone") @RequestParam String name,
@@ -90,32 +90,11 @@ public class B2CProductVariantController {
                 : Sort.by(sortBy).ascending();
 
         Pageable pageable = PageRequest.of(page, size, sort);
-        Page<ProductVariant> productVariants = productVariantService.searchByStoreAndName(storeId, name, status, pageable);
+        Page<ProductVariant> productVariants = productVariantService.searchByStoreAndName(storeId, name, status,
+                pageable);
         Page<ProductVariantResponse> productVariantResponses = productVariants
                 .map(ProductVariantResponse::fromProductVariant);
         return ResponseEntity.ok(ApiResponse.ok(productVariantResponses));
-    }
-
-    @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Create product variant", description = "Create a new product variant with specifications like size, color, price, and multiple product images")
-    public ResponseEntity<?> createProductVariant(
-            @Parameter(description = "Product variant information including product ID, size, color, price, stock quantity", required = true, content = @Content(schema = @Schema(implementation = ProductVariantDTO.class))) @RequestPart("dto") @Valid ProductVariantDTO productVariantDTO,
-            @Parameter(description = "Product variant images (multiple files supported)", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE)) @RequestPart(value = "images", required = false) List<MultipartFile> imageFiles,
-            @Parameter(description = "Index of the primary image in the images list", required = false) @RequestPart(value = "primaryImageIndex", required = false) String primaryImageIndex,
-            @Parameter(hidden = true) BindingResult result) throws Exception {
-        if (result.hasErrors()) {
-            List<String> errorMessages = result.getFieldErrors()
-                    .stream()
-                    .map(FieldError::getDefaultMessage)
-                    .toList();
-            return ResponseEntity.badRequest().body(ApiResponse.error(String.join(",", errorMessages)));
-        }
-        // Kiểm tra shop có bị banned không
-        Product product = productService.getProductById(productVariantDTO.getProductId());
-        storeService.validateStoreNotBanned(product.getStore().getId());
-        
-        productVariantService.createProductVariant(productVariantDTO, imageFiles, primaryImageIndex);
-        return ResponseEntity.ok(ApiResponse.ok("Tạo mẫu sản phẩm mới thành công!"));
     }
 
     @GetMapping("/store/{storeId}/count-by-status")
@@ -127,21 +106,43 @@ public class B2CProductVariantController {
         return ResponseEntity.ok(ApiResponse.ok(countByStatus));
     }
 
+    @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Tạo biến thể sản phẩm", description = "Tạo một biến thể sản phẩm mới với các thông số kỹ thuật như kích thước, màu sắc, giá, và nhiều hình ảnh sản phẩm")
+    public ResponseEntity<?> createProductVariant(
+            @Parameter(description = "Thông tin biến thể sản phẩm bao gồm ID sản phẩm, kích thước, màu sắc, giá, số lượng tồn kho", required = true, content = @Content(schema = @Schema(implementation = ProductVariantDTO.class))) @RequestPart("dto") @Valid ProductVariantDTO productVariantDTO,
+            @Parameter(description = "Hình ảnh biến thể sản phẩm (hỗ trợ nhiều file)", content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE)) @RequestPart(value = "images", required = false) List<MultipartFile> imageFiles,
+            @Parameter(description = "Chỉ số của hình ảnh chính trong danh sách hình ảnh", required = false) @RequestPart(value = "primaryImageIndex", required = false) String primaryImageIndex,
+            @Parameter(hidden = true) BindingResult result) throws Exception {
+        if (result.hasErrors()) {
+            List<String> errorMessages = result.getFieldErrors()
+                    .stream()
+                    .map(FieldError::getDefaultMessage)
+                    .toList();
+            return ResponseEntity.badRequest().body(ApiResponse.error(String.join(",", errorMessages)));
+        }
+        // Kiểm tra shop có bị banned không
+        Product product = productService.getProductById(productVariantDTO.getProductId());
+        storeService.validateStoreNotBanned(product.getStore().getId());
+
+        productVariantService.createProductVariant(productVariantDTO, imageFiles, primaryImageIndex);
+        return ResponseEntity.ok(ApiResponse.ok("Tạo mẫu sản phẩm mới thành công!"));
+    }
+
     @PostMapping(value = "/create-without-image")
-    @Operation(summary = "Create product variant without images", description = "Create a new product variant with basic information (size, color, price) without uploading images. Images can be added later using the upload endpoint.")
+    @Operation(summary = "Tạo mẫu sản phẩm không có hình ảnh", description = "Tạo một mẫu sản phẩm mới với thông tin cơ bản (kích thước, màu sắc, giá) mà không cần tải lên hình ảnh. Hình ảnh có thể được thêm sau bằng cách sử dụng endpoint tải lên.")
     public ResponseEntity<?> createProductVariantWithoutImage(
             @Parameter(description = "Product variant information including product ID, size, color, price, and stock quantity", required = true, content = @Content(schema = @Schema(implementation = ProductVariantDTO.class))) @RequestBody @Valid ProductVariantDTO productVariantDTO)
             throws Exception {
         // Kiểm tra shop có bị banned không
         Product product = productService.getProductById(productVariantDTO.getProductId());
         storeService.validateStoreNotBanned(product.getStore().getId());
-        
+
         productVariantService.createProductVariant(productVariantDTO);
         return ResponseEntity.ok(ApiResponse.ok("Tạo mẫu sản phẩm mới thành công!"));
     }
 
     @PostMapping(value = "/add-colors/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Add color option to product variant", description = "Add a new color option to an existing product variant with its specific image")
+    @Operation(summary = "Thêm tùy chọn màu sắc cho mẫu sản phẩm", description = "Thêm một tùy chọn màu sắc mới cho một mẫu sản phẩm hiện có cùng với hình ảnh cụ thể của nó")
     public ResponseEntity<?> addProductVariantColors(
             @Parameter(description = "ID of the product variant to add color to", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable("id") String productVariantId,
             @Parameter(description = "Color option information including color name, hex code, and additional properties", required = true, content = @Content(schema = @Schema(implementation = ColorOption.class))) @Valid @RequestPart("dto") ColorOption colorOptionDTO,
@@ -150,13 +151,13 @@ public class B2CProductVariantController {
         // Kiểm tra shop có bị banned không
         ProductVariant variant = productVariantService.getProductVariantById(productVariantId);
         storeService.validateStoreNotBanned(variant.getProduct().getStore().getId());
-        
+
         productVariantService.addProductVariantColors(productVariantId, colorOptionDTO, imageFile);
         return ResponseEntity.ok(ApiResponse.ok("Tạo màu sắc mẫu sản phẩm thành công!"));
     }
 
     @PutMapping(value = "/update-colors/{id}/color/{colorId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Update specific color option", description = "Update a specific color option of a product variant including its image")
+    @Operation(summary = "Cập nhật tùy chọn màu sắc cụ thể", description = "Cập nhật một tùy chọn màu sắc cụ thể của một mẫu sản phẩm bao gồm hình ảnh của nó")
     public ResponseEntity<?> updateProductVariantColors(
             @Parameter(description = "ID of the product variant", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable("id") String productVariantId,
             @Parameter(description = "ID of the specific color option to update", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d2") @PathVariable("colorId") String colorId,
@@ -166,13 +167,13 @@ public class B2CProductVariantController {
         // Kiểm tra shop có bị banned không
         ProductVariant variant = productVariantService.getProductVariantById(productVariantId);
         storeService.validateStoreNotBanned(variant.getProduct().getStore().getId());
-        
+
         productVariantService.updateProductVariantColors(productVariantId, colorId, colorOptionDTO, imageFile);
         return ResponseEntity.ok(ApiResponse.ok("Cập nhật màu sắc mẫu sản phẩm thành công!"));
     }
 
     @PutMapping(value = "/update-images/{variantId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Update product variant images", description = "Update the images of a product variant by replacing existing images with new ones and select which image should be the primary image")
+    @Operation(summary = "Cập nhật hình ảnh mẫu sản phẩm", description = "Cập nhật hình ảnh của một mẫu sản phẩm bằng cách thay thế các hình ảnh hiện có bằng những hình ảnh mới và chọn hình ảnh nào sẽ là hình ảnh chính")
     public ResponseEntity<?> updateProductVariantImages(
             @Parameter(description = "Id của product variant", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable("variantId") String productVariantId,
             @Parameter(description = "File ảnh mới để cập nhật ảnh cho variant", required = true, content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE)) @RequestPart("images") List<MultipartFile> imageFiles,
@@ -181,51 +182,50 @@ public class B2CProductVariantController {
         // Kiểm tra shop có bị banned không
         ProductVariant variant = productVariantService.getProductVariantById(productVariantId);
         storeService.validateStoreNotBanned(variant.getProduct().getStore().getId());
-        
+
         productVariantService.updateProductVariantImages(productVariantId, imageFiles, indexPrimary);
         return ResponseEntity.ok(ApiResponse.ok("Cập nhật hình ảnh mẫu sản phẩm thành công!"));
     }
 
-
     @PutMapping("/update-stock/{id}")
-    @Operation(summary = "Update product variant stock", description = "Update the stock quantity of a product variant. Only affects inventory quantity, price remains unchanged.")
+    @Operation(summary = "Cập nhật số lượng tồn kho mẫu sản phẩm", description = "Cập nhật số lượng tồn kho của một mẫu sản phẩm. Chỉ ảnh hưởng đến số lượng tồn kho, giá không thay đổi.")
     public ResponseEntity<?> updateStock(
-            @Parameter(description = "ID of the product variant to update", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable("id") String productVariantId,
-            @Parameter(description = "New stock quantity", required = true, example = "100") @RequestBody int newStock)
+            @Parameter(description = "ID của mẫu sản phẩm cần cập nhật", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable("id") String productVariantId,
+            @Parameter(description = "Số lượng tồn kho mới", required = true, example = "100") @RequestBody int newStock)
             throws Exception {
         // Kiểm tra shop có bị banned không
         ProductVariant variant = productVariantService.getProductVariantById(productVariantId);
         storeService.validateStoreNotBanned(variant.getProduct().getStore().getId());
-        
+
         productVariantService.updateStock(productVariantId, newStock);
         return ResponseEntity.ok(ApiResponse.ok("Cập nhật số lượng tồn kho thành công!"));
     }
 
     @PutMapping("/update-price/{id}")
-    @Operation(summary = "Update product variant price", description = "Update the selling price of a product variant. Only affects price, stock quantity remains unchanged.")
+    @Operation(summary = "Cập nhật giá bán mẫu sản phẩm", description = "Cập nhật giá bán của một mẫu sản phẩm. Chỉ ảnh hưởng đến giá, số lượng tồn kho không thay đổi.")
     public ResponseEntity<?> updatePrice(
-            @Parameter(description = "ID of the product variant to update", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable("id") String productVariantId,
-            @Parameter(description = "New selling price in VND", required = true, example = "15000000") @RequestBody Long newPrice)
+            @Parameter(description = "ID của mẫu sản phẩm cần cập nhật", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable("id") String productVariantId,
+            @Parameter(description = "Giá bán mới tính bằng VND", required = true, example = "15000000") @RequestBody Long newPrice)
             throws Exception {
         // Kiểm tra shop có bị banned không
         ProductVariant variant = productVariantService.getProductVariantById(productVariantId);
         storeService.validateStoreNotBanned(variant.getProduct().getStore().getId());
-        
+
         productVariantService.updatePrice(productVariantId, newPrice);
         return ResponseEntity.ok(ApiResponse.ok("Cập nhật giá bán thành công!"));
     }
 
     @DeleteMapping("/delete/{id}")
-    @Operation(summary = "Delete product variant", description = "Soft delete a product variant by disabling it (sets status to inactive)")
+    @Operation(summary = "Xóa mẫu sản phẩm", description = "Xóa mềm một mẫu sản phẩm bằng cách vô hiệu hóa nó (đặt trạng thái thành không hoạt động)")
     public ResponseEntity<?> deleteProductVariant(
-            @Parameter(description = "ID of the product variant to delete", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable("id") String productVariantId)
+            @Parameter(description = "ID của mẫu sản phẩm cần xóa", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable("id") String productVariantId)
             throws Exception {
         productVariantService.disableProduct(productVariantId);
         return ResponseEntity.ok(ApiResponse.ok("Xóa mẫu sản phẩm thành công!"));
     }
 
     @DeleteMapping("/delete-color/{variantId}/color/{colorId}")
-    @Operation(summary = "Delete color option from product variant", description = "Remove a specific color option from a product variant and automatically update the variant's total stock and price based on remaining colors")
+    @Operation(summary = "Xóa tùy chọn màu sắc khỏi mẫu sản phẩm", description = "Xóa một tùy chọn màu sắc cụ thể khỏi một mẫu sản phẩm và tự động cập nhật tổng số lượng tồn kho và giá của mẫu dựa trên các màu còn lại")
     public ResponseEntity<?> deleteProductVariantColor(
             @Parameter(description = "ID of the product variant", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable("variantId") String productVariantId,
             @Parameter(description = "ID of the color option to delete", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d2") @PathVariable("colorId") String colorId)

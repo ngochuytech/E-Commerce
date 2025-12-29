@@ -58,7 +58,7 @@ public class B2COrderController {
      * GET /api/v1/b2c/orders?storeId={storeId}
      */
     @GetMapping("")
-    @Operation(summary = "Get store orders", description = "Retrieve paginated list of orders for a specific store with optional status filtering")
+    @Operation(summary = "Lấy danh sách đơn hàng của cửa hàng", description = "Lấy danh sách đơn hàng phân trang cho một cửa hàng cụ thể với tùy chọn lọc theo trạng thái")
     public ResponseEntity<?> getStoreOrders(
             @Parameter(description = "ID of the store", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @RequestParam String storeId,
             @Parameter(description = "Page number (0-based)", example = "0") @RequestParam(defaultValue = "0") int page,
@@ -82,7 +82,7 @@ public class B2COrderController {
      * GET /api/v1/b2c/orders/{orderId}?storeId={storeId}
      */
     @GetMapping("/{orderId}")
-    @Operation(summary = "Get store order detail", description = "Retrieve detailed information of a specific order for a store")
+    @Operation(summary = "Lấy chi tiết đơn hàng của cửa hàng", description = "Lấy thông tin chi tiết của một đơn hàng cụ thể cho một cửa hàng")
     public ResponseEntity<?> getStoreOrderDetail(
             @Parameter(description = "ID of the order", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d2") @PathVariable String orderId,
             @Parameter(description = "ID of the store", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @RequestParam String storeId,
@@ -109,7 +109,7 @@ public class B2COrderController {
      * PUT /api/v1/b2c/orders/{orderId}/confirm?storeId={storeId}
      */
     @PutMapping("/{orderId}/confirm")
-    @Operation(summary = "Confirm order", description = "Confirm a pending order and change status to CONFIRMED")
+    @Operation(summary = "Xác nhận đơn hàng", description = "Xác nhận một đơn hàng đang chờ và thay đổi trạng thái thành CONFIRMED")
     public ResponseEntity<?> confirmOrder(
             @Parameter(description = "ID of the order to confirm", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d2") @PathVariable String orderId,
             @Parameter(description = "ID of the store", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @RequestParam String storeId,

@@ -37,7 +37,7 @@ import lombok.RequiredArgsConstructor;
 public class AdminUserController {
         private final IUserService userService;
 
-        @Operation(summary = "Get users (admin)", description = "Retrieve paginated list of users with optional filters")
+        @Operation(summary = "Lấy danh sách người dùng (admin)", description = "Lấy danh sách người dùng phân trang với các bộ lọc tùy chọn")
         @GetMapping("")
         public ResponseEntity<?> getAllUsers(
                         @Parameter(description = "Filter by full name") @RequestParam(required = false) String userName,
@@ -57,7 +57,15 @@ public class AdminUserController {
                 return ResponseEntity.ok(ApiResponse.ok(userResponses));
         }
 
-        @Operation(summary = "Ban a user", description = "Ban a user (temporary or permanent) by admin")
+        @Operation(summary = "Kiểm tra trạng thái chặn", description = "Kiểm tra xem người dùng có đang bị chặn hay không")
+        @GetMapping("/check-ban/{userId}")
+        public ResponseEntity<?> checkBanStatus(@Parameter(description = "User ID") @PathVariable String userId) {
+                boolean isBanned = userService.isUserBanned(userId);
+                return ResponseEntity.ok(ApiResponse
+                                .ok("Trạng thái người dùng: " + (isBanned ? "Đã bị chặn" : "Đang hoạt động")));
+        }
+
+        @Operation(summary = "Chặn người dùng", description = "Chặn người dùng (tạm thời hoặc vĩnh viễn) bởi quản trị viên")
         @PostMapping("/ban")
         public ResponseEntity<?> banUser(
                         @Valid @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "BanUser payload", required = true) @RequestBody BanUserDTO banUserDTO,
@@ -66,7 +74,7 @@ public class AdminUserController {
                 return ResponseEntity.ok(ApiResponse.ok("Chặn người dùng thành công"));
         }
 
-        @Operation(summary = "Unban a user", description = "Remove ban for a user")
+        @Operation(summary = "Bỏ chặn người dùng", description = "Bỏ chặn một người dùng")
         @PostMapping("/unban/{userId}")
         public ResponseEntity<?> unbanUser(
                         @Parameter(description = "ID of user to unban") @PathVariable String userId,
@@ -76,11 +84,4 @@ public class AdminUserController {
                 return ResponseEntity.ok(ApiResponse.ok("Mở chặn người dùng thành công!"));
         }
 
-        @Operation(summary = "Check ban status", description = "Check whether a user is currently banned")
-        @GetMapping("/check-ban/{userId}")
-        public ResponseEntity<?> checkBanStatus(@Parameter(description = "User ID") @PathVariable String userId) {
-                boolean isBanned = userService.isUserBanned(userId);
-                return ResponseEntity.ok(ApiResponse
-                                .ok("Trạng thái người dùng: " + (isBanned ? "Đã bị chặn" : "Đang hoạt động")));
-        }
 }

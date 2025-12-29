@@ -32,7 +32,7 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("${api.prefix}/shipper")
 @RequiredArgsConstructor
 @Validated
-@Tag(name = "Shipper Management", description = "APIs for shippers to manage pickup and delivery of orders")
+@Tag(name = "Shipper Management", description = "API cho quản lý shipper")
 @SecurityRequirement(name = "bearerAuth")
 @PreAuthorize("hasRole('SHIPPER')")
 public class ShipperController {
@@ -69,6 +69,26 @@ public class ShipperController {
                 return ResponseEntity.ok(ApiResponse.ok(ShipmentResponse.fromShipment(shipment)));
         }
 
+        @GetMapping("/history")
+        @Operation(summary = "Lịch sử giao hàng của shipper đang đăng nhập", description = "Lấy lịch sử các đơn hàng đã giao hoàn thành hoặc thất bại (DELIVERED + FAILED)")
+        public ResponseEntity<?> getDeliveryHistory(
+                        @Parameter(description = "Page number (0-based)", example = "0") @RequestParam(defaultValue = "0") int page,
+                        @Parameter(description = "Page size", example = "20") @RequestParam(defaultValue = "20") int size,
+                        @Parameter(description = "Sort by field") @RequestParam(defaultValue = "updatedAt") String sortBy,
+                        @Parameter(description = "Sort direction: asc or desc") @RequestParam(defaultValue = "desc") String sortDir,
+                        @AuthenticationPrincipal User shipper)
+                        throws Exception {
+
+                Pageable pageable = PageRequest.of(page, size,
+                                sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending()
+                                                : Sort.by(sortBy).ascending());
+
+                Page<Shipment> history = shipmentService.getShipperShipments(shipper, pageable);
+
+                Page<ShipmentResponse> responsePage = history.map(ShipmentResponse::fromShipment);
+                return ResponseEntity.ok(ApiResponse.ok(responsePage));
+        }
+
         @PutMapping("/shipment/{shipmentId}/picking")
         @Operation(summary = "Shipper tới lấy hàng", description = "Shipper đang tới lấy đơn hàng từ shop")
         public ResponseEntity<?> confirmPickup(
@@ -94,9 +114,6 @@ public class ShipperController {
                                 "Đã xác nhận đã lấy hàng từ shop"));
         }
 
-        /**
-         * Shipper bắt đầu giao (PICKED -> SHIPPING)
-         */
         @PutMapping("/shipment/{shipmentId}/shipping")
         @Operation(summary = "Bắt đầu giao hàng", description = "Shipper xác nhận đã lấy hàng và bắt đầu vận chuyển (PICKED -> SHIPPING)")
         public ResponseEntity<?> startShipping(
@@ -110,9 +127,6 @@ public class ShipperController {
                                 "Đã xác nhận lấy hàng và bắt đầu giao hàng"));
         }
 
-        /**
-         * Shipper xác nhận đã giao hàng thành công (SHIPPING -> DELIVERED)
-         */
         @PutMapping("/shipment/{shipmentId}/delivered")
         @Operation(summary = "Hoàn thành giao hàng", description = "Shipper xác nhận đã giao hàng thành công (SHIPPING -> DELIVERED)")
         public ResponseEntity<?> completeDelivery(
@@ -126,9 +140,6 @@ public class ShipperController {
                                 "Đã xác nhận giao hàng thành công"));
         }
 
-        /**
-         * Shipper báo giao hàng thất bại (DELIVERED -> DELIVER_FAIL)
-         */
         @PutMapping("/shipment/{shipmentId}/fail")
         @Operation(summary = "Báo giao hàng thất bại", description = "Shipper báo cáo giao hàng thất bại với lý do (DELIVERED -> DELIVER_FAIL)")
         public ResponseEntity<?> failDelivery(
@@ -170,29 +181,6 @@ public class ShipperController {
 
                 return ResponseEntity.ok(ApiResponse.ok(
                                 "Đã hoàn thành trả hàng về shop"));
-        }
-
-        /**
-         * Lấy lịch sử giao hàng của shipper
-         */
-        @GetMapping("/history")
-        @Operation(summary = "Lịch sử giao hàng của shipper đang đăng nhập", description = "Lấy lịch sử các đơn hàng đã giao hoàn thành hoặc thất bại (DELIVERED + FAILED)")
-        public ResponseEntity<?> getDeliveryHistory(
-                        @Parameter(description = "Page number (0-based)", example = "0") @RequestParam(defaultValue = "0") int page,
-                        @Parameter(description = "Page size", example = "20") @RequestParam(defaultValue = "20") int size,
-                        @Parameter(description = "Sort by field") @RequestParam(defaultValue = "updatedAt") String sortBy,
-                        @Parameter(description = "Sort direction: asc or desc") @RequestParam(defaultValue = "desc") String sortDir,
-                        @AuthenticationPrincipal User shipper)
-                        throws Exception {
-
-                Pageable pageable = PageRequest.of(page, size,
-                                sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending()
-                                                : Sort.by(sortBy).ascending());
-
-                Page<Shipment> history = shipmentService.getShipperShipments(shipper, pageable);
-
-                Page<ShipmentResponse> responsePage = history.map(ShipmentResponse::fromShipment);
-                return ResponseEntity.ok(ApiResponse.ok(responsePage));
         }
 
 }

@@ -29,7 +29,7 @@ public class AdminOrderController {
     private final IReturnRequestService returnRequestService;
 
     @GetMapping("/{orderId}")
-    @Operation(summary = "Get order detail", description = "Retrieve detailed information of a specific order")
+    @Operation(summary = "Lấy chi tiết đơn hàng", description = "Lấy chi tiết đơn hàng theo ID cho admin")
     public ResponseEntity<?> getOrderDetail(
             @Parameter(description = "Order ID", example = "670e8b8b9b3c4a1b2c3d4e5f") @PathVariable String orderId) throws Exception {
         Order order = orderService.getOrderById(orderId);

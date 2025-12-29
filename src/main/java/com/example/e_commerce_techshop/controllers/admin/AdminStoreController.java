@@ -35,7 +35,7 @@ public class AdminStoreController {
     private final IStoreService storeService;
 
     @GetMapping("/pending")
-    @Operation(summary = "Get pending stores", description = "Retrieve all stores that are waiting for admin approval")
+    @Operation(summary = "Lấy cửa hàng đang chờ duyệt", description = "Lấy tất cả các cửa hàng đang chờ được quản trị viên duyệt")
     public ResponseEntity<?> getPendingStores(@RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
@@ -50,7 +50,7 @@ public class AdminStoreController {
     }
 
     @GetMapping("/approved")
-    @Operation(summary = "Get approved stores", description = "Retrieve all stores that have been approved by admin")
+    @Operation(summary = "Lấy cửa hàng đã duyệt", description = "Lấy tất cả các cửa hàng đã được quản trị viên duyệt")
     public ResponseEntity<?> getApprovedStores(@RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
@@ -65,7 +65,7 @@ public class AdminStoreController {
     }
 
     @PutMapping("/{storeId}/approve")
-    @Operation(summary = "Approve store", description = "Approve a pending store registration")
+    @Operation(summary = "Duyệt cửa hàng", description = "Duyệt đăng ký cửa hàng đang chờ")
     public ResponseEntity<?> approveStore(
             @Parameter(description = "ID of the store to approve", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId)
             throws Exception {
@@ -74,7 +74,7 @@ public class AdminStoreController {
     }
 
     @PutMapping("/{storeId}/reject")
-    @Operation(summary = "Reject store", description = "Reject a pending store registration with a reason")
+    @Operation(summary = "Từ chối cửa hàng", description = "Từ chối đăng ký cửa hàng đang chờ với lý do")
     public ResponseEntity<?> rejectStore(
             @Parameter(description = "ID of the store to reject", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
             @Parameter(description = "Reason for rejection", required = true, example = "Không đủ điều kiện kinh doanh") @RequestParam String reason)
@@ -84,7 +84,7 @@ public class AdminStoreController {
     }
 
     @PutMapping("/{storeId}/status")
-    @Operation(summary = "Update store status", description = "Update the status of a store (activate/deactivate)")
+    @Operation(summary = "Cập nhật trạng thái cửa hàng", description = "Cập nhật trạng thái của cửa hàng (kích hoạt/vô hiệu hóa)")
     public ResponseEntity<?> updateStoreStatus(
             @Parameter(description = "ID of the store to update", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
             @Parameter(description = "New status for the store", required = true, example = "ACTIVE") @RequestParam String status)
@@ -99,17 +99,8 @@ public class AdminStoreController {
         return ResponseEntity.ok(ApiResponse.ok("Cập nhật trạng thái cửa hàng thành công!"));
     }
 
-    @DeleteMapping("/{storeId}")
-    @Operation(summary = "Soft delete store", description = "Soft delete a store by marking it as deleted")
-    public ResponseEntity<?> softDeleteStore(
-            @Parameter(description = "ID of the store to delete", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId)
-            throws Exception {
-        storeService.updateStoreStatus(storeId, "DELETED");
-        return ResponseEntity.ok(ApiResponse.ok("Đã xóa (mềm) cửa hàng"));
-    }
-
     @PutMapping("/{storeId}/ban")
-    @Operation(summary = "Ban store", description = "Ban a store and automatically cancel all pending orders. Store will not be able to perform any operations.")
+    @Operation(summary = "Cấm cửa hàng", description = "Cấm một cửa hàng và tự động hủy tất cả các đơn hàng đang chờ. Cửa hàng sẽ không thể thực hiện bất kỳ thao tác nào.")
     public ResponseEntity<?> banStore(
             @Parameter(description = "ID of the store to ban", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId,
             @Parameter(description = "Reason for banning the store", required = true, example = "Vi phạm chính sách bán hàng") @RequestParam String reason)
@@ -119,11 +110,20 @@ public class AdminStoreController {
     }
 
     @PutMapping("/{storeId}/unban")
-    @Operation(summary = "Unban store", description = "Unban a previously banned store, restoring its status to APPROVED")
+    @Operation(summary = "Bỏ cấm cửa hàng", description = "Bỏ cấm một cửa hàng đã bị cấm trước đó, khôi phục trạng thái của nó về APPROVED")
     public ResponseEntity<?> unbanStore(
             @Parameter(description = "ID of the store to unban", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId)
             throws Exception {
         StoreResponse response = storeService.unbanStore(storeId);
         return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    @DeleteMapping("/{storeId}")
+    @Operation(summary = "Xóa cửa hàng", description = "Xóa mềm cửa hàng bằng cách đánh dấu là đã xóa")
+    public ResponseEntity<?> softDeleteStore(
+            @Parameter(description = "ID of the store to delete", required = true, example = "64f1a2b3c4d5e6f7a8b9c0d1") @PathVariable String storeId)
+            throws Exception {
+        storeService.updateStoreStatus(storeId, "DELETED");
+        return ResponseEntity.ok(ApiResponse.ok("Đã xóa (mềm) cửa hàng"));
     }
 }
