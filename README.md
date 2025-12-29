@@ -1,384 +1,336 @@
-# E-Commerce TechShop - Changelog
+<div align="center">
 
-## 🔄 Recent Updates (October 2025)
+# 🛒 TechZone - E-Commerce Platform
 
-### 📝 Tổng quan thay đổi
+### *Nền tảng thương mại điện tử công nghệ đa nhà cung cấp*
 
-Phiên bản này tập trung vào **hệ thống phê duyệt nội dung** và **cải thiện trải nghiệm lỗi** cho nền tảng B2C e-commerce.
+[![Java](https://img.shields.io/badge/Java-21-orange?style=for-the-badge&logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.5-brightgreen?style=for-the-badge&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
+[![Redis](https://img.shields.io/badge/Redis-Cache-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
 
----
-
-## ✨ 1. Store Approval System
-
-### **Tính năng mới:**
-- ✅ Thêm workflow phê duyệt cửa hàng với 4 trạng thái: `PENDING`, `APPROVED`, `REJECTED`, `DELETED`
-- ✅ Shop chỉ được cập nhật thông tin sau khi được admin duyệt
-- ✅ Validation upload logo/banner (chỉ khi store APPROVED)
-- ✅ Tự động xóa file cũ khi upload media mới
-
-### **Quy trình:**
-```
-User đăng ký Store → PENDING
-    ↓
-Admin xét duyệt → APPROVED ✅ (hoạt động bình thường)
-               → REJECTED ❌ (không cho phép hoạt động)
-               → DELETED 🗑️ (xóa mềm)
-```
-
-### **Files thay đổi:**
-```
-✏️ models/Store.java
-   - Thêm enum StoreStatus {PENDING, APPROVED, REJECTED, DELETED}
-   - Thêm method isValidStatus() để validate
-
-✏️ services/store/StoreService.java
-   + updateStoreLogo() - Upload logo (chỉ khi APPROVED)
-   + updateStoreBanner() - Upload banner (chỉ khi APPROVED)
-   - Auto delete old files trước khi upload mới
-
-✏️ controllers/b2c/B2CStoreController.java
-   - PUT /api/v1/b2c/stores/{id}/logo
-   - PUT /api/v1/b2c/stores/{id}/banner
-   - Validation: Chỉ cho phép update khi store APPROVED
-
-✏️ controllers/admin/AdminStoreController.java (NEW)
-   + GET /api/v1/admin/stores/pending
-   + PUT /api/v1/admin/stores/{id}/approve
-   + PUT /api/v1/admin/stores/{id}/reject
-```
-
-### **Lợi ích:**
-- 🛡️ Kiểm soát chất lượng cửa hàng trước khi công khai
-- ♻️ Tiết kiệm storage bằng cách xóa file cũ tự động
-- 🔒 Bảo mật: Chỉ store được duyệt mới hoạt động được
+</div>
 
 ---
 
-## 📦 2. Product & ProductVariant Approval System
+## 📋 Mục lục
 
-### **Tính năng mới:**
-- ✅ Hệ thống duyệt 2 cấp: **Product** → **ProductVariant**
-- ✅ Shop tạo sản phẩm → Admin duyệt → Shop tạo biến thể → Admin duyệt lại
-- ✅ Shop chỉ được update **giá/tồn kho** của variant đã APPROVED
-- ✅ Người dùng chỉ thấy sản phẩm đã được duyệt
-
-### **Quy trình:**
-```
-Shop tạo Product → PENDING
-    ↓
-Admin duyệt Product → APPROVED
-    ↓
-Shop tạo ProductVariant → PENDING
-    ↓
-Admin duyệt Variant → APPROVED ✅ (hiển thị công khai)
-    ↓
-Shop update giá/stock → Không cần duyệt lại (linh hoạt)
-```
-
-### **Files thay đổi:**
-```
-✏️ models/Product.java
-   - Thêm field: status (PENDING/APPROVED/REJECTED)
-   - Thêm field: rejectionReason (lý do từ chối)
-   - Thêm enum ProductStatus
-   - Thêm method isValidStatus()
-
-✏️ models/ProductVariant.java
-   - Thêm field: status (PENDING/APPROVED/REJECTED)
-   - Thêm field: rejectionReason
-   - Thêm enum VariantStatus
-
-✏️ services/product/ProductService.java
-   + createProduct() - Tự động set status = PENDING
-   + getPendingProducts() - Lấy danh sách chờ duyệt
-   + updateStatus() - Admin duyệt/từ chối
-   + rejectProduct(id, reason) - Từ chối với lý do
-
-✏️ services/productVariant/ProductVariantService.java
-   + createProductVariant() - Kiểm tra Product đã APPROVED chưa
-   + updateProductVariant() - Chỉ update giá/stock nếu APPROVED
-   + getVariantsByStatus() - Lấy theo trạng thái
-   + updateVariantStatus()
-   + rejectVariant(id, reason)
-
-✏️ controllers/admin/AdminProductController.java (NEW)
-   + GET /api/v1/admin/products/pending
-   + PUT /api/v1/admin/products/{id}/approve
-   + PUT /api/v1/admin/products/{id}/reject?reason=...
-
-✏️ controllers/admin/AdminProductVariantController.java (NEW)
-   + GET /api/v1/admin/product-variants/pending
-   + PUT /api/v1/admin/product-variants/{id}/approve
-   + PUT /api/v1/admin/product-variants/{id}/reject?reason=...
-
-✏️ controllers/ProductController.java
-   - Chỉ hiển thị Product có status = APPROVED
-   
-✏️ controllers/ProductVariantController.java
-   - Chỉ hiển thị Variant có status = APPROVED
-```
-
-### **Lợi ích:**
-- ✅ Kiểm soát chặt chẽ chất lượng sản phẩm
-- 🔄 Shop linh hoạt điều chỉnh giá theo thị trường (không cần duyệt lại)
-- 🛡️ Bảo mật: Sản phẩm chưa duyệt không public
-- 🏪 Giống mô hình Shopee, Lazada (realistic)
+- [Giới thiệu](#-giới-thiệu)
+- [Tech Stack](#️-tech-stack)
+- [Tính năng chính](#-tính-năng-chính)
+- [Kiến trúc hệ thống](#-kiến-trúc-hệ-thống)
+- [Cài đặt & Chạy](#-cài-đặt--chạy)
+- [API Documentation](#-api-documentation)
 
 ---
 
-## 🚨 3. Global Exception Handling Enhancement
+## 🎯 Giới thiệu
 
-### **Tính năng mới:**
-- ✅ Centralized error handling cho toàn hệ thống
-- ✅ Tự động phát hiện lỗi authentication (`currentUser` null)
-- ✅ Xử lý lỗi nghiệp vụ (store/product chưa duyệt)
-- ✅ Error messages thân thiện với người dùng
+**TechZone** là một nền tảng thương mại điện tử **đa nhà cung cấp (Multi-vendor)** chuyên về sản phẩm công nghệ, được xây dựng nhằm mục đích học tập và demo các công nghệ hiện đại trong phát triển web.
 
-### **Cải thiện:**
+### 🎓 Mục đích dự án
+- ✅ Xây dựng hệ thống e-commerce hoàn chỉnh với các tính năng thực tế
+- ✅ Áp dụng kiến trúc microservices và design patterns
+- ✅ Thực hành DevOps với Docker
+- ✅ Demo tích hợp các dịch vụ third-party (Payment, Cloud Storage, Email)
 
-#### **Trước:**
-```json
-// Response generic, khó hiểu
-{
-  "error": "Cannot invoke \"User.getEmail()\" because \"currentUser\" is null"
-}
-```
-
-#### **Sau:**
-```json
-// Response rõ ràng, hướng dẫn user
-{
-  "success": false,
-  "message": "Bạn cần đăng nhập để thực hiện chức năng này. Token không hợp lệ hoặc đã hết hạn.",
-  "data": null
-}
-```
-
-### **Files thay đổi:**
-```
-✏️ controllers/GlobalExceptionHandler.java
-   + @ExceptionHandler(NullPointerException.class)
-     - Tự động detect khi gọi currentUser.getEmail() mà user null
-     - Check stackTrace để xác định method (getEmail, getId, getUsername)
-     - Trả về 401 Unauthorized với message rõ ràng
-   
-   + @ExceptionHandler(IllegalStateException.class)
-     - Xử lý lỗi nghiệp vụ:
-       * Store chưa được duyệt
-       * Product chưa được duyệt
-       * Variant chưa được duyệt
-     - Trả về 403 Forbidden
-   
-   + @ExceptionHandler(JwtAuthenticationException.class)
-     - Token không hợp lệ / hết hạn
-     - Trả về 401 Unauthorized
-```
-
-### **Lợi ích:**
-- ✅ Không cần thêm `if (currentUser == null)` ở mỗi endpoint
-- ✅ Code controller sạch hơn, tập trung vào logic nghiệp vụ
-- ✅ Error handling nhất quán trong toàn hệ thống
-- ✅ Developer-friendly và User-friendly
+### 🌟 Điểm nổi bật
+- 🏪 **Multi-vendor marketplace** - Cho phép nhiều người bán đăng ký và quản lý cửa hàng
+- 🔐 **Hệ thống phê duyệt 2 cấp** - Admin duyệt cửa hàng và sản phẩm trước khi công khai
+- 💬 **Real-time chat** - WebSocket để hỗ trợ khách hàng trực tiếp
+- 💳 **Đa phương thức thanh toán** - VNPay, MoMo
+- 📦 **Quản lý vận chuyển** - Tích hợp đơn vị giao hàng và theo dõi đơn
+- 📊 **Analytics & Statistics** - Dashboard thống kê cho seller và admin
 
 ---
 
-## 📸 4. File Upload Service Enhancement
+## 🛠️ Tech Stack
 
-### **Cải thiện:**
-- ✅ Tự động xóa file cũ khi upload file mới (tránh rác Cloudinary)
-- ✅ Validate store/product status trước khi cho phép upload
-- ✅ Logging rõ ràng cho debugging
+### Backend Framework
+- **Java 21** - Ngôn ngữ lập trình
+- **Spring Boot 3.5.5** - Framework chính
+- **Spring Security** - Xác thực & phân quyền
+- **Spring Data MongoDB** - ORM cho MongoDB
+- **Spring Data Redis** - Cache layer
+- **Spring WebSocket** - Real-time communication
+- **Spring Mail** - Email service
+- **Spring AOP** - Aspect-oriented programming
 
-### **Files thay đổi:**
+### Database & Cache
+- **MongoDB Atlas** - NoSQL Database (Cloud)
+- **Redis** - In-memory cache & session storage
+
+### Security & Authentication
+- **JWT (JSON Web Token)** - Stateless authentication
+- **BCrypt** - Password hashing
+- **Spring Security** - Role-based access control
+
+### Third-party Services
+- **Cloudinary** - Cloud storage cho hình ảnh
+- **SendGrid** - Email delivery service
+- **VNPay API** - Cổng thanh toán Việt Nam
+- **MoMo API** - Ví điện tử MoMo
+
+### DevOps & Tools
+- **Docker & Docker Compose** - Containerization
+- **Maven** - Build automation
+- **Swagger/OpenAPI 3** - API documentation
+- **Lombok** - Reduce boilerplate code
+
+### Development Tools
+- **IntelliJ IDEA / VS Code** - IDE
+- **Postman** - API testing
+- **MongoDB Compass** - Database GUI
+- **Git** - Version control
+
+---
+
+## ✨ Tính năng chính
+
+### 👥 Người dùng (Customer)
+- 🔐 Đăng ký / Đăng nhập (Email + Password)
+- 👤 Quản lý hồ sơ cá nhân
+- 🔑 Quên mật khẩu & Reset password
+- 📍 Quản lý địa chỉ giao hàng
+- 🛍️ Tìm kiếm & lọc sản phẩm (theo category, brand, price)
+- 🛒 Giỏ hàng & Wishlist
+- 💳 Đặt hàng & thanh toán (VNPay, MoMo, COD)
+- 📦 Theo dõi đơn hàng real-time
+- ⭐ Đánh giá & Review sản phẩm
+- 💬 Chat trực tiếp với seller
+- 🎟️ Sử dụng mã giảm giá (Promotions)
+- 💰 Ví điện tử nội bộ (User Wallet)
+- 🔄 Yêu cầu hoàn trả / Đổi hàng
+
+### 🏪 Nhà bán hàng (Vendor/B2C)
+- 📝 Đăng ký cửa hàng (chờ admin duyệt)
+- 🏢 Quản lý thông tin cửa hàng (Logo, Banner, Description)
+- 📦 Quản lý sản phẩm (CRUD)
+  - Tạo sản phẩm → Chờ admin duyệt
+  - Quản lý variants (màu sắc, size, giá)
+- 📊 Dashboard thống kê doanh thu
+- 📦 Quản lý đơn hàng (Xác nhận, Đóng gói, Giao shipper)
+- 💬 Chat với khách hàng
+- 🎟️ Tạo & quản lý mã khuyến mãi
+- 💰 Quản lý ví tiền & rút tiền
+- 🔔 Nhận thông báo đơn hàng mới
+
+### 🚚 Shipper (Delivery Partner)
+- 📦 Nhận đơn hàng cần giao
+- 📍 Cập nhật trạng thái vận chuyển
+- ✅ Xác nhận giao hàng thành công
+
+### 👨‍💼 Admin
+- 🏪 Phê duyệt cửa hàng
+- 📦 Phê duyệt sản phẩm & variants
+- 👥 Quản lý người dùng (Block/Unblock)
+- 📊 Xem thống kê tổng quan hệ thống
+- 🎟️ Quản lý promotions toàn hệ thống
+- 📦 Giám sát tất cả đơn hàng
+- 🚫 Xử lý khiếu nại & hoàn trả
+
+---
+
+## 🏗️ Kiến trúc hệ thống
+
+### Tổng quan kiến trúc
+
 ```
-✏️ services/store/StoreService.java
-   - updateStoreLogo(): Delete old logo trước khi upload
-   - updateStoreBanner(): Delete old banner trước khi upload
-   - Validate store phải APPROVED
-
-✏️ services/FileUploadService.java
-   - Improve error handling
-   - Better logging
+┌─────────────────────────────────────────────────────────────┐
+│                        Client Layer                          │
+│  (Web App / Mobile App / Admin Dashboard)                   │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ REST API / WebSocket
+┌──────────────────────────▼──────────────────────────────────┐
+│                    Spring Boot Backend                       │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              Controllers Layer                       │   │
+│  │  - AdminController  - B2CController                 │   │
+│  │  - BuyerController  - ChatController                │   │
+│  │  - ShipperController                                 │   │
+│  └──────────────────────┬──────────────────────────────┘   │
+│                         │                                    │
+│  ┌──────────────────────▼──────────────────────────────┐   │
+│  │              Services Layer                          │   │
+│  │  - ProductService    - OrderService                 │   │
+│  │  - StoreService      - PaymentService               │   │
+│  │  - UserService       - NotificationService          │   │
+│  │  - ChatService       - FileUploadService            │   │
+│  └──────────────────────┬──────────────────────────────┘   │
+│                         │                                    │
+│  ┌──────────────────────▼──────────────────────────────┐   │
+│  │           Repositories Layer (MongoDB)              │   │
+│  └─────────────────────────────────────────────────────┘   │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+        ┌──────────────────┼──────────────────┐
+        │                  │                  │
+┌───────▼────────┐ ┌──────▼──────┐ ┌────────▼─────────┐
+│  MongoDB Atlas │ │    Redis    │ │  Cloudinary      │
+│   (Database)   │ │   (Cache)   │ │ (File Storage)   │
+└────────────────┘ └─────────────┘ └──────────────────┘
 ```
 
 ---
 
-## 🔧 Technical Details
+## 🚀 Cài đặt & Chạy
 
-### **New Dependencies**
-Không có dependency mới, chỉ sử dụng tốt hơn các thư viện có sẵn.
+### Yêu cầu hệ thống
 
-### **Database Changes**
-```javascript
-// MongoDB Collections Updated
+| Công cụ | Version | Link Download |
+|---------|---------|---------------|
+| **JDK** | 21 hoặc cao hơn | [Oracle JDK](https://www.oracle.com/java/technologies/downloads/) |
+| **Maven** | 3.8+ | [Apache Maven](https://maven.apache.org/download.cgi) |
+| **Docker** | Latest | [Docker Desktop](https://www.docker.com/products/docker-desktop/) |
+| **Git** | Latest | [Git SCM](https://git-scm.com/downloads) |
 
-// stores collection
-{
-  status: "PENDING" | "APPROVED" | "REJECTED" | "DELETED" // NEW field
-}
+### Bước 1: Clone repository
 
-// products collection
-{
-  status: "PENDING" | "APPROVED" | "REJECTED", // NEW field
-  rejectionReason: String // NEW field (optional)
-}
-
-// product_variants collection
-{
-  status: "PENDING" | "APPROVED" | "REJECTED", // NEW field
-  rejectionReason: String // NEW field (optional)
-}
+```bash
+git clone https://github.com/ngochuytech/E-Commerce.git
+cd E-Commerce
 ```
 
-### **Migration Guide**
-Nếu bạn có data cũ, chạy script sau để update:
+### Bước 2: Cấu hình môi trường
 
-```javascript
-// MongoDB shell
-db.stores.updateMany(
-  { status: { $exists: false } },
-  { $set: { status: "APPROVED" } }
-);
+Tạo file `.env` hoặc cấu hình biến môi trường trong `application.yml`:
 
-db.products.updateMany(
-  { status: { $exists: false } },
-  { $set: { status: "APPROVED" } }
-);
+```yaml
+# MongoDB Configuration
+DB_MONGODB_USERNAME=your_mongodb_username
+DB_MONGODB_PASSWORD=your_mongodb_password
+DB_MONGODB_NAME=e-commerce
 
-db.product_variants.updateMany(
-  { status: { $exists: false } },
-  { $set: { status: "APPROVED" } }
-);
+# Redis Configuration
+REDIS_HOST=your_redis_host
+REDIS_PORT=6379
+REDIS_PASSWORD=your_redis_password
+
+# Email Configuration (SendGrid)
+SENDGRID_API_KEY=your_sendgrid_api_key
+MAIL_FROM_ADDRESS=noreply@techzone.com
+
+# Cloudinary Configuration
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+
+# Payment Gateway
+VNPAY_TMNCODE=your_vnpay_code
+VNPAY_SECRET_KEY=your_vnpay_secret
+VNPAY_RETURN_URI=your_frontend_url
+VNPAY_API_URL=http://localhost:8080
+MOMO_ACCESS_KEY=your_momo_accesskey
+MOMO_SECRET_KEY=your_secret_key
+MOMO_RETURN_URL=your_frontend_url
+MOMO_IPN_URL=http://localhost:8080/api/v1/buyer/payments/momo/ipn
 ```
 
----
+### Bước 3: Build project
 
-## 📊 API Changes Summary
+```bash
+# Clean & install dependencies
+mvn clean install
 
-### **New Admin Endpoints:**
-```http
-# Store Management
-GET    /api/v1/admin/stores/pending
-PUT    /api/v1/admin/stores/{id}/approve
-PUT    /api/v1/admin/stores/{id}/reject?reason={text}
-
-# Product Management
-GET    /api/v1/admin/products/pending
-PUT    /api/v1/admin/products/{id}/approve
-PUT    /api/v1/admin/products/{id}/reject?reason={text}
-
-# ProductVariant Management
-GET    /api/v1/admin/product-variants/pending
-PUT    /api/v1/admin/product-variants/{id}/approve
-PUT    /api/v1/admin/product-variants/{id}/reject?reason={text}
+# Hoặc sử dụng Maven Wrapper (không cần cài Maven)
+./mvnw clean install
 ```
 
-### **Updated B2C Endpoints:**
-```http
-# Store logo/banner (chỉ khi APPROVED)
-PUT    /api/v1/b2c/stores/{id}/logo
-PUT    /api/v1/b2c/stores/{id}/banner
+### Bước 4: Chạy với Docker Compose (Khuyến nghị)
 
-# Product creation (auto set PENDING)
-POST   /api/v1/b2c/products/create
-
-# Variant creation (auto set PENDING)
-POST   /api/v1/b2c/product-variants/create
-
-# Variant update (chỉ giá/stock, chỉ khi APPROVED)
-PUT    /api/v1/b2c/product-variants/update/{id}
+```bash
+# Build và start tất cả services
+docker-compose up -d
 ```
 
-### **Updated Public Endpoints:**
-```http
-# Chỉ trả về sản phẩm APPROVED
-GET    /api/v1/products
-GET    /api/v1/products/{id}
-GET    /api/v1/product-variants/{id}
+Ứng dụng sẽ chạy tại: **http://localhost:8080**
+
+### Bước 5: Chạy trực tiếp (Không dùng Docker)
+
+```bash
+# Chạy Spring Boot application
+mvn spring-boot:run
+
+# Hoặc
+./mvnw spring-boot:run
+
+# Hoặc chạy file JAR
+java -jar target/e-commerce-techshop-0.0.1-SNAPSHOT.jar
 ```
 
 ---
 
-## ⚠️ Breaking Changes
+## 📚 API Documentation
 
-### **1. Store Model**
-- Thêm field `status` (required)
-- Existing stores cần được set status = "APPROVED" manually
+### Swagger UI (Interactive Docs)
 
-### **2. Product Model**
-- Thêm field `status` (required)
-- Existing products cần được set status = "APPROVED"
+Sau khi chạy ứng dụng, truy cập:
 
-### **3. ProductVariant Model**
-- Thêm field `status` (required)
-- Existing variants cần được set status = "APPROVED"
-
-### **4. API Behavior Changes**
-- `POST /api/v1/b2c/products/create` → Tạo với status = PENDING (thay vì APPROVED)
-- `POST /api/v1/b2c/product-variants/create` → Tạo với status = PENDING
-- `GET /api/v1/products` → Chỉ trả về products đã APPROVED
-- `PUT /api/v1/b2c/stores/{id}/logo` → Chỉ cho phép khi store APPROVED
+🔗 **http://localhost:8080/swagger-ui/index.html**
 
 ---
 
-## 🧪 Testing Checklist
+## 📂 Cấu trúc thư mục
 
-### **Store Approval Flow**
-- [ ] User tạo store → status = PENDING
-- [ ] Admin approve store → status = APPROVED
-- [ ] Shop update store info → Success (khi APPROVED)
-- [ ] Shop upload logo/banner → Success (khi APPROVED)
-- [ ] Shop upload logo khi PENDING → Error 403
-
-### **Product Approval Flow**
-- [ ] Shop tạo product → status = PENDING
-- [ ] Admin approve product → status = APPROVED
-- [ ] Shop tạo variant (product chưa APPROVED) → Error
-- [ ] Shop tạo variant (product đã APPROVED) → Success, variant PENDING
-- [ ] Admin approve variant → status = APPROVED
-- [ ] Public GET /products → Chỉ thấy APPROVED products
-- [ ] Shop update giá variant → Success (khi APPROVED)
-
-### **Exception Handling**
-- [ ] Call API không có token → 401 "Bạn cần đăng nhập..."
-- [ ] Call API với token hết hạn → 401 "Token không hợp lệ..."
-- [ ] Upload logo khi store PENDING → 403 "Cửa hàng chưa được duyệt..."
-
----
-
-## 📚 Additional Resources
-
-- [CLOUDINARY_MIGRATION.md](CLOUDINARY_MIGRATION.md) - Hướng dẫn setup Cloudinary
-- [JWT_ERROR_HANDLING.md](JWT_ERROR_HANDLING.md) - Chi tiết về JWT error handling
-- [SWAGGER_SETUP_GUIDE.md](SWAGGER_SETUP_GUIDE.md) - API documentation
-
----
-
-## 👨‍💻 Developer Notes
-
-### **Code Organization**
-- Controllers phân chia theo role: `admin/`, `b2c/`, `buyer/`
-- Services tách riêng business logic
-- GlobalExceptionHandler xử lý lỗi tập trung
-
-### **Best Practices Applied**
-- ✅ Single Responsibility Principle
-- ✅ DRY (Don't Repeat Yourself) - GlobalExceptionHandler
-- ✅ Security First - Validation ở nhiều layer
-- ✅ User Experience - Error messages rõ ràng
+```
+e-commerce-techshop/
+├── src/
+│   ├── main/
+│   │   ├── java/com/example/e_commerce_techshop/
+│   │   │   ├── annotations/          # Custom annotations
+│   │   │   ├── aspects/              # AOP aspects
+│   │   │   ├── components/           # Spring components
+│   │   │   ├── configurations/       # Config classes (Security, WebSocket...)
+│   │   │   ├── controllers/
+│   │   │   │   ├── admin/           # Admin endpoints
+│   │   │   │   ├── b2c/             # Vendor endpoints
+│   │   │   │   ├── buyer/           # Customer endpoints
+│   │   │   │   ├── chat/            # Chat endpoints
+│   │   │   │   └── shipper/         # Shipper endpoints
+│   │   │   ├── dtos/                # Data Transfer Objects
+│   │   │   ├── exceptions/          # Custom exceptions
+│   │   │   ├── filter/              # Security filters (JWT)
+│   │   │   ├── models/              # MongoDB entities
+│   │   │   ├── repositories/        # Spring Data repositories
+│   │   │   ├── responses/           # API response wrappers
+│   │   │   ├── services/            # Business logic
+│   │   │   └── ECommerceTechshopApplication.java
+│   │   └── resources/
+│   │       ├── application.yml      # Main config
+│   │       ├── static/              # Static files
+│   │       └── templates/           # Email templates
+│   └── test/                        # Unit tests
+├── uploads/                         # Local file storage
+├── docker-compose.yml               # Docker services
+├── Dockerfile                       # App containerization
+├── pom.xml                          # Maven dependencies
+└── README.md                        # Documentation
+```
 
 ---
 
-## 🔜 Future Improvements
+## 🚢 Deployment
 
-- [ ] Add notification system khi store/product được duyệt
-- [ ] Add dashboard analytics cho admin
-- [ ] Add bulk approval cho products
-- [ ] Add comment/feedback khi reject
-- [ ] Add versioning cho Product (khi cập nhật lớn)
+### Deploy với Docker
+
+```bash
+# Build image
+docker build -t techzone-backend:latest .
+
+# Run container
+docker run -d -p 8080:8080 \
+  -e DB_MONGODB_USERNAME=... \
+  -e DB_MONGODB_PASSWORD=... \
+  techzone-backend:latest
+```
 
 ---
 
-**Last Updated:** October 20, 2025  
-**Version:** 2.0  
-**Author:** Ngoc Huy
+<div align="center">
+
+### ⭐ Nếu dự án này hữu ích, hãy cho chúng tôi một star!
+
+**Made with ❤️ by Nguyen Van Ngoc Huy**
+
+</div>

@@ -17,8 +17,6 @@ import org.cloudinary.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import lombok.RequiredArgsConstructor;
-
 @Service
 public class MomoService implements IMomoService {
     @Value("${momo.partner-code}")
