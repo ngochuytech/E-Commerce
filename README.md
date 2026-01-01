@@ -314,7 +314,7 @@ e-commerce-techshop/
 
 <div align="center">
 
-### ⭐ Nếu dự án này hữu ích, hãy cho chúng tôi một star!
+### ⭐ Nếu dự án này hữu ích, hãy cho mình một star nha!
 
 **Made with ❤️ by Nguyen Van Ngoc Huy**
 
