@@ -128,8 +128,8 @@ public class ChatService implements IChatService {
     public ConversationDTO getOrCreateConversation(String sender, String recipient, String storeId) {
         if(sender.equals(recipient))
             throw new IllegalArgumentException("Người gửi và người nhận không thể giống nhau");
-        Store store = storeRepository.findById(storeId)
-                .orElseThrow(() -> new DataNotFoundException("Store not found"));
+        if(!storeRepository.existsById(storeId))
+            throw new DataNotFoundException("Store not found");
 
         List<String> participantIds = Arrays.asList(sender, recipient);
         Optional<Conversation> existingConv = conversationRepository.findByParticipantIdsAndStoreId(participantIds, storeId);

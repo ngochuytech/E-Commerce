@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🛒 TechZone - E-Commerce Platform
+# 🛒 TechNova - E-Commerce Platform
 
 ### *Nền tảng thương mại điện tử công nghệ đa nhà cung cấp*
 
@@ -27,7 +27,7 @@
 
 ## 🎯 Giới thiệu
 
-**TechZone** là một nền tảng thương mại điện tử **đa nhà cung cấp (Multi-vendor)** chuyên về sản phẩm công nghệ, được xây dựng nhằm mục đích học tập và demo các công nghệ hiện đại trong phát triển web.
+**TechNova** là một nền tảng thương mại điện tử **đa nhà cung cấp (Multi-vendor)** chuyên về sản phẩm công nghệ, được xây dựng nhằm mục đích học tập và demo các công nghệ hiện đại trong phát triển web.
 
 ### 🎓 Mục đích dự án
 - ✅ Xây dựng hệ thống e-commerce hoàn chỉnh với các tính năng thực tế
@@ -138,30 +138,31 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        Client Layer                          │
-│  (Web App / Mobile App / Admin Dashboard)                   │
+│                        Client Layer                         |
+│                   (Web App / Mobile App)                    │
 └──────────────────────────┬──────────────────────────────────┘
                            │ REST API / WebSocket
 ┌──────────────────────────▼──────────────────────────────────┐
-│                    Spring Boot Backend                       │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │              Controllers Layer                       │   │
-│  │  - AdminController  - B2CController                 │   │
-│  │  - BuyerController  - ChatController                │   │
-│  │  - ShipperController                                 │   │
-│  └──────────────────────┬──────────────────────────────┘   │
-│                         │                                    │
-│  ┌──────────────────────▼──────────────────────────────┐   │
-│  │              Services Layer                          │   │
-│  │  - ProductService    - OrderService                 │   │
-│  │  - StoreService      - PaymentService               │   │
-│  │  - UserService       - NotificationService          │   │
-│  │  - ChatService       - FileUploadService            │   │
-│  └──────────────────────┬──────────────────────────────┘   │
-│                         │                                    │
-│  ┌──────────────────────▼──────────────────────────────┐   │
-│  │           Repositories Layer (MongoDB)              │   │
-│  └─────────────────────────────────────────────────────┘   │
+│                    Spring Boot Backend                      │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │              Controllers Layer                      │    │
+│  │  - AdminController  - B2CController                 │    │
+│  │  - BuyerController  - ChatController                │    │
+│  │  - ShipperController - PublicController             │    │
+│  └──────────────────────┬──────────────────────────────┘    │
+│                         │                                   │
+│  ┌──────────────────────▼──────────────────────────────┐    │
+│  │              Services Layer                         │    │
+│  │  - ProductService    - OrderService                 │    │
+│  │  - StoreService      - PaymentService               │    │
+│  │  - UserService       - NotificationService          │    │
+│  │  - ChatService       - FileUploadService            │    │
+│  │  - ...                                              │    │
+│  └──────────────────────┬──────────────────────────────┘    │
+│                         │                                   │
+│  ┌──────────────────────▼──────────────────────────────┐    │
+│  │           Repositories Layer (MongoDB)              │    │
+│  └─────────────────────────────────────────────────────┘    │
 └──────────────────────────┬──────────────────────────────────┘
                            │
         ┌──────────────────┼──────────────────┐
@@ -194,22 +195,23 @@ cd E-Commerce
 
 ### Bước 2: Cấu hình môi trường
 
-Tạo file `.env` hoặc cấu hình biến môi trường trong `application.yml`:
+Thay đổi cấu hình biến môi trường trong `application.yml`:
 
 ```yaml
 # MongoDB Configuration
 DB_MONGODB_USERNAME=your_mongodb_username
 DB_MONGODB_PASSWORD=your_mongodb_password
-DB_MONGODB_NAME=e-commerce
+DB_MONGODB_NAME=your_mongodb_databasename
 
 # Redis Configuration
 REDIS_HOST=your_redis_host
 REDIS_PORT=6379
 REDIS_PASSWORD=your_redis_password
+REDIS_USERNAME=your_redis_username
 
 # Email Configuration (SendGrid)
 SENDGRID_API_KEY=your_sendgrid_api_key
-MAIL_FROM_ADDRESS=noreply@techzone.com
+MAIL_FROM_ADDRESS=noreply@TechNova.com
 
 # Cloudinary Configuration
 CLOUDINARY_CLOUD_NAME=your_cloud_name
@@ -221,6 +223,7 @@ VNPAY_TMNCODE=your_vnpay_code
 VNPAY_SECRET_KEY=your_vnpay_secret
 VNPAY_RETURN_URI=your_frontend_url
 VNPAY_API_URL=http://localhost:8080
+MOMO_PARTNER_CODE=your_momo_partnercode
 MOMO_ACCESS_KEY=your_momo_accesskey
 MOMO_SECRET_KEY=your_secret_key
 MOMO_RETURN_URL=your_frontend_url
@@ -237,16 +240,7 @@ mvn clean install
 ./mvnw clean install
 ```
 
-### Bước 4: Chạy với Docker Compose (Khuyến nghị)
-
-```bash
-# Build và start tất cả services
-docker-compose up -d
-```
-
-Ứng dụng sẽ chạy tại: **http://localhost:8080**
-
-### Bước 5: Chạy trực tiếp (Không dùng Docker)
+### Bước 4: Chạy trực tiếp (Không dùng Docker)
 
 ```bash
 # Chạy Spring Boot application
@@ -258,6 +252,15 @@ mvn spring-boot:run
 # Hoặc chạy file JAR
 java -jar target/e-commerce-techshop-0.0.1-SNAPSHOT.jar
 ```
+
+### Chạy với Docker Compose (Khuyến nghị)
+
+```bash
+# Build và start tất cả services
+docker build -t technova:v1.0 .
+```
+
+Ứng dụng sẽ chạy tại: **http://localhost:8080**
 
 ---
 
@@ -302,27 +305,9 @@ e-commerce-techshop/
 │   │       └── templates/           # Email templates
 │   └── test/                        # Unit tests
 ├── uploads/                         # Local file storage
-├── docker-compose.yml               # Docker services
 ├── Dockerfile                       # App containerization
 ├── pom.xml                          # Maven dependencies
 └── README.md                        # Documentation
-```
-
----
-
-## 🚢 Deployment
-
-### Deploy với Docker
-
-```bash
-# Build image
-docker build -t techzone-backend:latest .
-
-# Run container
-docker run -d -p 8080:8080 \
-  -e DB_MONGODB_USERNAME=... \
-  -e DB_MONGODB_PASSWORD=... \
-  techzone-backend:latest
 ```
 
 ---
