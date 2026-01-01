@@ -85,7 +85,7 @@ public class AdminRefundController {
             @RequestBody ProcessRefundRequestDTO dto,
             @AuthenticationPrincipal User admin) throws Exception {
         
-        RefundRequestResponse result = refundAdminService.processRefundRequest(dto, admin);
+        refundAdminService.processRefundRequest(dto, admin);
         
         String message = "APPROVE".equalsIgnoreCase(dto.getAction()) 
                 ? "Đã duyệt yêu cầu hoàn tiền thành công" 

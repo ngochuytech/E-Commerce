@@ -42,8 +42,8 @@ spring:
           connectiontimeout: 10000
           timeout: 10000
           writetimeout: 10000
-      from: ${MAIL_FROM_ADDRESS:ngochuymail25@gmail.com}
-      from-name: ${MAIL_FROM_NAME:TechShop E-commerce}
+      from: ${MAIL_FROM_ADDRESS}
+      from-name: ${MAIL_FROM_NAME}
     default-encoding: UTF-8
   security:
     oauth2:
@@ -84,7 +84,7 @@ springdoc:
 
 jwt:
   secret: EQOIAUgMdB/GxPmYT+uew/HLvOkYDOrAo3ihcFynD+Y=
-  expiration: 2592000
+  expiration: 25920000
   expiration-refresh-token: 5184000 #60 days = 60 * 24 * 60 * 60
 
 vnpay:
@@ -92,4 +92,11 @@ vnpay:
   return-url: "${VNPAY_RETURN_URI:http://localhost:5173/payments/payment-callback}"
   tmn-code: "${VNPAY_TMNCODE}"
   secret-key: "${VNPAY_SECRET_KEY}"
-  api-url: "https://sandbox.vnpayment.vn/merchant_webapi/api/transaction"
+  api-url: "${VNPAY_API_URL}"
+
+momo:
+  partner-code: "${MOMO_PARTNER_CODE}"
+  access-key: "${MOMO_ACCESS_KEY}"
+  secret-key: "${MOMO_SECRET_KEY}"
+  return-url: "${MOMO_RETURN_URL:http://localhost:5173/orders}"
+  ipn-url: "${MOMO_IPN_URL}"

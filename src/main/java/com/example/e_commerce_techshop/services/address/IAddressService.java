@@ -25,6 +25,6 @@ public interface IAddressService {
      */
     void deleteAddress(User user, String addressId) throws Exception;
 
-    // Kiểm tra user có địa chỉ không
+    /** Kiểm tra user có địa chỉ không */
     boolean hasAddress(String userEmail);
 }
