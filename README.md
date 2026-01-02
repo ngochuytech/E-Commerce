@@ -95,12 +95,11 @@
 - 📍 Quản lý địa chỉ giao hàng
 - 🛍️ Tìm kiếm & lọc sản phẩm (theo category, brand, price)
 - 🛒 Giỏ hàng & Wishlist
-- 💳 Đặt hàng & thanh toán (VNPay, MoMo, COD)
-- 📦 Theo dõi đơn hàng real-time
+- 💳 Đặt hàng & thanh toán (MoMo, VNPay, COD)
+- 📦 Theo dõi đơn hàng
 - ⭐ Đánh giá & Review sản phẩm
 - 💬 Chat trực tiếp với seller
 - 🎟️ Sử dụng mã giảm giá (Promotions)
-- 💰 Ví điện tử nội bộ (User Wallet)
 - 🔄 Yêu cầu hoàn trả / Đổi hàng
 
 ### 🏪 Nhà bán hàng (Vendor/B2C)
