@@ -35,6 +35,8 @@ TK ADMIN: quang3072004.1@gmail.com TK BUYER: Ndnquang3072004@gmail.com TK CHỦ 
 
 MK : 123456789
 
+(Chức năng thanh toán Momo chỉ có thể hoạt động với ngork)
+
 ## 🎯 Giới thiệu
 
 **TechNova** là một nền tảng thương mại điện tử **đa nhà cung cấp (Multi-vendor)** chuyên về sản phẩm công nghệ, được xây dựng nhằm mục đích học tập và demo các công nghệ hiện đại trong phát triển web.
@@ -79,7 +81,6 @@ MK : 123456789
 ### Third-party Services
 - **Cloudinary** - Cloud storage cho hình ảnh
 - **SendGrid** - Email delivery service
-- **VNPay API** - Cổng thanh toán Việt Nam
 - **MoMo API** - Ví điện tử MoMo
 
 ### DevOps & Tools
@@ -105,7 +106,7 @@ MK : 123456789
 - 📍 Quản lý địa chỉ giao hàng
 - 🛍️ Tìm kiếm & lọc sản phẩm (theo category, brand, price)
 - 🛒 Giỏ hàng & Wishlist
-- 💳 Đặt hàng & thanh toán (VNPay, MoMo, COD)
+- 💳 Đặt hàng & thanh toán (MoMo, COD)
 - 📦 Theo dõi đơn hàng real-time
 - ⭐ Đánh giá & Review sản phẩm
 - 💬 Chat trực tiếp với seller
