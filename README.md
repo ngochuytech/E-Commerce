@@ -26,7 +26,10 @@
 ---
 
 ## Tài khoản test
-pbl-6-eight.vercel.app pbl-6-eight.vercel.app/admin-dashboard pbl-6-eight.vercel.app/store-dashboard
+URL: 
+- pbl-6-eight.vercel.app (USER)
+- pbl-6-eight.vercel.app/admin-dashboard (ADMIN)
+- pbl-6-eight.vercel.app/store-dashboard (STORE)
 
 TK ADMIN: quang3072004.1@gmail.com TK BUYER: Ndnquang3072004@gmail.com TK CHỦ STORE: quang3072004@gmail.com
 
