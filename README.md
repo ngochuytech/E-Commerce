@@ -35,7 +35,7 @@ TK ADMIN: quang3072004.1@gmail.com TK BUYER: Ndnquang3072004@gmail.com TK CHỦ 
 
 MK : 123456789
 
-(Chức năng thanh toán Momo chỉ có thể hoạt động với ngork)
+(Chức năng thanh toán Momo chỉ có thể hoạt động với ngrok)
 
 ## 🎯 Giới thiệu
 
