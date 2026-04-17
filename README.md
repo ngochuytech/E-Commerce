@@ -25,6 +25,13 @@
 
 ---
 
+## Tài khoản test
+pbl-6-eight.vercel.app pbl-6-eight.vercel.app/admin-dashboard pbl-6-eight.vercel.app/store-dashboard
+
+TK ADMIN: quang3072004.1@gmail.com TK BUYER: Ndnquang3072004@gmail.com TK CHỦ STORE: quang3072004@gmail.com
+
+MK : 123456789
+
 ## 🎯 Giới thiệu
 
 **TechNova** là một nền tảng thương mại điện tử **đa nhà cung cấp (Multi-vendor)** chuyên về sản phẩm công nghệ, được xây dựng nhằm mục đích học tập và demo các công nghệ hiện đại trong phát triển web.
