@@ -35,6 +35,7 @@ TK ADMIN: quang3072004.1@gmail.com TK BUYER: Ndnquang3072004@gmail.com TK CHỦ 
 
 MK : 123456789
 
+(Backend trên Azure Free Tier có thể khởi động chậm ở lần truy cập đầu sau thời gian không hoạt động.)
 (Chức năng thanh toán Momo chỉ có thể hoạt động với ngrok)
 
 ## 🎯 Giới thiệu
